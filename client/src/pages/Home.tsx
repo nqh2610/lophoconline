@@ -4,81 +4,119 @@ import { TutorCard } from "@/components/TutorCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Button } from "@/components/ui/button";
 
+import tutor1Avatar from '@assets/stock_images/vietnamese_female_te_395ea66e.jpg';
+import tutor2Avatar from '@assets/stock_images/vietnamese_male_teac_91dbce7c.jpg';
+import tutor3Avatar from '@assets/stock_images/asian_young_student__05aa4baa.jpg';
+import tutor4Avatar from '@assets/stock_images/vietnamese_female_te_513f7461.jpg';
+import tutor5Avatar from '@assets/stock_images/vietnamese_male_teac_12f7c494.jpg';
+import tutor6Avatar from '@assets/stock_images/vietnamese_female_te_727f8381.jpg';
+
 export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const mockTutors = [
     {
       id: '1',
-      name: 'Nguyễn Văn A',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
-      subjects: ['Toán', 'Lý', 'Hóa'],
-      rating: 4.8,
+      name: 'Nguyễn Thị Mai',
+      avatar: tutor1Avatar,
+      subjects: [
+        { name: 'Toán', grades: 'lớp 10-12' },
+        { name: 'Lý', grades: 'lớp 10-12' }
+      ],
+      rating: 4.9,
       reviewCount: 128,
-      hourlyRate: 150000,
+      hourlyRate: 200000,
       experience: '5 năm kinh nghiệm dạy THPT',
       verified: true,
       hasVideo: true,
+      occupation: 'teacher' as const,
+      availableSlots: ['T2, T4, T6 (19h-21h)', 'T7, CN (14h-20h)']
     },
     {
       id: '2',
-      name: 'Trần Thị B',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=2',
-      subjects: ['Tiếng Anh', 'Văn'],
-      rating: 4.9,
+      name: 'Trần Văn Hùng',
+      avatar: tutor2Avatar,
+      subjects: [
+        { name: 'Tiếng Anh', grades: 'IELTS 6.5+' },
+        { name: 'Tiếng Anh', grades: 'giao tiếp' }
+      ],
+      rating: 5.0,
       reviewCount: 95,
-      hourlyRate: 200000,
-      experience: '7 năm kinh nghiệm IELTS',
+      hourlyRate: 250000,
+      experience: '7 năm kinh nghiệm IELTS, TOEFL',
       verified: true,
       hasVideo: true,
+      occupation: 'professional' as const,
+      availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)']
     },
     {
       id: '3',
-      name: 'Lê Văn C',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=3',
-      subjects: ['Toán', 'Vật Lý'],
+      name: 'Lê Minh Tú',
+      avatar: tutor3Avatar,
+      subjects: [
+        { name: 'Toán', grades: 'lớp 6-9' },
+        { name: 'Vật Lý', grades: 'lớp 8-9' }
+      ],
       rating: 4.7,
       reviewCount: 76,
       hourlyRate: 120000,
       experience: '3 năm dạy THCS',
-      verified: false,
+      verified: true,
       hasVideo: true,
+      occupation: 'student' as const,
+      availableSlots: ['T2-T6 (17h-20h)', 'T7 (14h-18h)']
     },
     {
       id: '4',
-      name: 'Phạm Thị D',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=4',
-      subjects: ['Hóa học', 'Sinh học'],
-      rating: 4.6,
+      name: 'Phạm Thu Hà',
+      avatar: tutor4Avatar,
+      subjects: [
+        { name: 'Hóa học', grades: 'lớp 10-12' },
+        { name: 'Sinh học', grades: 'lớp 10-12' }
+      ],
+      rating: 4.8,
       reviewCount: 54,
       hourlyRate: 180000,
-      experience: '4 năm kinh nghiệm',
+      experience: '4 năm kinh nghiệm, chuyên luyện thi ĐH',
       verified: true,
-      hasVideo: false,
+      hasVideo: true,
+      occupation: 'teacher' as const,
+      availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)']
     },
     {
       id: '5',
-      name: 'Hoàng Văn E',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=5',
-      subjects: ['Văn', 'Sử', 'Địa'],
-      rating: 4.5,
+      name: 'Hoàng Đức Anh',
+      avatar: tutor5Avatar,
+      subjects: [
+        { name: 'Văn', grades: 'lớp 10-12' },
+        { name: 'Sử', grades: 'lớp 10-12' },
+        { name: 'Địa', grades: 'lớp 10-12' }
+      ],
+      rating: 4.6,
       reviewCount: 42,
       hourlyRate: 140000,
-      experience: '6 năm dạy THPT',
+      experience: '6 năm dạy THPT, chuyên khối C',
       verified: true,
       hasVideo: true,
+      occupation: 'teacher' as const,
+      availableSlots: ['T3, T5 (19h-21h)', 'CN (9h-17h)']
     },
     {
       id: '6',
-      name: 'Đỗ Thị F',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=6',
-      subjects: ['Tiếng Anh'],
-      rating: 5.0,
+      name: 'Đỗ Lan Anh',
+      avatar: tutor6Avatar,
+      subjects: [
+        { name: 'Tiếng Anh', grades: 'lớp 1-9' },
+        { name: 'Tiếng Anh', grades: 'TOEIC' }
+      ],
+      rating: 4.9,
       reviewCount: 210,
-      hourlyRate: 250000,
-      experience: '10 năm kinh nghiệm TOEFL',
+      hourlyRate: 230000,
+      experience: '10 năm kinh nghiệm, chứng chỉ TESOL',
       verified: true,
       hasVideo: true,
+      occupation: 'professional' as const,
+      availableSlots: ['T2-T6 (18h-20h)', 'T7, CN (9h-20h)']
     },
   ];
 

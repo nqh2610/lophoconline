@@ -66,12 +66,12 @@ export function TutorCard({
             </div>
             <div className="flex items-center gap-2 mb-2">
               <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{occupationLabels[occupation]}</span>
+              <span className="text-sm text-muted-foreground" data-testid={`text-occupation-${id}`}>{occupationLabels[occupation]}</span>
             </div>
             <p className="text-sm text-muted-foreground mb-3">{experience}</p>
             
             <div className="flex items-center gap-4 text-sm mb-2">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" data-testid={`text-rating-${id}`}>
                 <Star className="h-4 w-4 fill-chart-5 text-chart-5" />
                 <span className="font-medium">{rating.toFixed(1)}</span>
                 <span className="text-muted-foreground">({reviewCount})</span>
@@ -103,7 +103,7 @@ export function TutorCard({
               <Clock className="h-3.5 w-3.5" />
               Lịch còn trống:
             </h4>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground" data-testid={`text-availability-${id}`}>
               {availableSlots.join(', ')}
             </p>
           </div>
@@ -111,7 +111,7 @@ export function TutorCard({
       </CardContent>
       <CardFooter className="p-4 pt-0 flex items-center justify-between gap-2">
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-primary">{hourlyRate.toLocaleString('vi-VN')}đ</span>
+          <span className="text-2xl font-bold text-primary" data-testid={`text-price-${id}`}>{hourlyRate.toLocaleString('vi-VN')}đ</span>
           <span className="text-sm text-muted-foreground">/giờ</span>
         </div>
         <Button size="sm" data-testid={`button-view-profile-${id}`}>
