@@ -89,10 +89,12 @@ export function BookingDialog({
   ];
 
   // Tạo time slots với cả giờ bắt đầu và kết thúc
+  // Trial lessons are always 0.5 hours (30 minutes)
+  const effectiveDuration = isTrial ? 0.5 : lessonDuration;
   const timeSlotRanges = timeSlots.map(startTime => ({
     start: startTime,
-    end: calculateEndTime(startTime, lessonDuration),
-    display: `${startTime} - ${calculateEndTime(startTime, lessonDuration)}`
+    end: calculateEndTime(startTime, effectiveDuration),
+    display: `${startTime} - ${calculateEndTime(startTime, effectiveDuration)}`
   }));
 
   const handleWeekdayToggle = (weekday: number) => {
@@ -105,18 +107,15 @@ export function BookingDialog({
 
   const handleBooking = () => {
     if (isTrial) {
-      // Trial booking logic
+      // Trial booking logic - always 30 minutes (0.5 hours)
       if (!selectedDate || !selectedTime) {
         alert("Vui lòng chọn ngày và giờ học");
         return;
       }
       
-      const endTime = calculateEndTime(selectedTime, lessonDuration);
-      const durationText = lessonDuration >= 1 
-        ? `${lessonDuration} giờ` 
-        : `${lessonDuration * 60} phút`;
+      const endTime = calculateEndTime(selectedTime, 0.5);
       
-      alert(`Đã đặt lịch học thử với ${tutorName}\nNgày: ${selectedDate.toLocaleDateString('vi-VN')}\nCa học: ${selectedTime} - ${endTime}\nThời lượng: ${durationText}\nHọc phí: Miễn phí`);
+      alert(`Đã đặt lịch học thử với ${tutorName}\nNgày: ${selectedDate.toLocaleDateString('vi-VN')}\nCa học: ${selectedTime} - ${endTime}\nThời lượng: 30 phút\nHọc phí: Miễn phí`);
     } else {
       // Monthly booking logic
       if (selectedWeekdays.length === 0 || !selectedTimeSlot) {
@@ -224,8 +223,8 @@ export function BookingDialog({
                       month: 'long', 
                       day: 'numeric' 
                     })}</p>
-                    <p><strong>Ca học:</strong> {selectedTime} - {calculateEndTime(selectedTime, lessonDuration)}</p>
-                    <p><strong>Thời lượng:</strong> {lessonDuration * 60} phút</p>
+                    <p><strong>Ca học:</strong> {selectedTime} - {calculateEndTime(selectedTime, 0.5)}</p>
+                    <p><strong>Thời lượng:</strong> 30 phút</p>
                     <p><strong>Học phí:</strong> Miễn phí</p>
                   </div>
                 </div>
