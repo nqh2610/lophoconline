@@ -371,6 +371,27 @@ export default function TutorDetail() {
                 </ul>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Thành tích nổi bật
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {tutor.achievements.map((achievement: string, index: number) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Award className="h-4 w-4 text-primary" />
+                      </div>
+                      <span>{achievement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Schedule Tab */}
