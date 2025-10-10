@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookingDialog } from "@/components/BookingDialog";
 import { 
   Star, 
   Video, 
@@ -14,7 +16,8 @@ import {
   Award,
   MessageCircle,
   MapPin,
-  Briefcase
+  Briefcase,
+  Play
 } from "lucide-react";
 
 import tutor1Avatar from '@assets/stock_images/vietnamese_female_te_395ea66e.jpg';
@@ -50,6 +53,7 @@ interface TutorDetailData {
   experience: string;
   verified: boolean;
   hasVideo: boolean;
+  videoUrl?: string;
   occupation: 'student' | 'teacher' | 'professional';
   availableSlots: string[];
   bio: string;
@@ -78,6 +82,7 @@ const tutorData: Record<string, TutorDetailData> = {
     experience: '5 năm kinh nghiệm dạy THPT',
     verified: true,
     hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'teacher' as const,
     availableSlots: ['T2, T4, T6 (19h-21h)', 'T7, CN (14h-20h)'],
     bio: 'Tôi là giáo viên Toán và Vật Lý với 5 năm kinh nghiệm giảng dạy tại trường THPT chuyên. Tôi đam mê giúp học sinh hiểu sâu bản chất của môn học và áp dụng vào thực tế.',
@@ -135,6 +140,7 @@ const tutorData: Record<string, TutorDetailData> = {
     experience: '7 năm kinh nghiệm IELTS, TOEFL',
     verified: true,
     hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'professional' as const,
     availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)'],
     bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.5 và TOEFL 115. Chuyên luyện thi IELTS, TOEFL và giao tiếp thực tế.',
@@ -179,6 +185,9 @@ export default function TutorDetail() {
   const [, params] = useRoute("/tutor/:id");
   const tutorId = params?.id || '1';
   const tutor = tutorData[tutorId] || tutorData['1'];
+  
+  const [trialBookingOpen, setTrialBookingOpen] = useState(false);
+  const [regularBookingOpen, setRegularBookingOpen] = useState(false);
 
   const occupationLabels: Record<string, string> = {
     teacher: 'Giáo viên',
@@ -261,7 +270,12 @@ export default function TutorDetail() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button size="lg" className="gap-2" data-testid="button-book-trial">
+                  <Button 
+                    size="lg" 
+                    className="gap-2" 
+                    onClick={() => setTrialBookingOpen(true)}
+                    data-testid="button-book-trial"
+                  >
                     <Calendar className="h-5 w-5" />
                     Đặt lịch học thử miễn phí
                   </Button>
@@ -286,6 +300,29 @@ export default function TutorDetail() {
 
           {/* About Tab */}
           <TabsContent value="about" className="space-y-4">
+            {/* Video Introduction */}
+            {tutor.videoUrl && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Play className="h-5 w-5" />
+                    Video giới thiệu
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                    <iframe
+                      src={tutor.videoUrl}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      data-testid="video-introduction"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -354,7 +391,13 @@ export default function TutorDetail() {
                       data-testid={`slot-${index}`}
                     >
                       <span className="font-medium">{slot}</span>
-                      <Button size="sm" data-testid={`button-book-slot-${index}`}>Đặt lịch</Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => setRegularBookingOpen(true)}
+                        data-testid={`button-book-slot-${index}`}
+                      >
+                        Đặt lịch
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -423,6 +466,22 @@ export default function TutorDetail() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Booking Dialogs */}
+        <BookingDialog
+          open={trialBookingOpen}
+          onOpenChange={setTrialBookingOpen}
+          tutorName={tutor.name}
+          hourlyRate={tutor.hourlyRate}
+          isTrial={true}
+        />
+        <BookingDialog
+          open={regularBookingOpen}
+          onOpenChange={setRegularBookingOpen}
+          tutorName={tutor.name}
+          hourlyRate={tutor.hourlyRate}
+          isTrial={false}
+        />
       </div>
     </div>
   );
