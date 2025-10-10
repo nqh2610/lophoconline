@@ -50,6 +50,7 @@ interface TutorDetailData {
   rating: number;
   reviewCount: number;
   hourlyRate: number;
+  lessonDuration: number; // Thời lượng buổi học (giờ) do gia sư đặt
   experience: string;
   verified: boolean;
   hasVideo: boolean;
@@ -79,6 +80,7 @@ const tutorData: Record<string, TutorDetailData> = {
     rating: 4.9,
     reviewCount: 128,
     hourlyRate: 200000,
+    lessonDuration: 1.5, // 1.5 giờ mỗi buổi
     experience: '5 năm kinh nghiệm dạy THPT',
     verified: true,
     hasVideo: true,
@@ -137,6 +139,7 @@ const tutorData: Record<string, TutorDetailData> = {
     rating: 5.0,
     reviewCount: 95,
     hourlyRate: 250000,
+    lessonDuration: 2, // 2 giờ mỗi buổi
     experience: '7 năm kinh nghiệm IELTS, TOEFL',
     verified: true,
     hasVideo: true,
@@ -494,6 +497,7 @@ export default function TutorDetail() {
           onOpenChange={setTrialBookingOpen}
           tutorName={tutor.name}
           hourlyRate={tutor.hourlyRate}
+          lessonDuration={0.5} // Học thử 30 phút
           isTrial={true}
         />
         <BookingDialog
@@ -501,6 +505,7 @@ export default function TutorDetail() {
           onOpenChange={setRegularBookingOpen}
           tutorName={tutor.name}
           hourlyRate={tutor.hourlyRate}
+          lessonDuration={tutor.lessonDuration}
           isTrial={false}
         />
       </div>
