@@ -14,7 +14,10 @@ export function FilterPanel() {
         <div>
           <h3 className="font-medium mb-3">Môn học</h3>
           <div className="space-y-2">
-            {['Toán', 'Tiếng Anh', 'Lý', 'Hóa', 'Sinh', 'Văn'].map((subject) => (
+            {[
+              'Toán', 'Tiếng Anh', 'Vật Lý', 'Hóa học', 'Sinh học', 'Ngữ Văn',
+              'Lịch Sử', 'Địa Lý', 'Tin học', 'IELTS', 'TOEFL', 'SAT'
+            ].map((subject) => (
               <div key={subject} className="flex items-center space-x-2">
                 <Checkbox id={`subject-${subject}`} data-testid={`checkbox-subject-${subject}`} />
                 <Label htmlFor={`subject-${subject}`} className="font-normal cursor-pointer">
@@ -64,6 +67,25 @@ export function FilterPanel() {
                 <Checkbox id={`exp-${exp}`} data-testid={`checkbox-exp-${exp}`} />
                 <Label htmlFor={`exp-${exp}`} className="font-normal cursor-pointer">
                   {exp}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-medium mb-3">Thời gian học</h3>
+          <div className="space-y-2">
+            {[
+              'Sáng (6h-12h)',
+              'Chiều (12h-18h)',
+              'Tối (18h-22h)',
+              'Cuối tuần'
+            ].map((time) => (
+              <div key={time} className="flex items-center space-x-2">
+                <Checkbox id={`time-${time}`} data-testid={`checkbox-time-${time}`} />
+                <Label htmlFor={`time-${time}`} className="font-normal cursor-pointer">
+                  {time}
                 </Label>
               </div>
             ))}

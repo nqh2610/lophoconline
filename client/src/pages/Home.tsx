@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { TutorCard } from "@/components/TutorCard";
 import { FilterPanel } from "@/components/FilterPanel";
@@ -22,6 +23,7 @@ import tutor3Avatar from '@assets/stock_images/asian_young_student__05aa4baa.jpg
 import tutor4Avatar from '@assets/stock_images/vietnamese_female_te_513f7461.jpg';
 
 export default function Home() {
+  const [showAll, setShowAll] = useState(false);
   const featuredTutors = [
     {
       id: '1',
@@ -63,7 +65,8 @@ export default function Home() {
       avatar: tutor3Avatar,
       subjects: [
         { name: 'Toán', grades: 'lớp 6-9' },
-        { name: 'Vật Lý', grades: 'lớp 8-9' }
+        { name: 'Vật Lý', grades: 'lớp 8-9' },
+        { name: 'Tin học', grades: 'lớp 6-9' }
       ],
       rating: 4.7,
       reviewCount: 76,
@@ -90,8 +93,78 @@ export default function Home() {
       hasVideo: true,
       occupation: 'teacher' as const,
       availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)']
+    },
+    {
+      id: '5',
+      name: 'Đỗ Văn Thành',
+      avatar: tutor2Avatar,
+      subjects: [
+        { name: 'Lịch Sử', grades: 'lớp 10-12' },
+        { name: 'Địa Lý', grades: 'lớp 10-12' }
+      ],
+      rating: 4.6,
+      reviewCount: 42,
+      hourlyRate: 150000,
+      experience: '4 năm dạy môn Xã hội',
+      verified: true,
+      hasVideo: false,
+      occupation: 'teacher' as const,
+      availableSlots: ['T3, T5 (18h-21h)', 'CN (9h-15h)']
+    },
+    {
+      id: '6',
+      name: 'Hoàng Thị Lan',
+      avatar: tutor1Avatar,
+      subjects: [
+        { name: 'Ngữ Văn', grades: 'lớp 10-12' },
+        { name: 'Văn', grades: 'luyện thi ĐH' }
+      ],
+      rating: 4.9,
+      reviewCount: 88,
+      hourlyRate: 190000,
+      experience: '6 năm dạy Ngữ Văn THPT',
+      verified: true,
+      hasVideo: true,
+      occupation: 'teacher' as const,
+      availableSlots: ['T2, T4, T6 (19h-21h)', 'T7 (14h-19h)']
+    },
+    {
+      id: '7',
+      name: 'Bùi Minh Đức',
+      avatar: tutor2Avatar,
+      subjects: [
+        { name: 'SAT', grades: 'Math & Reading' },
+        { name: 'TOEFL', grades: '80+' }
+      ],
+      rating: 5.0,
+      reviewCount: 35,
+      hourlyRate: 300000,
+      experience: '5 năm luyện thi SAT/TOEFL',
+      verified: true,
+      hasVideo: true,
+      occupation: 'professional' as const,
+      availableSlots: ['T7, CN (9h-18h)']
+    },
+    {
+      id: '8',
+      name: 'Ngô Thị Hương',
+      avatar: tutor4Avatar,
+      subjects: [
+        { name: 'Tiếng Anh', grades: 'lớp 6-12' },
+        { name: 'IELTS', grades: '5.0-7.5' }
+      ],
+      rating: 4.8,
+      reviewCount: 67,
+      hourlyRate: 220000,
+      experience: '5 năm dạy Tiếng Anh',
+      verified: true,
+      hasVideo: true,
+      occupation: 'professional' as const,
+      availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)']
     }
   ];
+  
+  const displayedTutors = showAll ? featuredTutors : featuredTutors.slice(0, 4);
 
   return (
     <div className="min-h-screen">
@@ -188,7 +261,7 @@ export default function Home() {
                 <div>
                   <h2 className="text-2xl font-bold mb-1">Gia sư nổi bật</h2>
                   <p className="text-sm text-muted-foreground">
-                    {featuredTutors.length} gia sư được tìm thấy
+                    {displayedTutors.length} / {featuredTutors.length} gia sư
                   </p>
                 </div>
                 <Button variant="outline" size="sm" data-testid="button-sort">
@@ -197,16 +270,22 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {featuredTutors.map((tutor) => (
+                {displayedTutors.map((tutor) => (
                   <TutorCard key={tutor.id} {...tutor} />
                 ))}
               </div>
 
-              <div className="mt-8 flex justify-center">
-                <Button variant="outline" data-testid="button-load-more">
-                  Xem thêm gia sư
-                </Button>
-              </div>
+              {!showAll && (
+                <div className="mt-8 flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    data-testid="button-load-more"
+                    onClick={() => setShowAll(true)}
+                  >
+                    Xem thêm gia sư ({featuredTutors.length - 4} gia sư còn lại)
+                  </Button>
+                </div>
+              )}
             </main>
           </div>
         </div>

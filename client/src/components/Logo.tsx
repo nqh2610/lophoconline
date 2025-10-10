@@ -21,49 +21,43 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
         {/* Circular background */}
         <circle cx="24" cy="24" r="22" className="fill-primary"/>
         
-        {/* Chalkboard/Blackboard */}
+        {/* Computer/Laptop Screen */}
         <rect 
-          x="10" 
-          y="14" 
-          width="28" 
-          height="20" 
+          x="12" 
+          y="16" 
+          width="24" 
+          height="16" 
           rx="1" 
-          className="fill-primary-foreground"
-        />
-        
-        {/* Chalkboard border/frame - darker for contrast */}
-        <rect 
-          x="10" 
-          y="14" 
-          width="28" 
-          height="20" 
-          rx="1" 
-          className="stroke-primary" 
+          className="stroke-primary-foreground fill-background"
           strokeWidth="1.5"
-          fill="none"
         />
         
-        {/* Math equation on chalkboard: "A+" */}
+        {/* Screen display with "10 điểm" */}
         <text 
           x="24" 
-          y="27" 
-          className="fill-background" 
-          fontSize="10" 
+          y="26" 
+          className="fill-primary" 
+          fontSize="9" 
           fontWeight="bold" 
           textAnchor="middle"
           fontFamily="Arial, sans-serif"
         >
-          A+
+          10 điểm
         </text>
         
-        {/* Chalk holder at bottom */}
+        {/* Laptop base/keyboard */}
+        <path 
+          d="M 10 32 L 12 34 L 36 34 L 38 32 Z" 
+          className="fill-primary-foreground"
+        />
+        
+        {/* Stand/hinge */}
         <rect 
-          x="16" 
-          y="34" 
-          width="16" 
+          x="23" 
+          y="32" 
+          width="2" 
           height="2" 
-          rx="1" 
-          className="fill-primary-foreground opacity-80"
+          className="fill-primary-foreground"
         />
       </svg>
       <div className="flex flex-col leading-none">

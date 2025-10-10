@@ -12,7 +12,7 @@ export function HeroSection() {
             Kết nối với gia sư <span className="text-primary">chất lượng</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-8" data-testid="text-hero-subtitle">
-            Nền tảng học trực tuyến tin cậy với hơn 1000+ gia sư đã được xác thực. Học thử miễn phí, thanh toán linh hoạt.
+            Nền tảng học trực tuyến tin cậy với các gia sư đã được xác thực. Học thử miễn phí, thanh toán linh hoạt.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
             <div className="relative flex-1">
@@ -27,20 +27,6 @@ export function HeroSection() {
             <Button size="lg" className="h-12 px-8" data-testid="button-find-tutor">
               Tìm gia sư
             </Button>
-          </div>
-          <div className="mt-12 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
-            <div>
-              <div className="text-3xl font-bold text-primary" data-testid="text-stat-tutors">1,000+</div>
-              <div className="text-sm text-muted-foreground mt-1">Gia sư</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary" data-testid="text-stat-students">5,000+</div>
-              <div className="text-sm text-muted-foreground mt-1">Học viên</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary" data-testid="text-stat-lessons">50,000+</div>
-              <div className="text-sm text-muted-foreground mt-1">Buổi học</div>
-            </div>
           </div>
         </div>
       </div>

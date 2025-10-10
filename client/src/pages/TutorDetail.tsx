@@ -22,6 +22,8 @@ import {
 
 import tutor1Avatar from '@assets/stock_images/vietnamese_female_te_395ea66e.jpg';
 import tutor2Avatar from '@assets/stock_images/vietnamese_male_teac_91dbce7c.jpg';
+import tutor3Avatar from '@assets/stock_images/asian_young_student__05aa4baa.jpg';
+import tutor4Avatar from '@assets/stock_images/vietnamese_female_te_513f7461.jpg';
 
 interface Education {
   school: string;
@@ -179,6 +181,269 @@ const tutorData: Record<string, TutorDetailData> = {
         rating: 5,
         comment: 'Thầy giúp em cải thiện speaking rất nhiều. Giờ em tự tin giao tiếp tiếng Anh.',
         date: '2024-03-12'
+      }
+    ]
+  },
+  '3': {
+    id: '3',
+    name: 'Lê Minh Tú',
+    avatar: tutor3Avatar,
+    subjects: [
+      { name: 'Toán', grades: 'lớp 6-9' },
+      { name: 'Vật Lý', grades: 'lớp 8-9' },
+      { name: 'Tin học', grades: 'lớp 6-9' }
+    ],
+    rating: 4.7,
+    reviewCount: 76,
+    hourlyRate: 120000,
+    lessonDuration: 1.5,
+    experience: '3 năm dạy THCS',
+    verified: true,
+    hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    occupation: 'student' as const,
+    availableSlots: ['T2-T6 (17h-20h)', 'T7 (14h-18h)'],
+    bio: 'Tôi là sinh viên năm cuối ngành Sư phạm Toán - Tin. Đam mê dạy học và giúp các em THCS yêu thích môn Toán, Lý, Tin học.',
+    education: [
+      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Sư phạm Toán - Tin', year: '2025 (dự kiến)' }
+    ],
+    certifications: [
+      'Chứng chỉ Tin học quốc tế MOS',
+      'Giải Ba Olympic Toán sinh viên toàn quốc'
+    ],
+    achievements: [
+      'Học sinh đạt điểm cao môn Toán THCS: 28 em',
+      'Học sinh đỗ trường chuyên: 5 em'
+    ],
+    teachingStyle: 'Tôi dạy theo phương pháp học qua thực hành và game hóa, giúp các em hứng thú với môn học.',
+    languages: ['Tiếng Việt'],
+    location: 'Hà Nội',
+    reviews: [
+      {
+        id: '1',
+        studentName: 'Nguyễn Minh Khang',
+        rating: 5,
+        comment: 'Anh dạy vui và dễ hiểu. Em thích học Toán hơn rồi!',
+        date: '2024-03-14'
+      }
+    ]
+  },
+  '4': {
+    id: '4',
+    name: 'Phạm Thu Hà',
+    avatar: tutor4Avatar,
+    subjects: [
+      { name: 'Hóa học', grades: 'lớp 10-12' },
+      { name: 'Sinh học', grades: 'lớp 10-12' }
+    ],
+    rating: 4.8,
+    reviewCount: 54,
+    hourlyRate: 180000,
+    lessonDuration: 1.5,
+    experience: '4 năm kinh nghiệm, chuyên luyện thi ĐH',
+    verified: true,
+    hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    occupation: 'teacher' as const,
+    availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)'],
+    bio: 'Tôi là giáo viên Hóa - Sinh với niềm đam mê truyền cảm hứng cho học sinh yêu khoa học tự nhiên.',
+    education: [
+      { school: 'Đại học Khoa học Tự nhiên - ĐHQGHN', degree: 'Cử nhân Hóa học', year: '2019' }
+    ],
+    certifications: [
+      'Chứng chỉ Giáo viên giỏi cấp Quận',
+      'Bồi dưỡng học sinh giỏi Hóa - Sinh'
+    ],
+    achievements: [
+      'Học sinh đạt 9.0+ môn Hóa trong kỳ thi THPT: 23 em',
+      'Học sinh đỗ khối B, D: 19 em'
+    ],
+    teachingStyle: 'Tôi tập trung vào việc giúp học sinh hiểu bản chất phản ứng và cơ chế sinh học, không chỉ học thuộc.',
+    languages: ['Tiếng Việt'],
+    location: 'Hà Nội',
+    reviews: [
+      {
+        id: '1',
+        studentName: 'Trần Bảo Ngọc',
+        rating: 5,
+        comment: 'Cô dạy Hóa rất hay, giúp em hiểu sâu chứ không học vẹt.',
+        date: '2024-03-16'
+      }
+    ]
+  },
+  '5': {
+    id: '5',
+    name: 'Đỗ Văn Thành',
+    avatar: tutor2Avatar,
+    subjects: [
+      { name: 'Lịch Sử', grades: 'lớp 10-12' },
+      { name: 'Địa Lý', grades: 'lớp 10-12' }
+    ],
+    rating: 4.6,
+    reviewCount: 42,
+    hourlyRate: 150000,
+    lessonDuration: 2,
+    experience: '4 năm dạy môn Xã hội',
+    verified: true,
+    hasVideo: false,
+    occupation: 'teacher' as const,
+    availableSlots: ['T3, T5 (18h-21h)', 'CN (9h-15h)'],
+    bio: 'Tôi là giáo viên Lịch Sử - Địa Lý, yêu thích việc kể chuyện để giúp học sinh ghi nhớ kiến thức lâu dài.',
+    education: [
+      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Sư phạm Lịch Sử', year: '2019' }
+    ],
+    certifications: [
+      'Chứng chỉ Bồi dưỡng học sinh giỏi Quốc gia'
+    ],
+    achievements: [
+      'Học sinh đạt 9.0+ môn Lịch Sử trong kỳ thi THPT: 18 em',
+      'Học sinh đỗ khối C: 15 em'
+    ],
+    teachingStyle: 'Tôi sử dụng phương pháp kể chuyện và sơ đồ tư duy để giúp học sinh nhớ lâu và hiểu sâu.',
+    languages: ['Tiếng Việt'],
+    location: 'Hà Nội',
+    reviews: [
+      {
+        id: '1',
+        studentName: 'Lê Minh Châu',
+        rating: 5,
+        comment: 'Thầy kể chuyện Lịch Sử rất hay, em nhớ lâu hơn!',
+        date: '2024-03-13'
+      }
+    ]
+  },
+  '6': {
+    id: '6',
+    name: 'Hoàng Thị Lan',
+    avatar: tutor1Avatar,
+    subjects: [
+      { name: 'Ngữ Văn', grades: 'lớp 10-12' },
+      { name: 'Văn', grades: 'luyện thi ĐH' }
+    ],
+    rating: 4.9,
+    reviewCount: 88,
+    hourlyRate: 190000,
+    lessonDuration: 2,
+    experience: '6 năm dạy Ngữ Văn THPT',
+    verified: true,
+    hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    occupation: 'teacher' as const,
+    availableSlots: ['T2, T4, T6 (19h-21h)', 'T7 (14h-19h)'],
+    bio: 'Tôi là giáo viên Ngữ Văn với niềm đam mê văn chương và nghệ thuật viết. Giúp học sinh yêu thích môn Văn.',
+    education: [
+      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Ngữ văn', year: '2017' },
+      { school: 'Đại học Sư phạm Hà Nội', degree: 'Thạc sĩ Văn học', year: '2019' }
+    ],
+    certifications: [
+      'Chứng chỉ Giáo viên dạy giỏi cấp Thành phố',
+      'Chứng chỉ Bồi dưỡng học sinh giỏi Văn'
+    ],
+    achievements: [
+      'Học sinh đạt 8.5+ môn Văn trong kỳ thi THPT Quốc gia: 52 em',
+      'Học sinh đỗ các trường top về Xã hội - Nhân văn: 31 em',
+      'Giải Nhất cuộc thi viết văn cấp Thành phố'
+    ],
+    teachingStyle: 'Tôi khuyến khích học sinh phát triển tư duy phản biện và kỹ năng viết sáng tạo thông qua thảo luận và luyện tập.',
+    languages: ['Tiếng Việt'],
+    location: 'Hà Nội',
+    reviews: [
+      {
+        id: '1',
+        studentName: 'Vũ Thu Hương',
+        rating: 5,
+        comment: 'Cô dạy Văn rất tâm huyết, giúp em yêu thích môn Văn hơn.',
+        date: '2024-03-17'
+      }
+    ]
+  },
+  '7': {
+    id: '7',
+    name: 'Bùi Minh Đức',
+    avatar: tutor2Avatar,
+    subjects: [
+      { name: 'SAT', grades: 'Math & Reading' },
+      { name: 'TOEFL', grades: '80+' }
+    ],
+    rating: 5.0,
+    reviewCount: 35,
+    hourlyRate: 300000,
+    lessonDuration: 2,
+    experience: '5 năm luyện thi SAT/TOEFL',
+    verified: true,
+    hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    occupation: 'professional' as const,
+    availableSlots: ['T7, CN (9h-18h)'],
+    bio: 'Tôi là chuyên gia luyện thi SAT và TOEFL với nhiều học viên đạt điểm cao và nhập học các trường đại học hàng đầu Mỹ.',
+    education: [
+      { school: 'University of California, Berkeley', degree: 'Bachelor in Economics', year: '2015' },
+      { school: 'Columbia University', degree: 'Master in Education', year: '2018' }
+    ],
+    certifications: [
+      'SAT Perfect Score 1600',
+      'TOEFL iBT 118',
+      'Certified SAT/ACT Prep Instructor'
+    ],
+    achievements: [
+      'Học viên đạt SAT 1500+: 23 người',
+      'Học viên đạt TOEFL 100+: 41 người',
+      'Học viên nhập học Ivy League: 8 người'
+    ],
+    teachingStyle: 'Tôi sử dụng phương pháp luyện thi chiến lược, tập trung vào kỹ thuật làm bài và quản lý thời gian hiệu quả.',
+    languages: ['Tiếng Việt', 'Tiếng Anh (bản ngữ)'],
+    location: 'Hà Nội',
+    reviews: [
+      {
+        id: '1',
+        studentName: 'Nguyễn Đức Anh',
+        rating: 5,
+        comment: 'Thầy dạy rất chuyên nghiệp, em đã đạt 1520 SAT!',
+        date: '2024-03-19'
+      }
+    ]
+  },
+  '8': {
+    id: '8',
+    name: 'Ngô Thị Hương',
+    avatar: tutor4Avatar,
+    subjects: [
+      { name: 'Tiếng Anh', grades: 'lớp 6-12' },
+      { name: 'IELTS', grades: '5.0-7.5' }
+    ],
+    rating: 4.8,
+    reviewCount: 67,
+    hourlyRate: 220000,
+    lessonDuration: 1.5,
+    experience: '5 năm dạy Tiếng Anh',
+    verified: true,
+    hasVideo: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    occupation: 'professional' as const,
+    availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)'],
+    bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.0, chuyên dạy IELTS và Tiếng Anh giao tiếp.',
+    education: [
+      { school: 'Đại học Ngoại ngữ - ĐHQGHN', degree: 'Cử nhân Ngôn ngữ Anh', year: '2018' }
+    ],
+    certifications: [
+      'IELTS 8.0 Overall',
+      'Cambridge TKT',
+      'TESOL Certificate'
+    ],
+    achievements: [
+      'Học viên đạt IELTS 7.0+: 45 người',
+      'Học viên cải thiện từ 5.0 lên 7.0 trong 6 tháng: 12 người'
+    ],
+    teachingStyle: 'Tôi tập trung vào phát triển 4 kỹ năng nghe-nói-đọc-viết một cách cân bằng, kết hợp luyện đề và phản hồi chi tiết.',
+    languages: ['Tiếng Việt', 'Tiếng Anh (thành thạo)'],
+    location: 'Hà Nội',
+    reviews: [
+      {
+        id: '1',
+        studentName: 'Phạm Thùy Linh',
+        rating: 5,
+        comment: 'Cô dạy IELTS rất tận tâm, em đã đạt 7.5!',
+        date: '2024-03-20'
       }
     ]
   }

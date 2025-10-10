@@ -55,9 +55,11 @@ export function TutorCard({
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="font-semibold text-lg truncate" data-testid={`text-tutor-name-${id}`}>
-                {name}
-              </h3>
+              <Link href={`/tutor/${id}`}>
+                <h3 className="font-semibold text-lg truncate hover:text-primary transition-colors cursor-pointer" data-testid={`text-tutor-name-${id}`}>
+                  {name}
+                </h3>
+              </Link>
               {verified && (
                 <Badge variant="outline" className="gap-1 shrink-0">
                   <CheckCircle2 className="h-3 w-3 text-chart-2" />
