@@ -27,6 +27,7 @@ Preferred communication style: Simple, everyday language.
 **Design System:**
 - Custom color palette optimized for educational platforms
 - Vietnamese-focused typography using Inter font family
+- Logo: Graduation cap icon with "10 điểm" text (symbolizing academic excellence)
 - Comprehensive component library including cards, modals, forms, and data display components
 - Mobile-responsive design with breakpoint utilities
 
