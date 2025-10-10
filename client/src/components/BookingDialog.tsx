@@ -11,6 +11,7 @@ interface BookingDialogProps {
   onOpenChange: (open: boolean) => void;
   tutorName: string;
   hourlyRate: number;
+  lessonDuration: number; // Thời lượng buổi học (giờ)
   isTrial?: boolean;
 }
 
@@ -19,6 +20,7 @@ export function BookingDialog({
   onOpenChange, 
   tutorName, 
   hourlyRate,
+  lessonDuration,
   isTrial = false 
 }: BookingDialogProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -32,11 +34,27 @@ export function BookingDialog({
     }
   }, [open]);
 
+  // Hàm tính giờ kết thúc từ giờ bắt đầu và thời lượng
+  const calculateEndTime = (startTime: string, durationInHours: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationInHours * 60;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+
   const timeSlots = [
     "08:00", "09:00", "10:00", "11:00", 
     "14:00", "15:00", "16:00", "17:00", 
     "18:00", "19:00", "20:00", "21:00"
   ];
+
+  // Tạo time slots với cả giờ bắt đầu và kết thúc
+  const timeSlotRanges = timeSlots.map(startTime => ({
+    start: startTime,
+    end: calculateEndTime(startTime, lessonDuration),
+    display: `${startTime} - ${calculateEndTime(startTime, lessonDuration)}`
+  }));
 
   const handleBooking = () => {
     if (!selectedDate || !selectedTime) {
@@ -44,8 +62,13 @@ export function BookingDialog({
       return;
     }
     
+    const endTime = calculateEndTime(selectedTime, lessonDuration);
+    const durationText = lessonDuration >= 1 
+      ? `${lessonDuration} giờ` 
+      : `${lessonDuration * 60} phút`;
+    
     // TODO: Implement actual booking logic
-    alert(`Đã đặt lịch ${isTrial ? 'học thử' : 'học'} với ${tutorName}\nNgày: ${selectedDate.toLocaleDateString('vi-VN')}\nGiờ: ${selectedTime}`);
+    alert(`Đã đặt lịch ${isTrial ? 'học thử' : 'học'} với ${tutorName}\nNgày: ${selectedDate.toLocaleDateString('vi-VN')}\nCa học: ${selectedTime} - ${endTime}\nThời lượng: ${durationText}`);
     onOpenChange(false);
   };
 
@@ -91,23 +114,23 @@ export function BookingDialog({
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Chọn giờ học
+              Chọn ca học
             </Label>
             <RadioGroup value={selectedTime} onValueChange={setSelectedTime}>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {timeSlots.map((time) => (
-                  <div key={time} className="flex items-center">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {timeSlotRanges.map((slot) => (
+                  <div key={slot.start} className="flex items-center">
                     <RadioGroupItem 
-                      value={time} 
-                      id={`time-${time}`}
+                      value={slot.start} 
+                      id={`time-${slot.start}`}
                       className="peer sr-only"
-                      data-testid={`radio-time-${time}`}
+                      data-testid={`radio-time-${slot.start}`}
                     />
                     <Label
-                      htmlFor={`time-${time}`}
-                      className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 text-center font-medium hover-elevate peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                      htmlFor={`time-${slot.start}`}
+                      className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 text-center text-sm font-medium hover-elevate peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
                     >
-                      {time}
+                      {slot.display}
                     </Label>
                   </div>
                 ))}
@@ -127,9 +150,17 @@ export function BookingDialog({
                   month: 'long', 
                   day: 'numeric' 
                 })}</p>
-                <p><strong>Giờ:</strong> {selectedTime}</p>
-                <p><strong>Thời lượng:</strong> {isTrial ? "30 phút" : "60 phút"}</p>
-                <p><strong>Học phí:</strong> {isTrial ? "Miễn phí" : `${hourlyRate.toLocaleString('vi-VN')}đ`}</p>
+                <p><strong>Ca học:</strong> {selectedTime} - {calculateEndTime(selectedTime, lessonDuration)}</p>
+                <p><strong>Thời lượng:</strong> {
+                  lessonDuration >= 1 
+                    ? `${lessonDuration} giờ` 
+                    : `${lessonDuration * 60} phút`
+                }</p>
+                <p><strong>Học phí:</strong> {
+                  isTrial 
+                    ? "Miễn phí" 
+                    : `${(hourlyRate * lessonDuration).toLocaleString('vi-VN')}đ`
+                }</p>
               </div>
             </div>
           )}

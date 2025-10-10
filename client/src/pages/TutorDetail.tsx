@@ -294,11 +294,10 @@ export default function TutorDetail() {
 
         {/* Tabs Section */}
         <Tabs defaultValue="about" className="mb-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="about">Giới thiệu</TabsTrigger>
             <TabsTrigger value="schedule">Lịch trống</TabsTrigger>
             <TabsTrigger value="reviews">Đánh giá</TabsTrigger>
-            <TabsTrigger value="achievements">Thành tích</TabsTrigger>
           </TabsList>
 
           {/* About Tab */}
@@ -462,30 +461,6 @@ export default function TutorDetail() {
                     </p>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Achievements Tab */}
-          <TabsContent value="achievements">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
-                  Thành tích nổi bật
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {tutor.achievements.map((achievement: string, index: number) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                        <Award className="h-4 w-4 text-primary" />
-                      </div>
-                      <span>{achievement}</span>
-                    </li>
-                  ))}
-                </ul>
               </CardContent>
             </Card>
           </TabsContent>
