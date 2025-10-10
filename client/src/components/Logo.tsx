@@ -11,39 +11,34 @@ const sizes = {
 
 export function Logo({ className = '', size = 'md' }: LogoProps) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-3 ${className}`}>
       <svg 
         className={sizes[size]} 
-        viewBox="0 0 40 40" 
+        viewBox="0 0 48 48" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Background circle */}
-        <rect width="40" height="40" rx="8" className="fill-primary"/>
+        {/* Main circle background */}
+        <circle cx="24" cy="24" r="22" className="fill-primary"/>
         
-        {/* Graduation cap (mortarboard) */}
-        {/* Cap base */}
+        {/* Book icon - simplified and clear */}
         <path 
-          d="M20 14L8 19L20 24L32 19L20 14Z" 
+          d="M14 16C14 14.8954 14.8954 14 16 14H20C21.1046 14 22 14.8954 22 16V32C22 33.1046 21.1046 34 20 34H16C14.8954 34 14 33.1046 14 32V16Z" 
           className="fill-primary-foreground"
         />
-        {/* Cap top */}
         <path 
-          d="M20 14L8 19L20 24L32 19L20 14Z" 
-          className="fill-primary-foreground opacity-90"
+          d="M26 16C26 14.8954 26.8954 14 28 14H32C33.1046 14 34 14.8954 34 16V32C34 33.1046 33.1046 34 32 34H28C26.8954 34 26 33.1046 26 32V16Z" 
+          className="fill-primary-foreground"
         />
-        {/* Tassel */}
-        <circle cx="32" cy="19" r="1.5" className="fill-chart-5"/>
-        <line x1="32" y1="20.5" x2="32" y2="24" stroke="currentColor" strokeWidth="0.8" className="text-chart-5"/>
         
-        {/* Books/Students representing classroom */}
-        <rect x="17" y="25" width="6" height="8" rx="0.5" className="fill-primary-foreground opacity-80"/>
-        <line x1="17" y1="28" x2="23" y2="28" className="stroke-primary" strokeWidth="0.5"/>
-        <line x1="17" y1="30" x2="23" y2="30" className="stroke-primary" strokeWidth="0.5"/>
+        {/* Book spine details */}
+        <line x1="24" y1="14" x2="24" y2="34" className="stroke-primary" strokeWidth="2"/>
+        <line x1="18" y1="20" x2="18" y2="28" className="stroke-primary" strokeWidth="1.5"/>
+        <line x1="30" y1="20" x2="30" y2="28" className="stroke-primary" strokeWidth="1.5"/>
       </svg>
       <div className="flex flex-col leading-none">
-        <span className="font-bold text-xl">LopHoc</span>
-        <span className="text-xs text-primary font-semibold">.Online</span>
+        <span className="font-bold text-xl tracking-tight">LopHoc</span>
+        <span className="text-xs text-primary font-semibold tracking-wide">.Online</span>
       </div>
     </div>
   );

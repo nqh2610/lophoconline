@@ -17,6 +17,7 @@ import ForStudents from "@/pages/ForStudents";
 import ForParents from "@/pages/ForParents";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import TutorDetail from "@/pages/TutorDetail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/tutor/:id" component={TutorDetail} />
       <Route path="/about" component={About} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/pricing" component={Pricing} />

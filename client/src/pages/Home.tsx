@@ -1,20 +1,18 @@
-import { useState } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { TutorCard } from "@/components/TutorCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { FeatureCard } from "@/components/FeatureCard";
 import { TestimonialCard } from "@/components/TestimonialCard";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { 
   Video, 
   Shield, 
   Clock, 
-  DollarSign, 
-  Search, 
-  UserCheck,
-  CheckCircle2,
+  DollarSign,
   Users,
   GraduationCap,
+  CheckCircle2,
   Award
 } from "lucide-react";
 
@@ -22,11 +20,9 @@ import tutor1Avatar from '@assets/stock_images/vietnamese_female_te_395ea66e.jpg
 import tutor2Avatar from '@assets/stock_images/vietnamese_male_teac_91dbce7c.jpg';
 import tutor3Avatar from '@assets/stock_images/asian_young_student__05aa4baa.jpg';
 import tutor4Avatar from '@assets/stock_images/vietnamese_female_te_513f7461.jpg';
-import tutor5Avatar from '@assets/stock_images/vietnamese_male_teac_12f7c494.jpg';
-import tutor6Avatar from '@assets/stock_images/vietnamese_female_te_727f8381.jpg';
 
 export default function Home() {
-  const mockTutors = [
+  const featuredTutors = [
     {
       id: '1',
       name: 'Nguyễn Thị Mai',
@@ -94,42 +90,7 @@ export default function Home() {
       hasVideo: true,
       occupation: 'teacher' as const,
       availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)']
-    },
-    {
-      id: '5',
-      name: 'Hoàng Đức Anh',
-      avatar: tutor5Avatar,
-      subjects: [
-        { name: 'Văn', grades: 'lớp 10-12' },
-        { name: 'Sử', grades: 'lớp 10-12' },
-        { name: 'Địa', grades: 'lớp 10-12' }
-      ],
-      rating: 4.6,
-      reviewCount: 42,
-      hourlyRate: 140000,
-      experience: '6 năm dạy THPT, chuyên khối C',
-      verified: true,
-      hasVideo: true,
-      occupation: 'teacher' as const,
-      availableSlots: ['T3, T5 (19h-21h)', 'CN (9h-17h)']
-    },
-    {
-      id: '6',
-      name: 'Đỗ Lan Anh',
-      avatar: tutor6Avatar,
-      subjects: [
-        { name: 'Tiếng Anh', grades: 'lớp 1-9' },
-        { name: 'Tiếng Anh', grades: 'TOEIC' }
-      ],
-      rating: 4.9,
-      reviewCount: 210,
-      hourlyRate: 230000,
-      experience: '10 năm kinh nghiệm, chứng chỉ TESOL',
-      verified: true,
-      hasVideo: true,
-      occupation: 'professional' as const,
-      availableSlots: ['T2-T6 (18h-20h)', 'T7, CN (9h-20h)']
-    },
+    }
   ];
 
   return (
@@ -171,7 +132,7 @@ export default function Home() {
       </section>
 
       {/* Statistics Section */}
-      <section className="py-16 bg-primary/5">
+      <section className="py-12 bg-primary/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
@@ -214,62 +175,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Cách thức hoạt động</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Chỉ 3 bước đơn giản để bắt đầu học với gia sư chất lượng
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold">
-                  1
-                </div>
-              </div>
-              <div className="flex justify-center mb-4">
-                <Search className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Tìm gia sư</h3>
-              <p className="text-muted-foreground">
-                Tìm kiếm gia sư phù hợp với nhu cầu học tập của bạn
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold">
-                  2
-                </div>
-              </div>
-              <div className="flex justify-center mb-4">
-                <UserCheck className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Đặt lịch học</h3>
-              <p className="text-muted-foreground">
-                Chọn thời gian phù hợp và đặt buổi học thử miễn phí
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold">
-                  3
-                </div>
-              </div>
-              <div className="flex justify-center mb-4">
-                <Video className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Bắt đầu học</h3>
-              <p className="text-muted-foreground">
-                Tham gia lớp học trực tuyến và nâng cao kiến thức
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Tutors Section */}
       <section className="py-12 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -283,7 +188,7 @@ export default function Home() {
                 <div>
                   <h2 className="text-2xl font-bold mb-1">Gia sư nổi bật</h2>
                   <p className="text-sm text-muted-foreground">
-                    {mockTutors.length} gia sư được tìm thấy
+                    {featuredTutors.length} gia sư được tìm thấy
                   </p>
                 </div>
                 <Button variant="outline" size="sm" data-testid="button-sort">
@@ -292,7 +197,7 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockTutors.map((tutor) => (
+                {featuredTutors.map((tutor) => (
                   <TutorCard key={tutor.id} {...tutor} />
                 ))}
               </div>
@@ -316,7 +221,7 @@ export default function Home() {
               Hàng nghìn học viên đã đạt được kết quả học tập tốt với LopHoc.Online
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <TestimonialCard
               name="Nguyễn Minh Anh"
               role="Học sinh lớp 12"
@@ -330,13 +235,6 @@ export default function Home() {
               avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=testimonial2"
               content="Con tôi học Toán với cô Mai được 3 tháng, điểm số cải thiện rõ rệt. Cô rất nhiệt tình và chu đáo."
               rating={5}
-            />
-            <TestimonialCard
-              name="Lê Hoàng Nam"
-              role="Học sinh lớp 10"
-              avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=testimonial3"
-              content="Nền tảng rất tiện lợi, dễ sử dụng. Em có thể học mọi lúc mọi nơi với gia sư chất lượng."
-              rating={4}
             />
           </div>
         </div>
@@ -354,9 +252,11 @@ export default function Home() {
               <Button size="lg" data-testid="button-cta-student">
                 Tìm gia sư ngay
               </Button>
-              <Button size="lg" variant="outline" data-testid="button-cta-tutor">
-                Trở thành gia sư
-              </Button>
+              <Link href="/for-tutors">
+                <Button size="lg" variant="outline" data-testid="button-cta-tutor">
+                  Trở thành gia sư
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

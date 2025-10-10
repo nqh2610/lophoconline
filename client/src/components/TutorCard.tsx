@@ -3,6 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from "wouter";
 
 interface SubjectDetail {
   name: string;
@@ -114,8 +115,10 @@ export function TutorCard({
           <span className="text-2xl font-bold text-primary" data-testid={`text-price-${id}`}>{hourlyRate.toLocaleString('vi-VN')}đ</span>
           <span className="text-sm text-muted-foreground">/giờ</span>
         </div>
-        <Button size="sm" data-testid={`button-view-profile-${id}`}>
-          Xem chi tiết
+        <Button size="sm" data-testid={`button-view-profile-${id}`} asChild>
+          <Link href={`/tutor/${id}`}>
+            Xem chi tiết
+          </Link>
         </Button>
       </CardFooter>
     </Card>
