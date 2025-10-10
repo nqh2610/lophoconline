@@ -21,44 +21,55 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
         {/* Circular background */}
         <circle cx="24" cy="24" r="22" className="fill-primary"/>
         
-        {/* Computer/Laptop Screen */}
-        <rect 
-          x="12" 
-          y="16" 
-          width="24" 
-          height="16" 
-          rx="1" 
-          className="stroke-primary-foreground fill-background"
-          strokeWidth="1.5"
+        {/* Graduation cap - mortarboard (top square) */}
+        <path 
+          d="M 14 20 L 24 16 L 34 20 L 24 24 Z" 
+          className="fill-primary-foreground"
         />
         
-        {/* Screen display with "10 điểm" */}
+        {/* Graduation cap - base */}
+        <ellipse 
+          cx="24" 
+          cy="26" 
+          rx="8" 
+          ry="3" 
+          className="fill-primary-foreground"
+        />
+        
+        {/* Cap bottom part */}
+        <path 
+          d="M 16 26 L 16 30 Q 24 33 32 30 L 32 26" 
+          className="fill-primary-foreground"
+        />
+        
+        {/* Tassel */}
+        <line 
+          x1="34" 
+          y1="20" 
+          x2="36" 
+          y2="24" 
+          className="stroke-primary-foreground" 
+          strokeWidth="1.5"
+        />
+        <circle 
+          cx="36" 
+          cy="25" 
+          r="1.5" 
+          className="fill-primary-foreground"
+        />
+        
+        {/* "10 điểm" text */}
         <text 
           x="24" 
-          y="26" 
+          y="20" 
           className="fill-primary" 
-          fontSize="9" 
+          fontSize="7" 
           fontWeight="bold" 
           textAnchor="middle"
           fontFamily="Arial, sans-serif"
         >
           10 điểm
         </text>
-        
-        {/* Laptop base/keyboard */}
-        <path 
-          d="M 10 32 L 12 34 L 36 34 L 38 32 Z" 
-          className="fill-primary-foreground"
-        />
-        
-        {/* Stand/hinge */}
-        <rect 
-          x="23" 
-          y="32" 
-          width="2" 
-          height="2" 
-          className="fill-primary-foreground"
-        />
       </svg>
       <div className="flex flex-col leading-none">
         <span className="font-bold text-xl tracking-tight">LopHoc</span>
