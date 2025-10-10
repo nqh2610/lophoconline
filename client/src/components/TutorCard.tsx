@@ -1,21 +1,34 @@
-import { Star, CheckCircle2, Video, Clock } from "lucide-react";
+import { Star, CheckCircle2, Video, Clock, Briefcase } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+interface SubjectDetail {
+  name: string;
+  grades: string;
+}
+
 interface TutorCardProps {
   id: string;
   name: string;
   avatar?: string;
-  subjects: string[];
+  subjects: SubjectDetail[];
   rating: number;
   reviewCount: number;
   hourlyRate: number;
   experience: string;
   verified: boolean;
   hasVideo: boolean;
+  occupation: 'student' | 'teacher' | 'professional';
+  availableSlots: string[];
 }
+
+const occupationLabels = {
+  student: 'Sinh viên',
+  teacher: 'Giáo viên',
+  professional: 'Đã đi làm'
+};
 
 export function TutorCard({
   name,
@@ -28,11 +41,13 @@ export function TutorCard({
   verified,
   hasVideo,
   id,
+  occupation,
+  availableSlots,
 }: TutorCardProps) {
   return (
     <Card className="hover-elevate overflow-visible" data-testid={`card-tutor-${id}`}>
       <CardContent className="p-4">
-        <div className="flex gap-4">
+        <div className="flex gap-4 mb-4">
           <Avatar className="h-16 w-16">
             <AvatarImage src={avatar} alt={name} />
             <AvatarFallback>{name[0]}</AvatarFallback>
@@ -49,15 +64,13 @@ export function TutorCard({
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground mb-2">{experience}</p>
-            <div className="flex flex-wrap gap-1 mb-3">
-              {subjects.slice(0, 3).map((subject) => (
-                <Badge key={subject} variant="secondary" className="text-xs">
-                  {subject}
-                </Badge>
-              ))}
+            <div className="flex items-center gap-2 mb-2">
+              <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">{occupationLabels[occupation]}</span>
             </div>
-            <div className="flex items-center gap-4 text-sm">
+            <p className="text-sm text-muted-foreground mb-3">{experience}</p>
+            
+            <div className="flex items-center gap-4 text-sm mb-2">
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4 fill-chart-5 text-chart-5" />
                 <span className="font-medium">{rating.toFixed(1)}</span>
@@ -70,6 +83,29 @@ export function TutorCard({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <h4 className="text-sm font-medium mb-2">Môn dạy:</h4>
+            <div className="flex flex-wrap gap-2">
+              {subjects.map((subject, idx) => (
+                <Badge key={idx} variant="secondary" className="text-xs">
+                  {subject.name} {subject.grades}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              Lịch còn trống:
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {availableSlots.join(', ')}
+            </p>
           </div>
         </div>
       </CardContent>
