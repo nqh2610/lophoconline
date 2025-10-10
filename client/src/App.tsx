@@ -8,6 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
+import Tutors from "@/pages/Tutors";
 import About from "@/pages/About";
 import HowItWorks from "@/pages/HowItWorks";
 import Pricing from "@/pages/Pricing";
@@ -25,6 +26,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/tutors" component={Tutors} />
       <Route path="/tutor/:id" component={TutorDetail} />
       <Route path="/about" component={About} />
       <Route path="/how-it-works" component={HowItWorks} />

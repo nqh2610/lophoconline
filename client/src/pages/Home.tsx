@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { TutorCard } from "@/components/TutorCard";
-import { FilterPanel } from "@/components/FilterPanel";
 import { FeatureCard } from "@/components/FeatureCard";
 import { TestimonialCard } from "@/components/TestimonialCard";
 import { Button } from "@/components/ui/button";
@@ -23,7 +21,6 @@ import tutor3Avatar from '@assets/stock_images/asian_young_student__05aa4baa.jpg
 import tutor4Avatar from '@assets/stock_images/vietnamese_female_te_513f7461.jpg';
 
 export default function Home() {
-  const [showAll, setShowAll] = useState(false);
   const featuredTutors = [
     {
       id: '1',
@@ -163,8 +160,6 @@ export default function Home() {
       availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)']
     }
   ];
-  
-  const displayedTutors = showAll ? featuredTutors : featuredTutors.slice(0, 4);
 
   return (
     <div className="min-h-screen">
@@ -251,42 +246,25 @@ export default function Home() {
       {/* Tutors Section */}
       <section className="py-12 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <aside className="lg:w-80 shrink-0">
-              <FilterPanel />
-            </aside>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Gia sư nổi bật</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Khám phá các gia sư hàng đầu với kinh nghiệm và chuyên môn được xác thực
+            </p>
+          </div>
 
-            <main className="flex-1">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1">Gia sư nổi bật</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {displayedTutors.length} / {featuredTutors.length} gia sư
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" data-testid="button-sort">
-                  Sắp xếp: Đề xuất
-                </Button>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredTutors.slice(0, 4).map((tutor) => (
+              <TutorCard key={tutor.id} {...tutor} />
+            ))}
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayedTutors.map((tutor) => (
-                  <TutorCard key={tutor.id} {...tutor} />
-                ))}
-              </div>
-
-              {!showAll && (
-                <div className="mt-8 flex justify-center">
-                  <Button 
-                    variant="outline" 
-                    data-testid="button-load-more"
-                    onClick={() => setShowAll(true)}
-                  >
-                    Xem thêm gia sư ({featuredTutors.length - 4} gia sư còn lại)
-                  </Button>
-                </div>
-              )}
-            </main>
+          <div className="mt-12 flex justify-center">
+            <Link href="/tutors">
+              <Button size="lg" data-testid="button-view-all-tutors">
+                Xem tất cả gia sư
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
