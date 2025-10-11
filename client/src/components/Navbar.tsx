@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Search, Bell, User, LogIn } from "lucide-react";
+import { Search, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "./ThemeToggle";
-import { Badge } from "@/components/ui/badge";
 import { Logo } from "./Logo";
 import { LoginDialog } from "./LoginDialog";
+import { NotificationDropdown } from "./NotificationDropdown";
 
 export function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
@@ -36,12 +36,7 @@ export function Navbar() {
               <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
                 Trở thành gia sư
               </Button>
-              <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
-                <Bell className="h-5 w-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                  3
-                </Badge>
-              </Button>
+              <NotificationDropdown />
               <ThemeToggle />
               <Button 
                 variant="default" 
