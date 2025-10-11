@@ -83,7 +83,28 @@ Preferred communication style: Simple, everyday language.
 - Toggle between login and register modes
 - Form validation with react-hook-form and zod
 - Integrated into Navbar with login button trigger
+- ForgotPasswordDialog for password reset:
+  - Email input for reset link
+  - Success state with auto-close after 3 seconds
+  - Toast notification confirmation
+  - Triggered from LoginDialog "Quên mật khẩu?" link
 - User schema with hashed passwords prepared for backend integration
+
+**Notification System:**
+- NotificationDropdown component in Navbar (added October 11, 2025)
+- Real-time notification display with dropdown menu
+- Three notification types: lesson, payment, system
+- Visual indicators:
+  - Badge showing unread count
+  - Blue dot for unread notifications
+  - Accent background for unread items
+- Interactive features:
+  - "Đánh dấu đã đọc" button to mark all notifications as read
+  - "Xem tất cả thông báo" button to navigate to full notification page
+  - ScrollArea for long notification lists (400px max height)
+- State management with useState for local notification updates
+- Toast notifications for user feedback
+- Mock data structure with 3 sample notifications (2 unread, 1 read)
 
 **Tutor Discovery:**
 - Dedicated /tutors page for searching and filtering tutors (added October 2025)
