@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { TutorCard } from "@/components/TutorCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import tutor1Avatar from '@assets/stock_images/vietnamese_female_te_395ea66e.jpg';
 import tutor2Avatar from '@assets/stock_images/vietnamese_male_teac_91dbce7c.jpg';
@@ -148,9 +155,36 @@ const mockTutors = [
   }
 ];
 
+type SortOption = 'default' | 'price-asc' | 'price-desc' | 'rating-desc' | 'experience-desc' | 'reviews-desc';
+
 export default function Tutors() {
-  // For now, show all tutors. Filtering logic will be added when FilterPanel is updated
-  const displayedTutors = mockTutors;
+  const [sortBy, setSortBy] = useState<SortOption>('default');
+
+  // Extract years of experience from experience string
+  const getExperienceYears = (experience: string): number => {
+    const match = experience.match(/(\d+)\s*năm/);
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  // Sort tutors based on selected option
+  const displayedTutors = useMemo(() => {
+    const sorted = [...mockTutors];
+    
+    switch (sortBy) {
+      case 'price-asc':
+        return sorted.sort((a, b) => a.hourlyRate - b.hourlyRate);
+      case 'price-desc':
+        return sorted.sort((a, b) => b.hourlyRate - a.hourlyRate);
+      case 'rating-desc':
+        return sorted.sort((a, b) => b.rating - a.rating);
+      case 'experience-desc':
+        return sorted.sort((a, b) => getExperienceYears(b.experience) - getExperienceYears(a.experience));
+      case 'reviews-desc':
+        return sorted.sort((a, b) => b.reviewCount - a.reviewCount);
+      default:
+        return sorted;
+    }
+  }, [sortBy]);
 
   return (
     <div className="min-h-screen py-8">
@@ -179,10 +213,26 @@ export default function Tutors() {
 
           {/* Tutor List */}
           <main className="flex-1">
-            <div className="mb-6">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm text-muted-foreground" data-testid="text-results-count">
                 Tìm thấy <span className="font-semibold text-foreground">{displayedTutors.length}</span> gia sư
               </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sắp xếp:</span>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                  <SelectTrigger className="w-[200px]" data-testid="select-sort">
+                    <SelectValue placeholder="Mặc định" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Mặc định</SelectItem>
+                    <SelectItem value="price-asc">Giá thấp đến cao</SelectItem>
+                    <SelectItem value="price-desc">Giá cao đến thấp</SelectItem>
+                    <SelectItem value="rating-desc">Điểm đánh giá cao nhất</SelectItem>
+                    <SelectItem value="experience-desc">Kinh nghiệm nhiều nhất</SelectItem>
+                    <SelectItem value="reviews-desc">Đánh giá nhiều nhất</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {displayedTutors.length > 0 ? (
