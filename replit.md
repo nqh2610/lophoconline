@@ -110,6 +110,12 @@ Preferred communication style: Simple, everyday language.
 - Dedicated /tutors page for searching and filtering tutors (added October 2025)
 - Home page displays 8 featured tutors in 2-row grid layout (4 tutors per row on desktop)
 - Filter panel with subject, grade level, and price range filters (located on /tutors page)
+- Sorting functionality with Select dropdown (added October 11, 2025):
+  - Sort by price: ascending (low to high) or descending (high to low)
+  - Sort by rating: high to low
+  - Sort by experience: most experienced first (extracts years from experience strings)
+  - Sort by review count: most reviewed first
+  - Memoized sorting logic for performance optimization
 - Enhanced TutorCard component with improved visual hierarchy (updated October 11, 2025):
   - Larger avatar (80px) with primary border for prominence
   - Three-section layout: Header (avatar, name, badges) → Info (subjects, schedule) → Footer (price, CTA)
@@ -121,6 +127,25 @@ Preferred communication style: Simple, everyday language.
   - Equal-height cards (434px) with consistent spacing (24px gaps)
 - Full tutor list of 8 tutors with expanded subjects (Math, Physics, Chemistry, English, IELTS, History, Geography, Computer Science, SAT, TOEFL)
 - Mock data structure supporting real-time tutor information
+
+**Tutor Registration:**
+- TutorRegistrationForm component for prospective tutors (added October 11, 2025)
+- Dedicated /tutor-registration route and page
+- Navigation via "Trở thành gia sư" button in Navbar
+- Multi-section registration form with comprehensive validation:
+  - Personal information: Full name, email, phone number
+  - Education background: Degree level, university, major, graduation year
+  - Teaching experience: Years of experience, current occupation
+  - Subjects and grades: Multiple selection for subjects taught and grade levels
+  - Teaching profile: Bio (50-1000 chars), teaching methodology description
+  - Availability: Day selection and time slot preferences
+  - Hourly rate: Pricing in VNĐ
+- Form validation using Zod schema with react-hook-form
+- Controlled Select components with proper value binding
+- Interactive UI with card-based layout for each section
+- Success feedback with toast notification and form reset
+- Comprehensive test coverage with data-testid attributes
+- Ready for backend integration with API endpoints
 
 **Lesson Management:**
 - Lesson card component with status tracking (pending, confirmed, completed, cancelled)

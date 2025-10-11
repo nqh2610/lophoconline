@@ -198,7 +198,7 @@ export function TutorRegistrationForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Trình độ học vấn *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-education">
                         <SelectValue placeholder="Chọn trình độ" />
@@ -281,7 +281,7 @@ export function TutorRegistrationForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Số năm kinh nghiệm *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-experience">
                           <SelectValue placeholder="Chọn số năm" />
@@ -306,7 +306,7 @@ export function TutorRegistrationForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nghề nghiệp hiện tại *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-occupation">
                           <SelectValue placeholder="Chọn nghề nghiệp" />
