@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { Bell, CheckCircle, Calendar, DollarSign, X } from "lucide-react";
 import {
   DropdownMenu,
@@ -10,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface Notification {
   id: string;
@@ -20,7 +23,7 @@ interface Notification {
   read: boolean;
 }
 
-const mockNotifications: Notification[] = [
+const initialNotifications: Notification[] = [
   {
     id: "1",
     type: "lesson",
@@ -59,7 +62,27 @@ const getNotificationIcon = (type: Notification["type"]) => {
 };
 
 export function NotificationDropdown() {
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    toast({
+      title: "Đã đánh dấu tất cả",
+      description: "Tất cả thông báo đã được đánh dấu là đã đọc",
+    });
+  };
+
+  const handleViewAll = () => {
+    setLocation("/notifications");
+    toast({
+      title: "Đang chuyển hướng",
+      description: "Đang mở trang thông báo...",
+    });
+  };
 
   return (
     <DropdownMenu>
@@ -89,6 +112,7 @@ export function NotificationDropdown() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={handleMarkAllRead}
               className="h-auto p-0 text-xs text-primary hover:underline"
               data-testid="button-mark-all-read"
             >
@@ -98,13 +122,13 @@ export function NotificationDropdown() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <ScrollArea className="h-[400px]">
-          {mockNotifications.length === 0 ? (
+          {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <Bell className="h-12 w-12 mb-2 opacity-20" />
               <p className="text-sm">Không có thông báo</p>
             </div>
           ) : (
-            mockNotifications.map((notification) => (
+            notifications.map((notification: Notification) => (
               <DropdownMenuItem
                 key={notification.id}
                 className={`flex gap-3 p-4 cursor-pointer ${
@@ -139,6 +163,7 @@ export function NotificationDropdown() {
         <div className="p-2">
           <Button
             variant="ghost"
+            onClick={handleViewAll}
             className="w-full justify-center text-sm"
             data-testid="button-view-all-notifications"
           >
