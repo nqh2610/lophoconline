@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Lock } from "lucide-react";
 import { SiGoogle, SiFacebook } from "react-icons/si";
+import { ForgotPasswordDialog } from "./ForgotPasswordDialog";
 
 interface LoginDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
   const handleEmailAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,6 +142,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
               <div className="flex justify-end">
                 <button
                   type="button"
+                  onClick={() => setForgotPasswordOpen(true)}
                   className="text-sm text-primary hover:underline"
                   data-testid="button-forgot-password"
                 >
@@ -169,6 +172,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
           </div>
         </div>
       </DialogContent>
+      <ForgotPasswordDialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen} />
     </Dialog>
   );
 }
