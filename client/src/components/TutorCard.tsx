@@ -57,7 +57,7 @@ export function TutorCard({
             </Avatar>
             <div className="flex-1 min-w-0">
               <Link href={`/tutor/${id}`}>
-                <h3 className="font-bold text-xl mb-1 truncate hover:text-primary transition-colors cursor-pointer" data-testid={`text-tutor-name-${id}`}>
+                <h3 className="font-bold text-xl mb-1 hover:text-primary transition-colors cursor-pointer" data-testid={`text-tutor-name-${id}`}>
                   {name}
                 </h3>
               </Link>
@@ -73,14 +73,14 @@ export function TutorCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-3 text-sm flex-wrap">
                 <div className="flex items-center gap-1" data-testid={`text-rating-${id}`}>
                   <Star className="h-4 w-4 fill-chart-5 text-chart-5" />
                   <span className="font-semibold">{rating.toFixed(1)}</span>
                   <span className="text-muted-foreground text-xs">({reviewCount})</span>
                 </div>
                 {hasVideo && (
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge variant="secondary" className="gap-1 shrink-0">
                     <Video className="h-3 w-3" />
                     <span className="text-xs">Video</span>
                   </Badge>

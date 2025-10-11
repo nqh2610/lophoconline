@@ -34,51 +34,51 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
         {/* Background circle with gradient */}
         <circle cx="32" cy="32" r="28" fill="url(#capGradient)" filter="url(#shadow)"/>
         
-        {/* Graduation cap - mortarboard top (clear and prominent in upper half) */}
+        {/* Graduation cap - mortarboard top (larger and more visible) */}
         <path 
-          d="M 14 18 L 32 12 L 50 18 L 32 24 Z" 
+          d="M 12 20 L 32 14 L 52 20 L 32 26 Z" 
           className="fill-primary-foreground"
-          opacity="0.95"
+          opacity="1"
         />
         
         {/* Cap shadow for depth */}
         <path 
-          d="M 32 24 L 50 18 L 50 19 L 32 25 Z" 
+          d="M 32 26 L 52 20 L 52 21 L 32 27 Z" 
           className="fill-primary-foreground"
-          opacity="0.4"
+          opacity="0.5"
         />
         
         {/* Graduation cap base - top edge */}
         <ellipse 
           cx="32" 
-          cy="26" 
-          rx="12" 
-          ry="3" 
+          cy="28" 
+          rx="13" 
+          ry="3.5" 
           className="fill-primary-foreground"
-          opacity="0.9"
+          opacity="0.95"
         />
         
         {/* Cap body with volume */}
         <path 
-          d="M 20 26 L 20 32 Q 32 36 44 32 L 44 26 Q 32 29 20 26" 
+          d="M 19 28 L 19 34 Q 32 38 45 34 L 45 28 Q 32 31 19 28" 
           className="fill-primary-foreground"
-          opacity="0.85"
+          opacity="0.9"
         />
         
         {/* Tassel with refined look */}
         <line 
-          x1="50" 
-          y1="18" 
-          x2="53" 
-          y2="24" 
+          x1="52" 
+          y1="20" 
+          x2="55" 
+          y2="26" 
           className="stroke-primary-foreground" 
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
         />
         <circle 
-          cx="53" 
-          cy="25.5" 
-          r="2" 
+          cx="55" 
+          cy="27.5" 
+          r="2.5" 
           className="fill-primary-foreground"
         />
         

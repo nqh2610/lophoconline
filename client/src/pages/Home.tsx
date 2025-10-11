@@ -244,7 +244,7 @@ export default function Home() {
       </section>
 
       {/* Tutors Section */}
-      <section className="py-12 bg-muted/50">
+      <section className="py-8 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Gia sư nổi bật</h2>
@@ -254,7 +254,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredTutors.slice(0, 4).map((tutor) => (
+            {featuredTutors.slice(0, 8).map((tutor) => (
               <TutorCard key={tutor.id} {...tutor} />
             ))}
           </div>
