@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 **Design System:**
 - Custom color palette optimized for educational platforms
 - Vietnamese-focused typography using Inter font family
-- Logo: Professional graduation cap icon in upper portion of circle with "10 điểm" text in lower portion for clear visibility (redesigned October 11, 2025)
+- Logo: Enhanced graduation cap icon with larger mortarboard (opacity 1.0) and thicker tassel (2.5px) in upper portion; "10 điểm" text in lower portion for maximum visibility (redesigned October 11, 2025)
 - Comprehensive component library including cards, modals, forms, and data display components
 - Mobile-responsive design with breakpoint utilities
 
@@ -76,19 +76,26 @@ Preferred communication style: Simple, everyday language.
 ### Key Features Architecture
 
 **Authentication System:**
-- Prepared session-based authentication
-- User schema with hashed passwords
-- Login/registration modal components
+- LoginDialog component with three authentication methods:
+  - Google OAuth login
+  - Facebook OAuth login
+  - JWT email/password authentication
+- Toggle between login and register modes
+- Form validation with react-hook-form and zod
+- Integrated into Navbar with login button trigger
+- User schema with hashed passwords prepared for backend integration
 
 **Tutor Discovery:**
 - Dedicated /tutors page for searching and filtering tutors (added October 2025)
-- Home page displays 4 featured tutors with link to view all tutors
+- Home page displays 8 featured tutors in 2-row grid layout (4 tutors per row on desktop)
 - Filter panel with subject, grade level, and price range filters (located on /tutors page)
 - Enhanced TutorCard component with improved visual hierarchy (updated October 11, 2025):
   - Larger avatar (80px) with primary border for prominence
   - Three-section layout: Header (avatar, name, badges) → Info (subjects, schedule) → Footer (price, CTA)
   - Visual dividers and colored indicators for better section separation
-  - Responsive badge wrapping prevents overflow on mobile
+  - Responsive badge wrapping with flex-wrap prevents overflow on mobile
+  - Video badge has shrink-0 to prevent compression
+  - Full tutor names displayed without truncation
   - Optimized typography: text-xl/text-2xl for price (reduced from text-2xl/text-3xl)
   - Equal-height cards (434px) with consistent spacing (24px gaps)
 - Full tutor list of 8 tutors with expanded subjects (Math, Physics, Chemistry, English, IELTS, History, Geography, Computer Science, SAT, TOEFL)
