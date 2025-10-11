@@ -61,13 +61,13 @@ export function TutorCard({
                   {name}
                 </h3>
               </Link>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Badge variant="secondary" className="gap-1.5">
                   <Briefcase className="h-3 w-3" />
                   <span className="text-xs" data-testid={`text-occupation-${id}`}>{occupationLabels[occupation]}</span>
                 </Badge>
                 {verified && (
-                  <Badge variant="outline" className="gap-1 border-chart-2/30 text-chart-2">
+                  <Badge variant="outline" className="gap-1 border-chart-2/30 text-chart-2 shrink-0">
                     <CheckCircle2 className="h-3 w-3" />
                     <span className="text-xs">Đã xác thực</span>
                   </Badge>
@@ -125,7 +125,7 @@ export function TutorCard({
       {/* Footer */}
       <CardFooter className="p-4 sm:p-6 pt-0 flex items-center justify-between gap-3 flex-wrap border-t bg-muted/30">
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl sm:text-3xl font-bold text-primary" data-testid={`text-price-${id}`}>{hourlyRate.toLocaleString('vi-VN')}đ</span>
+          <span className="text-xl sm:text-2xl font-bold text-primary" data-testid={`text-price-${id}`}>{hourlyRate.toLocaleString('vi-VN')}đ</span>
           <span className="text-sm text-muted-foreground font-medium">/giờ</span>
         </div>
         <Button size="default" data-testid={`button-view-profile-${id}`} asChild>

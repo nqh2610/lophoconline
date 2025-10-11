@@ -34,16 +34,16 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
         {/* Background circle with gradient */}
         <circle cx="32" cy="32" r="28" fill="url(#capGradient)" filter="url(#shadow)"/>
         
-        {/* Graduation cap - mortarboard top (refined shape) */}
+        {/* Graduation cap - mortarboard top (clear and prominent in upper half) */}
         <path 
-          d="M 18 26 L 32 20 L 46 26 L 32 32 Z" 
+          d="M 14 18 L 32 12 L 50 18 L 32 24 Z" 
           className="fill-primary-foreground"
           opacity="0.95"
         />
         
         {/* Cap shadow for depth */}
         <path 
-          d="M 32 32 L 46 26 L 46 27 L 32 33 Z" 
+          d="M 32 24 L 50 18 L 50 19 L 32 25 Z" 
           className="fill-primary-foreground"
           opacity="0.4"
         />
@@ -51,43 +51,43 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
         {/* Graduation cap base - top edge */}
         <ellipse 
           cx="32" 
-          cy="34" 
-          rx="10" 
-          ry="3.5" 
+          cy="26" 
+          rx="12" 
+          ry="3" 
           className="fill-primary-foreground"
           opacity="0.9"
         />
         
         {/* Cap body with volume */}
         <path 
-          d="M 22 34 L 22 40 Q 32 44 42 40 L 42 34 Q 32 37 22 34" 
+          d="M 20 26 L 20 32 Q 32 36 44 32 L 44 26 Q 32 29 20 26" 
           className="fill-primary-foreground"
           opacity="0.85"
         />
         
         {/* Tassel with refined look */}
         <line 
-          x1="46" 
-          y1="26" 
-          x2="49" 
-          y2="32" 
+          x1="50" 
+          y1="18" 
+          x2="53" 
+          y2="24" 
           className="stroke-primary-foreground" 
           strokeWidth="2"
           strokeLinecap="round"
         />
         <circle 
-          cx="49" 
-          cy="33.5" 
+          cx="53" 
+          cy="25.5" 
           r="2" 
           className="fill-primary-foreground"
         />
         
-        {/* "10" with professional styling */}
+        {/* "10" text - positioned clearly below cap in lower half */}
         <text 
           x="32" 
-          y="28" 
-          className="fill-background" 
-          fontSize="11" 
+          y="50" 
+          className="fill-primary-foreground" 
+          fontSize="13" 
           fontWeight="800" 
           textAnchor="middle"
           fontFamily="system-ui, -apple-system, sans-serif"
@@ -96,12 +96,12 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
           10
         </text>
         
-        {/* "điểm" text smaller and elegant */}
+        {/* "điểm" text - positioned below "10" */}
         <text 
           x="32" 
-          y="30" 
-          className="fill-background" 
-          fontSize="5" 
+          y="58" 
+          className="fill-primary-foreground" 
+          fontSize="6" 
           fontWeight="600" 
           textAnchor="middle"
           fontFamily="system-ui, -apple-system, sans-serif"
