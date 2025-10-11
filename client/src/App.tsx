@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Tutors from "@/pages/Tutors";
+import TutorRegistration from "@/pages/TutorRegistration";
 import About from "@/pages/About";
 import HowItWorks from "@/pages/HowItWorks";
 import Pricing from "@/pages/Pricing";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/tutors" component={Tutors} />
       <Route path="/tutor/:id" component={TutorDetail} />
+      <Route path="/tutor-registration" component={TutorRegistration} />
       <Route path="/about" component={About} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/pricing" component={Pricing} />

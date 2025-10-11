@@ -33,9 +33,11 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
-                Trở thành gia sư
-              </Button>
+              <Link href="/tutor-registration">
+                <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
+                  Trở thành gia sư
+                </Button>
+              </Link>
               <NotificationDropdown />
               <ThemeToggle />
               <Button 
