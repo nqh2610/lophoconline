@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 **Design System:**
 - Custom color palette optimized for educational platforms
 - Vietnamese-focused typography using Inter font family
-- Logo: Professional graduation cap with gradient background and "10 điểm" text in modern typography (symbolizing academic excellence - redesigned October 2025)
+- Logo: Professional graduation cap icon in upper portion of circle with "10 điểm" text in lower portion for clear visibility (redesigned October 11, 2025)
 - Comprehensive component library including cards, modals, forms, and data display components
 - Mobile-responsive design with breakpoint utilities
 
@@ -84,7 +84,13 @@ Preferred communication style: Simple, everyday language.
 - Dedicated /tutors page for searching and filtering tutors (added October 2025)
 - Home page displays 4 featured tutors with link to view all tutors
 - Filter panel with subject, grade level, and price range filters (located on /tutors page)
-- Tutor card component displaying credentials, ratings, and availability
+- Enhanced TutorCard component with improved visual hierarchy (updated October 11, 2025):
+  - Larger avatar (80px) with primary border for prominence
+  - Three-section layout: Header (avatar, name, badges) → Info (subjects, schedule) → Footer (price, CTA)
+  - Visual dividers and colored indicators for better section separation
+  - Responsive badge wrapping prevents overflow on mobile
+  - Optimized typography: text-xl/text-2xl for price (reduced from text-2xl/text-3xl)
+  - Equal-height cards (434px) with consistent spacing (24px gaps)
 - Full tutor list of 8 tutors with expanded subjects (Math, Physics, Chemistry, English, IELTS, History, Geography, Computer Science, SAT, TOEFL)
 - Mock data structure supporting real-time tutor information
 
