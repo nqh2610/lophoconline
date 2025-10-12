@@ -122,27 +122,43 @@ export function TutorRegistrationForm() {
   };
 
   const onSubmit = async (data: TutorRegistrationFormValues) => {
+    // Validate profile photo is required
+    if (!profilePhoto) {
+      toast({
+        title: "Thiếu ảnh đại diện",
+        description: "Vui lòng tải lên ảnh đại diện của bạn.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
       // TODO: Implement API call to register tutor
       console.log("Tutor registration data:", data);
+      console.log("Profile photo:", profilePhoto.name);
+      console.log("Certificates:", certificates.map(c => c.name));
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Reset form and file states
-      form.reset();
-      setProfilePhoto(null);
-      setCertificates([]);
-      
-      // Show success toast
+      // Show success toast BEFORE resetting form
       toast({
         title: "Đăng ký thành công!",
         description: "Chúng tôi sẽ xem xét hồ sơ và liên hệ với bạn trong vòng 24 giờ.",
         duration: 10000, // 10 seconds for better visibility
       });
+      
+      // Wait a bit for toast to mount before resetting
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Reset form and file states
+      form.reset();
+      setProfilePhoto(null);
+      setCertificates([]);
     } catch (error) {
+      console.error("Registration error:", error);
       toast({
         title: "Có lỗi xảy ra",
         description: "Vui lòng thử lại sau.",
