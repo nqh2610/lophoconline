@@ -147,6 +147,79 @@ Preferred communication style: Simple, everyday language.
 - Comprehensive test coverage with data-testid attributes
 - Ready for backend integration with API endpoints
 
+**Complete Tutor Flow System:**
+- 8-stage tutor journey from registration to reputation building (added October 12, 2025)
+- Centralized progress tracking with completion percentage across all stages
+- Routing optimized: specific /tutor/* routes placed before wildcard /tutor/:id to prevent conflicts
+
+Stage 1: Dashboard (/tutor/dashboard)
+- Main hub displaying progress tracker and flow overview
+- 8 step cards showing registration, verification, profile, schedule, trial, teaching, feedback, reputation
+- Visual status indicators: completed (green checkmark), current (blue badge), pending (gray)
+- Quick action cards for profile editing, schedule management, and earnings overview
+- Navigation buttons to advance through each stage
+
+Stage 2: Verification (/tutor/verification)
+- OCR document verification with ID card upload (front and back)
+- Video selfie verification for identity confirmation
+- File upload interface with visual feedback
+- Validation ensures all required documents uploaded before proceeding
+- Success redirects to profile setup
+
+Stage 3: Profile Setup (/tutor/profile-setup)
+- Profile photo upload for tutor avatar
+- Video introduction upload (1-3 minutes) for student preview
+- Optional teaching certificates upload
+- Form fields: display name, tagline, bio, achievements, teaching style
+- Zod validation with character limits and required field checks
+- Success redirects to schedule setup
+
+Stage 4: Schedule Setup (/tutor/schedule-setup)
+- Interactive schedule grid: days of week × time slots (morning/afternoon/evening)
+- Click-to-toggle slot selection with visual feedback
+- Selected slot counter and progress tracking
+- Minimum 3 slots required for validation
+- Success redirects to trial requests
+
+Stage 5: Trial Requests (/tutor/trial-requests)
+- Display pending trial lesson requests from students
+- Stats cards: pending count, accepted count, rejected count
+- Request cards show student info, subject, preferred time, message
+- Accept/reject actions with instant feedback
+- "Bắt đầu dạy" button after accepting to start teaching
+
+Stage 6: Online Teaching (/tutor/teaching)
+- Video call interface placeholder (prepared for Jitsi/Zoom integration)
+- Ongoing lesson display with student information
+- Video controls: toggle microphone, toggle video, end call
+- Sidebar with upcoming lessons list
+- Teaching tools section: whiteboard, materials, notes (placeholders)
+- Chat interface for student communication
+
+Stage 7: Feedback & Reviews (/tutor/feedback)
+- Rating overview: average rating, positive percentage, growth metrics
+- Rating distribution chart (5-star to 1-star with counts)
+- Review tabs: All, Positive (4-5 stars), Negative (<4 stars)
+- Review cards with student avatar, rating stars, subject badge, comment, date
+- Mock data with 3 sample reviews for development
+
+Stage 8: Reputation & Stats (/tutor/reputation)
+- Key statistics: total students taught, total hours, average rating, total earnings
+- Performance metrics with progress bars: completion rate, success rate, repeat students
+- Achievement system: 5 achievements with unlock status and progress tracking
+- Achievements: First Student, 10 Students Milestone, 5-Star Rating, 100 Hours, Top Tutor
+- Call-to-action button to view new trial requests
+
+Technical Implementation:
+- All pages use consistent layout with progress tracker in header
+- Mock data structures prepared for backend integration
+- File upload handling with validation and preview
+- Form validation using Zod schemas
+- Toast notifications for user feedback
+- Responsive design with mobile support
+- End-to-end tested with playwright verification
+- Note: Some data-testid attributes need expansion for comprehensive test coverage
+
 **Lesson Management:**
 - Lesson card component with status tracking (pending, confirmed, completed, cancelled)
 - Calendar integration ready
