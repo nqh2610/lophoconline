@@ -1,15 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Search, LogIn } from "lucide-react";
+import { Search, LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo } from "./Logo";
 import { LoginDialog } from "./LoginDialog";
 import { NotificationDropdown } from "./NotificationDropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface UserData {
+  name: string;
+  email: string;
+  loginMethod: string;
+}
 
 export function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    window.location.reload();
+  };
 
   return (
     <>
@@ -40,16 +68,47 @@ export function Navbar() {
               </Link>
               <NotificationDropdown />
               <ThemeToggle />
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="gap-2" 
-                onClick={() => setLoginOpen(true)}
-                data-testid="button-login"
-              >
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Đăng nhập</span>
-              </Button>
+              
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2" data-testid="button-user-menu">
+                      <User className="h-4 w-4" />
+                      <span className="hidden sm:inline">{user.name}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link href="/dashboard">
+                      <DropdownMenuItem data-testid="menu-dashboard">
+                        Dashboard
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/dashboard">
+                      <DropdownMenuItem data-testid="menu-profile">
+                        Hồ sơ của tôi
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} data-testid="menu-logout">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="gap-2" 
+                  onClick={() => setLoginOpen(true)}
+                  data-testid="button-login"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Đăng nhập</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
