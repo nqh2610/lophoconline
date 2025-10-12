@@ -133,6 +133,11 @@ export function TutorRegistrationForm() {
   };
 
   const validateStep = async (step: number): Promise<boolean> => {
+    // TEMPORARY: Validation disabled for UI/UX flow review
+    // Will re-enable after design review is complete
+    return true;
+    
+    /* Original validation code (commented out for design review):
     let fieldsToValidate: (keyof TutorRegistrationFormValues)[] = [];
     
     switch (step) {
@@ -164,6 +169,7 @@ export function TutorRegistrationForm() {
 
     const result = await form.trigger(fieldsToValidate);
     return result;
+    */
   };
 
   const nextStep = async () => {
@@ -182,26 +188,17 @@ export function TutorRegistrationForm() {
   };
 
   const onSubmit = async (data: TutorRegistrationFormValues) => {
-    // Validate profile photo is required
-    if (!profilePhoto) {
-      toast({
-        title: "Thiếu ảnh đại diện",
-        description: "Vui lòng tải lên ảnh đại diện của bạn.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    // TEMPORARY: Validation disabled for UI/UX flow review
     setIsSubmitting(true);
     
     try {
       // TODO: Implement API call to register tutor
       console.log("Tutor registration data:", data);
-      console.log("Profile photo:", profilePhoto.name);
-      console.log("Certificates:", certificates.map(c => c.name));
+      if (profilePhoto) console.log("Profile photo:", profilePhoto.name);
+      if (certificates.length > 0) console.log("Certificates:", certificates.map(c => c.name));
       
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Show success toast BEFORE resetting form
       toast({
