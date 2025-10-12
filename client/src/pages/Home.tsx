@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { TutorCard } from "@/components/TutorCard";
 import { FeatureCard } from "@/components/FeatureCard";
 import { TestimonialCard } from "@/components/TestimonialCard";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { 
   Video, 
@@ -12,7 +14,13 @@ import {
   Users,
   GraduationCap,
   CheckCircle2,
-  Award
+  Award,
+  LayoutDashboard,
+  Search,
+  Calendar,
+  Star,
+  BookOpen,
+  TrendingUp
 } from "lucide-react";
 
 import tutor1Avatar from '@assets/stock_images/vietnamese_female_te_395ea66e.jpg';
@@ -20,7 +28,21 @@ import tutor2Avatar from '@assets/stock_images/vietnamese_male_teac_91dbce7c.jpg
 import tutor3Avatar from '@assets/stock_images/asian_young_student__05aa4baa.jpg';
 import tutor4Avatar from '@assets/stock_images/vietnamese_female_te_513f7461.jpg';
 
+interface UserData {
+  name: string;
+  email: string;
+  loginMethod: string;
+}
+
 export default function Home() {
+  const [user, setUser] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
   const featuredTutors = [
     {
       id: '1',
@@ -163,7 +185,134 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <HeroSection />
+      {user ? (
+        // Welcome section for logged-in users
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-12">
+              <h1 className="text-4xl font-bold mb-2" data-testid="text-welcome-greeting">
+                Xin chào, {user.name}!
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Chào mừng bạn quay trở lại. Hãy bắt đầu hành trình học tập của bạn ngay hôm nay.
+              </p>
+            </div>
+
+            {/* Quick Access Menu */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              <Link href="/dashboard">
+                <Card className="hover-elevate active-elevate-2 cursor-pointer transition-all" data-testid="card-dashboard">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <LayoutDashboard className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle>Dashboard</CardTitle>
+                        <CardDescription>Xem tổng quan học tập</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Theo dõi tiến trình, lịch học và thống kê của bạn
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link href="/tutors">
+                <Card className="hover-elevate active-elevate-2 cursor-pointer transition-all" data-testid="card-find-tutors">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Search className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle>Tìm gia sư</CardTitle>
+                        <CardDescription>Khám phá gia sư phù hợp</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Tìm kiếm và đặt buổi học với các gia sư chuyên nghiệp
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link href="/dashboard">
+                <Card className="hover-elevate active-elevate-2 cursor-pointer transition-all" data-testid="card-schedule">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Calendar className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle>Lịch học</CardTitle>
+                        <CardDescription>Quản lý thời gian biểu</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Xem lịch học sắp tới và quản lý các buổi học
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+
+            {/* Additional Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Card data-testid="card-stat-progress">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <TrendingUp className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tiến độ tháng này</p>
+                      <p className="text-2xl font-bold">24 buổi học</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-stat-rating">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Star className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Đánh giá trung bình</p>
+                      <p className="text-2xl font-bold">4.8/5.0</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-stat-hours">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <BookOpen className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Giờ học tích lũy</p>
+                      <p className="text-2xl font-bold">156 giờ</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <HeroSection />
+      )}
 
       {/* Features Section */}
       <section className="py-16">

@@ -30,16 +30,50 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     e.preventDefault();
     // TODO: Implement JWT authentication
     console.log("Email auth:", { email, password, name });
+    
+    // Simulate successful login - save to localStorage
+    const userData = {
+      name: isLogin ? email.split('@')[0] : name,
+      email: email,
+      loginMethod: 'email'
+    };
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    // Close dialog and reload to show updated home page
+    onOpenChange(false);
+    window.location.reload();
   };
 
   const handleGoogleAuth = () => {
     // TODO: Implement Google OAuth
     console.log("Google auth");
+    
+    // Simulate successful login
+    const userData = {
+      name: 'Người dùng Google',
+      email: 'user@gmail.com',
+      loginMethod: 'google'
+    };
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    onOpenChange(false);
+    window.location.reload();
   };
 
   const handleFacebookAuth = () => {
     // TODO: Implement Facebook OAuth
     console.log("Facebook auth");
+    
+    // Simulate successful login
+    const userData = {
+      name: 'Người dùng Facebook',
+      email: 'user@facebook.com',
+      loginMethod: 'facebook'
+    };
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    onOpenChange(false);
+    window.location.reload();
   };
 
   return (
