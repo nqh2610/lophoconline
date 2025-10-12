@@ -124,19 +124,33 @@ export function TutorRegistrationForm() {
   const onSubmit = async (data: TutorRegistrationFormValues) => {
     setIsSubmitting(true);
     
-    // TODO: Implement API call to register tutor
-    console.log("Tutor registration data:", data);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({
-      title: "Đăng ký thành công!",
-      description: "Chúng tôi sẽ xem xét hồ sơ và liên hệ với bạn trong vòng 24 giờ.",
-    });
-    
-    setIsSubmitting(false);
-    form.reset();
+    try {
+      // TODO: Implement API call to register tutor
+      console.log("Tutor registration data:", data);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Reset form and file states
+      form.reset();
+      setProfilePhoto(null);
+      setCertificates([]);
+      
+      // Show success toast
+      toast({
+        title: "Đăng ký thành công!",
+        description: "Chúng tôi sẽ xem xét hồ sơ và liên hệ với bạn trong vòng 24 giờ.",
+        duration: 10000, // 10 seconds for better visibility
+      });
+    } catch (error) {
+      toast({
+        title: "Có lỗi xảy ra",
+        description: "Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
