@@ -500,7 +500,7 @@ export default function Tutors() {
           <main className="flex-1">
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm text-muted-foreground" data-testid="text-results-count">
-                Tìm thấy <span className="font-semibold text-foreground">{displayedTutors.length}</span> gia sư
+                Tìm thấy <span className="font-semibold text-foreground">{sortedTutors.length}</span> gia sư
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Sắp xếp:</span>
