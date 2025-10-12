@@ -23,6 +23,12 @@ Preferred communication style: Simple, everyday language.
 - Tailwind CSS for styling with custom design tokens
 - Class Variance Authority (CVA) for component variant management
 - Custom theme system supporting light/dark modes
+- Toast notification system (enhanced October 12, 2025):
+  - Radix UI Toast primitives with custom auto-dismiss logic
+  - Configurable duration support (default 5 seconds)
+  - Data-testid attributes for automated testing
+  - Success, error, and destructive variants
+  - Bottom-right positioning with animations
 
 **Design System:**
 - Custom color palette optimized for educational platforms
@@ -129,23 +135,37 @@ Preferred communication style: Simple, everyday language.
 - Mock data structure supporting real-time tutor information
 
 **Tutor Registration:**
-- TutorRegistrationForm component for prospective tutors (added October 11, 2025)
+- TutorRegistrationForm component for prospective tutors (added October 11, 2025, enhanced October 12, 2025)
 - Dedicated /tutor-registration route and page
 - Navigation via "Trở thành gia sư" button in Navbar
 - Multi-section registration form with comprehensive validation:
   - Personal information: Full name, email, phone number
+  - **Profile photo upload** (required, added October 12): 
+    - File upload with image preview (80x80 circular)
+    - Remove button to clear selection
+    - Validated before form submission with error toast
   - Education background: Degree level, university, major, graduation year
+  - **Certificates/Credentials upload** (optional, added October 12):
+    - Multiple file support (images and PDFs)
+    - Individual file list with remove buttons
+    - Accepts multiple simultaneous uploads
   - Teaching experience: Years of experience, current occupation
   - Subjects and grades: Multiple selection for subjects taught and grade levels
-  - Teaching profile: Bio (50-1000 chars), teaching methodology description
+  - Teaching profile:
+    - Bio (50-1000 chars)
+    - **Notable achievements** (optional, added October 12): Separate textarea for awards and accomplishments
+    - Teaching methodology description (20+ chars)
   - Availability: Day selection and time slot preferences
   - Hourly rate: Pricing in VNĐ
 - Form validation using Zod schema with react-hook-form
+- Profile photo validation in onSubmit handler
+- File state management with reset on successful submission
 - Controlled Select components with proper value binding
 - Interactive UI with card-based layout for each section
-- Success feedback with toast notification and form reset
+- Success feedback with toast notification (10-second duration) and form reset
+- Error toasts for validation failures (missing photo, server errors)
 - Comprehensive test coverage with data-testid attributes
-- Ready for backend integration with API endpoints
+- Ready for backend integration with API endpoints and file uploads
 
 **Complete Tutor Flow System:**
 - 8-stage tutor journey from registration to reputation building (added October 12, 2025)
