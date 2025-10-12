@@ -24,7 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, User, GraduationCap, BookOpen, Clock, DollarSign, FileText } from "lucide-react";
+import { Upload, User, GraduationCap, BookOpen, Clock, DollarSign, FileText, Award, Camera, CheckCircle2 } from "lucide-react";
 
 const tutorRegistrationSchema = z.object({
   // Personal Information
@@ -46,8 +46,9 @@ const tutorRegistrationSchema = z.object({
   subjects: z.array(z.string()).min(1, "Vui lòng chọn ít nhất 1 môn học"),
   grades: z.array(z.string()).min(1, "Vui lòng chọn ít nhất 1 cấp lớp"),
   
-  // Bio
+  // Bio & Achievements
   bio: z.string().min(50, "Giới thiệu phải có ít nhất 50 ký tự").max(1000, "Giới thiệu không quá 1000 ký tự"),
+  achievements: z.string().optional(),
   teachingMethod: z.string().min(20, "Phương pháp giảng dạy phải có ít nhất 20 ký tự"),
   
   // Availability
@@ -78,6 +79,8 @@ const timeSlots = [
 export function TutorRegistrationForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [certificates, setCertificates] = useState<File[]>([]);
 
   const form = useForm<TutorRegistrationFormValues>({
     resolver: zodResolver(tutorRegistrationSchema),
@@ -94,12 +97,29 @@ export function TutorRegistrationForm() {
       subjects: [],
       grades: [],
       bio: "",
+      achievements: "",
       teachingMethod: "",
       availableDays: [],
       availableTime: [],
       hourlyRate: "",
     },
   });
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePhoto(file);
+    }
+  };
+
+  const handleCertificateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setCertificates(prev => [...prev, ...files]);
+  };
+
+  const removeCertificate = (index: number) => {
+    setCertificates(prev => prev.filter((_, i) => i !== index));
+  };
 
   const onSubmit = async (data: TutorRegistrationFormValues) => {
     setIsSubmitting(true);
@@ -134,6 +154,59 @@ export function TutorRegistrationForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Profile Photo Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Ảnh đại diện *</label>
+              <div className="flex items-start gap-4">
+                <div className="relative">
+                  {profilePhoto ? (
+                    <div className="relative">
+                      <img 
+                        src={URL.createObjectURL(profilePhoto)} 
+                        alt="Preview" 
+                        className="h-24 w-24 rounded-full object-cover border-2 border-primary"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => setProfilePhoto(null)}
+                        data-testid="button-remove-photo"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="h-24 w-24 rounded-full border-2 border-dashed border-muted-foreground/25 flex items-center justify-center bg-muted/50">
+                      <Camera className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    id="profile-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    data-testid="input-profile-photo"
+                  />
+                  <label htmlFor="profile-photo">
+                    <Button type="button" variant="outline" asChild data-testid="button-upload-photo">
+                      <span className="cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Chọn ảnh
+                      </span>
+                    </Button>
+                  </label>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Ảnh chân dung rõ nét, kích thước tối đa 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="fullName"
@@ -259,6 +332,55 @@ export function TutorRegistrationForm() {
                 </FormItem>
               )}
             />
+
+            {/* Certificates Upload */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Chứng chỉ / Bằng cấp
+              </label>
+              <p className="text-sm text-muted-foreground">
+                Tải lên bằng cấp, chứng chỉ liên quan (nếu có)
+              </p>
+              
+              <div className="space-y-2">
+                {certificates.map((cert, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-sm flex-1" data-testid={`text-certificate-${index}`}>{cert.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCertificate(index)}
+                      data-testid={`button-remove-certificate-${index}`}
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <input
+                  id="certificates"
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  onChange={handleCertificateChange}
+                  className="hidden"
+                  data-testid="input-certificates"
+                />
+                <label htmlFor="certificates">
+                  <Button type="button" variant="outline" asChild data-testid="button-upload-certificates">
+                    <span className="cursor-pointer">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Tải lên chứng chỉ
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -414,7 +536,7 @@ export function TutorRegistrationForm() {
                 <FormItem>
                   <FormLabel>Giới thiệu bản thân *</FormLabel>
                   <FormDescription>
-                    Viết vài dòng về bản thân, kinh nghiệm và thành tích của bạn (50-1000 ký tự)
+                    Viết vài dòng về bản thân và kinh nghiệm của bạn (50-1000 ký tự)
                   </FormDescription>
                   <FormControl>
                     <Textarea
@@ -422,6 +544,31 @@ export function TutorRegistrationForm() {
                       className="min-h-[100px]"
                       {...field}
                       data-testid="textarea-bio"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="achievements"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Award className="h-4 w-4" />
+                    Thành tích nổi bật
+                  </FormLabel>
+                  <FormDescription>
+                    Các giải thưởng, thành tích đáng chú ý trong quá trình dạy học (không bắt buộc)
+                  </FormDescription>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Ví dụ: Giáo viên xuất sắc năm 2023, 95% học sinh đạt điểm A..."
+                      className="min-h-[100px]"
+                      {...field}
+                      data-testid="textarea-achievements"
                     />
                   </FormControl>
                   <FormMessage />
