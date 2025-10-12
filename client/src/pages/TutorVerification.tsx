@@ -121,11 +121,11 @@ export default function TutorVerification() {
                     className="hidden"
                     data-testid="input-id-front"
                   />
-                  <label htmlFor="id-front" className="cursor-pointer">
+                  <label htmlFor="id-front" className="cursor-pointer" data-testid="label-id-front">
                     {idCardFront ? (
                       <div className="space-y-2">
                         <CheckCircle2 className="h-12 w-12 mx-auto text-primary" />
-                        <p className="text-sm font-medium">{idCardFront.name}</p>
+                        <p className="text-sm font-medium" data-testid="text-id-front-filename">{idCardFront.name}</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -151,11 +151,11 @@ export default function TutorVerification() {
                     className="hidden"
                     data-testid="input-id-back"
                   />
-                  <label htmlFor="id-back" className="cursor-pointer">
+                  <label htmlFor="id-back" className="cursor-pointer" data-testid="label-id-back">
                     {idCardBack ? (
                       <div className="space-y-2">
                         <CheckCircle2 className="h-12 w-12 mx-auto text-primary" />
-                        <p className="text-sm font-medium">{idCardBack.name}</p>
+                        <p className="text-sm font-medium" data-testid="text-id-back-filename">{idCardBack.name}</p>
                       </div>
                     ) : (
                       <div className="space-y-2">

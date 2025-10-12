@@ -36,10 +36,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/tutors" component={Tutors} />
-      <Route path="/tutor/:id" component={TutorDetail} />
       <Route path="/tutor-registration" component={TutorRegistration} />
       
-      {/* Tutor Flow Routes */}
+      {/* Tutor Flow Routes - Must come BEFORE /tutor/:id to avoid wildcard matching */}
       <Route path="/tutor/dashboard" component={TutorDashboard} />
       <Route path="/tutor/verification" component={TutorVerification} />
       <Route path="/tutor/profile-setup" component={TutorProfileSetup} />
@@ -48,6 +47,9 @@ function Router() {
       <Route path="/tutor/teaching" component={TutorTeaching} />
       <Route path="/tutor/feedback" component={TutorFeedback} />
       <Route path="/tutor/reputation" component={TutorReputation} />
+      
+      {/* Dynamic tutor detail route - Must come AFTER specific /tutor/* routes */}
+      <Route path="/tutor/:id" component={TutorDetail} />
       
       <Route path="/about" component={About} />
       <Route path="/how-it-works" component={HowItWorks} />
