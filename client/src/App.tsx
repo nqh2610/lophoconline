@@ -18,6 +18,10 @@ import TutorTrialRequests from "@/pages/TutorTrialRequests";
 import TutorTeaching from "@/pages/TutorTeaching";
 import TutorFeedback from "@/pages/TutorFeedback";
 import TutorReputation from "@/pages/TutorReputation";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminTutors from "@/pages/AdminTutors";
+import AdminStudents from "@/pages/AdminStudents";
+import AdminTransactions from "@/pages/AdminTransactions";
 import About from "@/pages/About";
 import HowItWorks from "@/pages/HowItWorks";
 import Pricing from "@/pages/Pricing";
@@ -50,6 +54,12 @@ function Router() {
       
       {/* Dynamic tutor detail route - Must come AFTER specific /tutor/* routes */}
       <Route path="/tutor/:id" component={TutorDetail} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/tutors" component={AdminTutors} />
+      <Route path="/admin/students" component={AdminStudents} />
+      <Route path="/admin/transactions" component={AdminTransactions} />
       
       <Route path="/about" component={About} />
       <Route path="/how-it-works" component={HowItWorks} />
