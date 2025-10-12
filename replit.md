@@ -138,33 +138,47 @@ Preferred communication style: Simple, everyday language.
 - TutorRegistrationForm component for prospective tutors (added October 11, 2025, enhanced October 12, 2025)
 - Dedicated /tutor-registration route and page
 - Navigation via "Trở thành gia sư" button in Navbar
-- Multi-section registration form with comprehensive validation:
-  - Personal information: Full name, email, phone number
-  - **Profile photo upload** (required, added October 12): 
+- **Multi-step wizard form** (refactored October 12, 2025):
+  - 5-step registration process with visual progress indicator
+  - Progress bar showing completion percentage
+  - Step indicators with icons and completion checkmarks
+  - Previous/Next navigation with smooth scrolling
+  - Per-step validation before advancing to next step
+  
+  **Step 1: Personal Information**
+  - Full name, email, phone number
+  - **Profile photo upload** (required): 
     - File upload with image preview (80x80 circular)
     - Remove button to clear selection
-    - Validated before form submission with error toast
-  - Education background: Degree level, university, major, graduation year
-  - **Certificates/Credentials upload** (optional, added October 12):
+    - Validated before advancing to next step
+  
+  **Step 2: Education**
+  - Degree level, university, major, graduation year
+  - **Certificates/Credentials upload** (optional):
     - Multiple file support (images and PDFs)
     - Individual file list with remove buttons
-    - Accepts multiple simultaneous uploads
-  - Teaching experience: Years of experience, current occupation
-  - Subjects and grades: Multiple selection for subjects taught and grade levels
-  - Teaching profile:
-    - Bio (50-1000 chars)
-    - **Notable achievements** (optional, added October 12): Separate textarea for awards and accomplishments
+  
+  **Step 3: Experience & Subjects**
+  - Years of experience, current occupation
+  - Multiple selection for subjects taught and grade levels
+  
+  **Step 4: Teaching Profile**
+  - Bio (50-1000 chars)
+  - **Notable achievements** (optional): Awards and accomplishments
     - Teaching methodology description (20+ chars)
-  - Availability: Day selection and time slot preferences
-  - Hourly rate: Pricing in VNĐ
+  
+  **Step 5: Availability & Rate**
+  - Day selection and time slot preferences
+  - Hourly rate in VNĐ
+
 - Form validation using Zod schema with react-hook-form
-- Profile photo validation in onSubmit handler
+- Step-by-step validation ensures data completeness
 - File state management with reset on successful submission
 - Controlled Select components with proper value binding
-- Interactive UI with card-based layout for each section
-- Success feedback with toast notification (10-second duration) and form reset
-- Error toasts for validation failures (missing photo, server errors)
-- Comprehensive test coverage with data-testid attributes
+- Card-based layout for each step
+- Success feedback with toast notification (10-second duration) and form reset to step 1
+- Error toasts for validation failures (missing photo, incomplete fields)
+- Comprehensive data-testid attributes for all interactive elements
 - Ready for backend integration with API endpoints and file uploads
 
 **Complete Tutor Flow System:**
