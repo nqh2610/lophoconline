@@ -10,6 +10,14 @@ import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Tutors from "@/pages/Tutors";
 import TutorRegistration from "@/pages/TutorRegistration";
+import TutorDashboard from "@/pages/TutorDashboard";
+import TutorVerification from "@/pages/TutorVerification";
+import TutorProfileSetup from "@/pages/TutorProfileSetup";
+import TutorScheduleSetup from "@/pages/TutorScheduleSetup";
+import TutorTrialRequests from "@/pages/TutorTrialRequests";
+import TutorTeaching from "@/pages/TutorTeaching";
+import TutorFeedback from "@/pages/TutorFeedback";
+import TutorReputation from "@/pages/TutorReputation";
 import About from "@/pages/About";
 import HowItWorks from "@/pages/HowItWorks";
 import Pricing from "@/pages/Pricing";
@@ -30,6 +38,17 @@ function Router() {
       <Route path="/tutors" component={Tutors} />
       <Route path="/tutor/:id" component={TutorDetail} />
       <Route path="/tutor-registration" component={TutorRegistration} />
+      
+      {/* Tutor Flow Routes */}
+      <Route path="/tutor/dashboard" component={TutorDashboard} />
+      <Route path="/tutor/verification" component={TutorVerification} />
+      <Route path="/tutor/profile-setup" component={TutorProfileSetup} />
+      <Route path="/tutor/schedule-setup" component={TutorScheduleSetup} />
+      <Route path="/tutor/trial-requests" component={TutorTrialRequests} />
+      <Route path="/tutor/teaching" component={TutorTeaching} />
+      <Route path="/tutor/feedback" component={TutorFeedback} />
+      <Route path="/tutor/reputation" component={TutorReputation} />
+      
       <Route path="/about" component={About} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/pricing" component={Pricing} />
