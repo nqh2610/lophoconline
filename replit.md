@@ -18,7 +18,7 @@ Preferred communication style: Simple, everyday language.
 
 **Key Features:**
 
-*   **Authentication System:** Supports Google OAuth, Facebook OAuth, and email/password JWT authentication, including password reset functionality.
+*   **Authentication System:** Supports Google OAuth, Facebook OAuth, and email/password JWT authentication, including password reset functionality. Mock authentication flow (October 12, 2025): saves user data to localStorage on login, page reload to update UI, error handling for localStorage parsing, logout clears session. Logged-in users see personalized home page with greeting, quick access menu (Dashboard, Tìm gia sư, Lịch học), and stats cards. Navbar displays user dropdown menu with profile and logout options.
 *   **Notification System:** Real-time notifications for lessons, payments, and system alerts, accessible via a dropdown in the Navbar.
 *   **Tutor Discovery:** A dedicated page `/tutors` with filtering (subject, grade, price) and sorting options (price, rating, experience, review count). Tutor cards display detailed information and are visually enhanced.
 *   **Tutor Registration:** A multi-step wizard form for prospective tutors, covering personal information, education, experience, teaching profile, and availability/rate. Includes profile photo and certificate uploads with validation.
