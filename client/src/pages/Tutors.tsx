@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { TutorCard } from "@/components/TutorCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import {
   Select,
@@ -423,8 +423,16 @@ const mockTutors = [
 
 type SortOption = 'default' | 'price-asc' | 'price-desc' | 'rating-desc' | 'experience-desc' | 'reviews-desc';
 
+const ITEMS_PER_PAGE = 8;
+
 export default function Tutors() {
   const [sortBy, setSortBy] = useState<SortOption>('default');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 when sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortBy]);
 
   // Extract years of experience from experience string
   const getExperienceYears = (experience: string): number => {
@@ -433,7 +441,7 @@ export default function Tutors() {
   };
 
   // Sort tutors based on selected option
-  const displayedTutors = useMemo(() => {
+  const sortedTutors = useMemo(() => {
     const sorted = [...mockTutors];
     
     switch (sortBy) {
@@ -451,6 +459,17 @@ export default function Tutors() {
         return sorted;
     }
   }, [sortBy]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedTutors.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayedTutors = sortedTutors.slice(startIndex, endIndex);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   return (
     <div className="min-h-screen py-8">
@@ -502,11 +521,55 @@ export default function Tutors() {
             </div>
 
             {displayedTutors.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2">
-                {displayedTutors.map((tutor) => (
-                  <TutorCard key={tutor.id} {...tutor} />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {displayedTutors.map((tutor) => (
+                    <TutorCard key={tutor.id} {...tutor} />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      data-testid="button-prev-page"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Trước
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="min-w-[40px]"
+                          data-testid={`button-page-${page}`}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      data-testid="button-next-page"
+                    >
+                      Sau
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground" data-testid="text-no-results">
