@@ -14,6 +14,8 @@ import TutorDashboard from "@/pages/TutorDashboard";
 import TutorVerification from "@/pages/TutorVerification";
 import TutorProfileSetup from "@/pages/TutorProfileSetup";
 import TutorScheduleSetup from "@/pages/TutorScheduleSetup";
+import TutorAvailabilityManagement from "@/pages/TutorAvailabilityManagement";
+import StudentTimetable from "@/pages/StudentTimetable";
 import TutorTrialRequests from "@/pages/TutorTrialRequests";
 import TutorTeaching from "@/pages/TutorTeaching";
 import TutorFeedback from "@/pages/TutorFeedback";
@@ -39,6 +41,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/student/timetable" component={StudentTimetable} />
       <Route path="/tutors" component={Tutors} />
       <Route path="/tutor-registration" component={TutorRegistration} />
       
@@ -47,6 +50,7 @@ function Router() {
       <Route path="/tutor/verification" component={TutorVerification} />
       <Route path="/tutor/profile-setup" component={TutorProfileSetup} />
       <Route path="/tutor/schedule-setup" component={TutorScheduleSetup} />
+      <Route path="/tutor/availability" component={TutorAvailabilityManagement} />
       <Route path="/tutor/trial-requests" component={TutorTrialRequests} />
       <Route path="/tutor/teaching" component={TutorTeaching} />
       <Route path="/tutor/feedback" component={TutorFeedback} />
