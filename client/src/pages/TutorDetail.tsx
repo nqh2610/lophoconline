@@ -44,6 +44,15 @@ interface Subject {
   grades: string;
 }
 
+interface AvailableSlot {
+  id: string;
+  dayLabels: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  sessionsPerWeek: number;
+}
+
 interface TutorDetailData {
   id: string;
   name: string;
@@ -59,6 +68,7 @@ interface TutorDetailData {
   videoUrl?: string;
   occupation: 'student' | 'teacher' | 'professional';
   availableSlots: string[];
+  availableSlotDetails: AvailableSlot[];
   bio: string;
   education: Education[];
   certifications: string[];
@@ -89,6 +99,10 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'teacher' as const,
     availableSlots: ['T2, T4, T6 (19h-21h)', 'T7, CN (14h-20h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '19:00', endTime: '21:00', price: 300000, sessionsPerWeek: 3 },
+      { id: 'slot-2', dayLabels: 'Thứ 7, CN', startTime: '14:00', endTime: '20:00', price: 350000, sessionsPerWeek: 2 },
+    ],
     bio: 'Tôi là giáo viên Toán và Vật Lý với 5 năm kinh nghiệm giảng dạy tại trường THPT chuyên. Tôi đam mê giúp học sinh hiểu sâu bản chất của môn học và áp dụng vào thực tế.',
     education: [
       { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Toán học', year: '2018' },
@@ -148,6 +162,10 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'professional' as const,
     availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'Thứ 3, 5, 7', startTime: '18:00', endTime: '21:00', price: 500000, sessionsPerWeek: 3 },
+      { id: 'slot-2', dayLabels: 'Chủ nhật', startTime: '09:00', endTime: '18:00', price: 550000, sessionsPerWeek: 1 },
+    ],
     bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.5 và TOEFL 115. Chuyên luyện thi IELTS, TOEFL và giao tiếp thực tế.',
     education: [
       { school: 'Đại học Ngoại ngữ - ĐHQGHN', degree: 'Cử nhân Ngôn ngữ Anh', year: '2016' },
@@ -203,6 +221,10 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'student' as const,
     availableSlots: ['T2-T6 (17h-20h)', 'T7 (14h-18h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'T2-T6', startTime: '17:00', endTime: '20:00', price: 180000, sessionsPerWeek: 5 },
+      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '14:00', endTime: '18:00', price: 200000, sessionsPerWeek: 1 },
+    ],
     bio: 'Tôi là sinh viên năm cuối ngành Sư phạm Toán - Tin. Đam mê dạy học và giúp các em THCS yêu thích môn Toán, Lý, Tin học.',
     education: [
       { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Sư phạm Toán - Tin', year: '2025 (dự kiến)' }
@@ -246,6 +268,10 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'teacher' as const,
     availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '18:00', endTime: '21:00', price: 270000, sessionsPerWeek: 3 },
+      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '15:00', endTime: '19:00', price: 300000, sessionsPerWeek: 1 },
+    ],
     bio: 'Tôi là giáo viên Hóa - Sinh với niềm đam mê truyền cảm hứng cho học sinh yêu khoa học tự nhiên.',
     education: [
       { school: 'Đại học Khoa học Tự nhiên - ĐHQGHN', degree: 'Cử nhân Hóa học', year: '2019' }
@@ -288,6 +314,10 @@ const tutorData: Record<string, TutorDetailData> = {
     hasVideo: false,
     occupation: 'teacher' as const,
     availableSlots: ['T3, T5 (18h-21h)', 'CN (9h-15h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'Thứ 3, 5', startTime: '18:00', endTime: '21:00', price: 300000, sessionsPerWeek: 2 },
+      { id: 'slot-2', dayLabels: 'Chủ nhật', startTime: '09:00', endTime: '15:00', price: 320000, sessionsPerWeek: 1 },
+    ],
     bio: 'Tôi là giáo viên Lịch Sử - Địa Lý, yêu thích việc kể chuyện để giúp học sinh ghi nhớ kiến thức lâu dài.',
     education: [
       { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Sư phạm Lịch Sử', year: '2019' }
@@ -330,6 +360,10 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'teacher' as const,
     availableSlots: ['T2, T4, T6 (19h-21h)', 'T7 (14h-19h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '19:00', endTime: '21:00', price: 380000, sessionsPerWeek: 3 },
+      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '14:00', endTime: '19:00', price: 400000, sessionsPerWeek: 1 },
+    ],
     bio: 'Tôi là giáo viên Ngữ Văn với niềm đam mê văn chương và nghệ thuật viết. Giúp học sinh yêu thích môn Văn.',
     education: [
       { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Ngữ văn', year: '2017' },
@@ -375,6 +409,9 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'professional' as const,
     availableSlots: ['T7, CN (9h-18h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'Thứ 7, CN', startTime: '09:00', endTime: '18:00', price: 600000, sessionsPerWeek: 2 },
+    ],
     bio: 'Tôi là chuyên gia luyện thi SAT và TOEFL với nhiều học viên đạt điểm cao và nhập học các trường đại học hàng đầu Mỹ.',
     education: [
       { school: 'University of California, Berkeley', degree: 'Bachelor in Economics', year: '2015' },
@@ -421,6 +458,10 @@ const tutorData: Record<string, TutorDetailData> = {
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     occupation: 'professional' as const,
     availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)'],
+    availableSlotDetails: [
+      { id: 'slot-1', dayLabels: 'T2-T6', startTime: '18:00', endTime: '21:00', price: 330000, sessionsPerWeek: 5 },
+      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '14:00', endTime: '20:00', price: 350000, sessionsPerWeek: 1 },
+    ],
     bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.0, chuyên dạy IELTS và Tiếng Anh giao tiếp.',
     education: [
       { school: 'Đại học Ngoại ngữ - ĐHQGHN', degree: 'Cử nhân Ngôn ngữ Anh', year: '2018' }
@@ -747,6 +788,7 @@ export default function TutorDetail() {
           hourlyRate={tutor.hourlyRate}
           lessonDuration={tutor.lessonDuration}
           isTrial={false}
+          availableSlots={tutor.availableSlotDetails}
         />
       </div>
     </div>
