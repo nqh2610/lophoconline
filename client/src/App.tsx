@@ -41,7 +41,11 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      
+      {/* Student Routes */}
       <Route path="/student/timetable" component={StudentTimetable} />
+      <Route path="/student-timetable" component={StudentTimetable} />
+      
       <Route path="/tutors" component={Tutors} />
       <Route path="/tutor-registration" component={TutorRegistration} />
       
@@ -51,6 +55,7 @@ function Router() {
       <Route path="/tutor/profile-setup" component={TutorProfileSetup} />
       <Route path="/tutor/schedule-setup" component={TutorScheduleSetup} />
       <Route path="/tutor/availability" component={TutorAvailabilityManagement} />
+      <Route path="/tutor-availability" component={TutorAvailabilityManagement} />
       <Route path="/tutor/trial-requests" component={TutorTrialRequests} />
       <Route path="/tutor/teaching" component={TutorTeaching} />
       <Route path="/tutor/feedback" component={TutorFeedback} />
