@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar as CalendarIcon, CheckCircle2 } from "lucide-react";
+import { Clock, Calendar as CalendarIcon, CheckCircle2, Package } from "lucide-react";
 
 interface AvailableSlot {
   id: string;
@@ -27,6 +27,14 @@ interface BookingDialogProps {
   availableSlots?: AvailableSlot[];
 }
 
+const PACKAGES = [
+  { id: "1m", months: 1, discount: 0, label: "1 tháng" },
+  { id: "2m", months: 2, discount: 5, label: "2 tháng (giảm 5%)" },
+  { id: "3m", months: 3, discount: 10, label: "3 tháng (giảm 10%)", popular: true },
+  { id: "6m", months: 6, discount: 15, label: "6 tháng (giảm 15%)" },
+  { id: "12m", months: 12, discount: 20, label: "12 tháng (giảm 20%)" },
+];
+
 export function BookingDialog({ 
   open, 
   onOpenChange, 
@@ -40,6 +48,7 @@ export function BookingDialog({
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [startDate, setStartDate] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState<string>("1m");
 
   useEffect(() => {
     if (!open) {
@@ -47,6 +56,7 @@ export function BookingDialog({
       setSelectedTime("");
       setSelectedSlot("");
       setStartDate("");
+      setSelectedPackage("1m");
     }
   }, [open]);
 
@@ -79,10 +89,19 @@ export function BookingDialog({
   };
 
   const slot = availableSlots.find((s) => s.id === selectedSlot);
+  const pkg = PACKAGES.find((p) => p.id === selectedPackage);
 
   const calculateMonthlyPrice = () => {
     if (!slot) return 0;
     return slot.sessionsPerWeek * 4 * slot.price;
+  };
+
+  const calculateTotalPrice = () => {
+    if (!slot || !pkg) return 0;
+    const monthlyPrice = calculateMonthlyPrice();
+    const originalTotal = monthlyPrice * pkg.months;
+    const discountAmount = (originalTotal * pkg.discount) / 100;
+    return originalTotal - discountAmount;
   };
 
   const handleBooking = () => {
@@ -102,8 +121,11 @@ export function BookingDialog({
       }
 
       const monthlyPrice = calculateMonthlyPrice();
+      const totalPrice = calculateTotalPrice();
+      const originalTotal = monthlyPrice * (pkg?.months || 1);
+      const savings = originalTotal - totalPrice;
       
-      alert(`Đã đặt lịch học với ${tutorName}\nLịch học: ${slot?.dayLabels}\nCa học: ${slot?.startTime} - ${slot?.endTime}\nNgày bắt đầu: ${new Date(startDate).toLocaleDateString('vi-VN')}\nHọc phí/tháng: ${formatPrice(monthlyPrice)}\n\n⚠️ Vui lòng thanh toán để bắt đầu học`);
+      alert(`Đã đặt lịch học với ${tutorName}\nLịch học: ${slot?.dayLabels}\nCa học: ${slot?.startTime} - ${slot?.endTime}\nNgày bắt đầu: ${new Date(startDate).toLocaleDateString('vi-VN')}\nGói: ${pkg?.label}\nHọc phí/tháng: ${formatPrice(monthlyPrice)}\nTổng cộng: ${formatPrice(totalPrice)}${savings > 0 ? `\nTiết kiệm: ${formatPrice(savings)}` : ''}\n\n⚠️ Vui lòng thanh toán để bắt đầu học`);
     }
     
     onOpenChange(false);
@@ -111,7 +133,7 @@ export function BookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="booking-dialog">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             {isTrial ? "Đặt lịch học thử miễn phí" : "Đặt lịch học theo tháng"}
@@ -268,7 +290,45 @@ export function BookingDialog({
                 )}
               </div>
 
-              {selectedSlot && startDate && slot && (
+              <div>
+                <Label className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Chọn gói thanh toán
+                </Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {PACKAGES.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      onClick={() => setSelectedPackage(pkg.id)}
+                      className={`relative p-4 rounded-lg border-2 transition-all hover-elevate ${
+                        selectedPackage === pkg.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      }`}
+                      data-testid={`package-${pkg.id}`}
+                    >
+                      {pkg.popular && (
+                        <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground">
+                          Phổ biến
+                        </Badge>
+                      )}
+                      <div className="text-center">
+                        <p className="font-semibold">{pkg.label}</p>
+                        {pkg.discount > 0 && (
+                          <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                            Giảm {pkg.discount}%
+                          </p>
+                        )}
+                      </div>
+                      {selectedPackage === pkg.id && (
+                        <CheckCircle2 className="h-5 w-5 text-primary absolute bottom-2 right-2" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selectedSlot && startDate && slot && pkg && (
                 <div className="rounded-lg bg-muted/50 p-4">
                   <h4 className="font-semibold mb-2">Tóm tắt đặt lịch:</h4>
                   <div className="space-y-1 text-sm">
@@ -278,12 +338,36 @@ export function BookingDialog({
                     <p><strong>Ngày bắt đầu:</strong> {new Date(startDate).toLocaleDateString('vi-VN')}</p>
                     <p><strong>Số buổi/tuần:</strong> {slot.sessionsPerWeek} buổi</p>
                     <p><strong>Học phí/buổi:</strong> {formatPrice(slot.price)}</p>
-                    <p className="text-base font-semibold text-primary pt-2">
-                      <strong>Học phí/tháng:</strong> {formatPrice(calculateMonthlyPrice())}
-                    </p>
-                    <p className="text-xs text-muted-foreground pt-1">
-                      = {slot.sessionsPerWeek} buổi × 4 tuần × {formatPrice(slot.price)}
-                    </p>
+                    <p><strong>Gói đăng ký:</strong> {pkg.label}</p>
+                    <div className="border-t pt-2 mt-2">
+                      <p className="text-sm">
+                        <strong>Học phí/tháng:</strong> {formatPrice(calculateMonthlyPrice())}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        = {slot.sessionsPerWeek} buổi × 4 tuần × {formatPrice(slot.price)}
+                      </p>
+                      {pkg.discount > 0 && (
+                        <>
+                          <p className="text-sm mt-1">
+                            <strong>Giá gốc ({pkg.months} tháng):</strong>{" "}
+                            <span className="line-through text-muted-foreground">
+                              {formatPrice(calculateMonthlyPrice() * pkg.months)}
+                            </span>
+                          </p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            <strong>Giảm {pkg.discount}%:</strong> -{formatPrice((calculateMonthlyPrice() * pkg.months * pkg.discount) / 100)}
+                          </p>
+                        </>
+                      )}
+                      <p className="text-lg font-bold text-primary mt-2">
+                        <strong>Tổng thanh toán:</strong> {formatPrice(calculateTotalPrice())}
+                      </p>
+                      {pkg.discount > 0 && (
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          Tiết kiệm {formatPrice((calculateMonthlyPrice() * pkg.months * pkg.discount) / 100)}!
+                        </p>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground pt-1">
                       ⚠️ Cần thanh toán trước để bắt đầu học
                     </p>

@@ -588,6 +588,16 @@ export default function TutorDetail() {
                     <Calendar className="h-5 w-5" />
                     Đặt lịch học thử miễn phí
                   </Button>
+                  <Button 
+                    size="lg" 
+                    variant="default"
+                    className="gap-2" 
+                    onClick={() => setRegularBookingOpen(true)}
+                    data-testid="button-book-monthly"
+                  >
+                    <Calendar className="h-5 w-5" />
+                    Đặt lịch theo tháng
+                  </Button>
                   <Button size="lg" variant="outline" className="gap-2" data-testid="button-message">
                     <MessageCircle className="h-5 w-5" />
                     Nhắn tin

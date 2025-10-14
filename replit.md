@@ -23,9 +23,15 @@ Preferred communication style: Simple, everyday language.
 *   **Tutor Discovery:** A dedicated page `/tutors` with filtering (subject, grade, price) and sorting options (price, rating, experience, review count). Tutor cards display detailed information and are visually enhanced. Pagination system shows 8 tutors per page with Previous/Next buttons and page numbers. Smooth scroll-to-top on page changes, automatic reset to page 1 when sort changes.
 *   **Tutor Registration:** A multi-step wizard form for prospective tutors, covering personal information, education, experience, teaching profile, and availability/rate. Includes profile photo and certificate uploads with validation.
 *   **Complete Tutor Flow System:** An 8-stage journey for tutors, from registration to reputation building, with progress tracking. Stages include Dashboard, Verification (OCR, video selfie), Profile Setup (video introduction), Schedule Setup, Trial Requests, Online Teaching (video call integration placeholder), Feedback & Reviews, and Reputation & Stats.
-*   **Booking Dialog System (October 14, 2025 - Simplified):** Popup booking dialogs in tutor detail pages:
+*   **Booking Dialog System (October 14, 2025 - With Package Selection):** Popup booking dialogs in tutor detail pages:
     - **Trial Booking**: Calendar-based single session booking (30 minutes free) - unchanged
-    - **Monthly Booking**: Simplified from complex flow (select month → select weekdays → select time) to streamlined process (select pre-configured slot → select start date). Shows summary with monthly price calculation (sessions/week × 4 × price/session)
+    - **Monthly Booking**: Complete booking flow with package selection:
+      - Step 1: Select pre-configured slot from tutor's available schedules
+      - Step 2: Choose start date
+      - Step 3: Select subscription package (1, 2, 3, 6, or 12 months with tiered discounts)
+      - Shows detailed summary with monthly price, discount breakdown, total payment, and savings
+      - Package discounts: 1m (0%), 2m (5%), 3m (10% - Popular), 6m (15%), 12m (20%)
+      - Auto-calculates: monthly price × months - discount% = total payment
 *   **Advanced Scheduling System (October 14, 2025):** Production-ready scheduling with comprehensive conflict prevention and data integrity:
     - **Tutor Availability Management** (`/tutor-availability`): Create, edit, and delete custom time slots with day-of-week selection and time ranges
     - **Student Timetable** (`/student-timetable`): View scheduled lessons in a weekly calendar format
