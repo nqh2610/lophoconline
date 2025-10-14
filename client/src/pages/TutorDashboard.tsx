@@ -197,6 +197,11 @@ export default function TutorDashboard() {
                 Xem hồ sơ của tôi
               </Button>
             </Link>
+            <Link href="/tutor/recurring-schedule">
+              <Button variant="outline" data-testid="button-create-recurring-schedule">
+                Tạo lịch dạy lặp lại
+              </Button>
+            </Link>
             <Link href="/tutor/schedule">
               <Button variant="outline" data-testid="button-view-schedule">
                 Xem lịch dạy
