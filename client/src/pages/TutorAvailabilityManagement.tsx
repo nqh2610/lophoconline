@@ -28,13 +28,20 @@ import {
 } from "@/components/ui/dialog";
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: 'Chủ nhật' },
-  { value: 1, label: 'Thứ 2' },
-  { value: 2, label: 'Thứ 3' },
-  { value: 3, label: 'Thứ 4' },
-  { value: 4, label: 'Thứ 5' },
-  { value: 5, label: 'Thứ 6' },
-  { value: 6, label: 'Thứ 7' },
+  { value: 0, label: 'Chủ nhật', short: 'CN' },
+  { value: 1, label: 'Thứ 2', short: 'T2' },
+  { value: 2, label: 'Thứ 3', short: 'T3' },
+  { value: 3, label: 'Thứ 4', short: 'T4' },
+  { value: 4, label: 'Thứ 5', short: 'T5' },
+  { value: 5, label: 'Thứ 6', short: 'T6' },
+  { value: 6, label: 'Thứ 7', short: 'T7' },
+];
+
+const PRESETS = [
+  { id: "246", label: "Thứ 2, 4, 6", days: [1, 3, 5] },
+  { id: "357", label: "Thứ 3, 5, 7", days: [2, 4, 6] },
+  { id: "weekend", label: "Cuối tuần", days: [0, 6] },
+  { id: "weekday", label: "T2-T6", days: [1, 2, 3, 4, 5] },
 ];
 
 export default function TutorAvailabilityManagement() {
@@ -42,7 +49,7 @@ export default function TutorAvailabilityManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Form state
-  const [dayOfWeek, setDayOfWeek] = useState<number>(1);
+  const [selectedDays, setSelectedDays] = useState<number[]>([1]);
   const [startTime, setStartTime] = useState("18:00");
   const [endTime, setEndTime] = useState("19:30");
 
@@ -60,15 +67,6 @@ export default function TutorAvailabilityManagement() {
   const createMutation = useMutation({
     mutationFn: async (data: { tutorId: string; dayOfWeek: number; startTime: string; endTime: string }) => {
       return await apiRequest('POST', '/api/tutor-availability', data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tutor-availability', tutorId] });
-      toast({
-        title: "Đã thêm ca dạy!",
-        description: "Ca dạy mới đã được thêm vào lịch của bạn.",
-      });
-      setIsDialogOpen(false);
-      resetForm();
     },
     onError: (error: any) => {
       toast({
@@ -101,12 +99,33 @@ export default function TutorAvailabilityManagement() {
   });
 
   const resetForm = () => {
-    setDayOfWeek(1);
+    setSelectedDays([1]);
     setStartTime("18:00");
     setEndTime("19:30");
   };
 
-  const handleSubmit = () => {
+  const handlePresetClick = (days: number[]) => {
+    setSelectedDays(days);
+  };
+
+  const handleDayToggle = (day: number) => {
+    if (selectedDays.includes(day)) {
+      setSelectedDays(selectedDays.filter(d => d !== day));
+    } else {
+      setSelectedDays([...selectedDays, day]);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (selectedDays.length === 0) {
+      toast({
+        title: "Thiếu thông tin",
+        description: "Vui lòng chọn ít nhất một ngày.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!startTime || !endTime) {
       toast({
         title: "Thiếu thông tin",
@@ -126,12 +145,32 @@ export default function TutorAvailabilityManagement() {
       return;
     }
 
-    createMutation.mutate({
-      tutorId,
-      dayOfWeek,
-      startTime,
-      endTime,
-    });
+    // Create slots for all selected days
+    try {
+      for (const day of selectedDays) {
+        await createMutation.mutateAsync({
+          tutorId,
+          dayOfWeek: day,
+          startTime,
+          endTime,
+        });
+      }
+      
+      toast({
+        title: "Đã thêm ca dạy!",
+        description: `Đã thêm ${selectedDays.length} ca dạy vào lịch của bạn.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/tutor-availability', tutorId] });
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể thêm ca dạy. Vui lòng kiểm tra lại thời gian.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -181,7 +220,7 @@ export default function TutorAvailabilityManagement() {
                   Thêm ca dạy
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Thêm ca dạy mới</DialogTitle>
                   <DialogDescription>
@@ -189,24 +228,50 @@ export default function TutorAvailabilityManagement() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                  {/* Preset buttons */}
                   <div className="space-y-2">
-                    <Label htmlFor="day">Ngày trong tuần</Label>
-                    <Select 
-                      value={dayOfWeek.toString()} 
-                      onValueChange={(v) => setDayOfWeek(parseInt(v))}
-                    >
-                      <SelectTrigger id="day" data-testid="select-day">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DAYS_OF_WEEK.map(day => (
-                          <SelectItem key={day.value} value={day.value.toString()}>
-                            {day.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Chọn nhanh</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PRESETS.map((preset) => (
+                        <Button
+                          key={preset.id}
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => handlePresetClick(preset.days)}
+                          className={
+                            JSON.stringify(selectedDays.sort()) === JSON.stringify(preset.days.sort())
+                              ? "border-primary bg-primary/10"
+                              : ""
+                          }
+                          data-testid={`preset-${preset.id}`}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Day selection */}
+                  <div className="space-y-2">
+                    <Label>Hoặc chọn từng ngày</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <Button
+                          key={day.value}
+                          variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                          size="sm"
+                          type="button"
+                          onClick={() => handleDayToggle(day.value)}
+                          data-testid={`day-${day.value}`}
+                        >
+                          {day.short}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Time inputs */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="start-time">Giờ bắt đầu</Label>
@@ -229,6 +294,18 @@ export default function TutorAvailabilityManagement() {
                       />
                     </div>
                   </div>
+
+                  {/* Preview */}
+                  {selectedDays.length > 0 && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm font-medium">
+                        Sẽ tạo {selectedDays.length} ca dạy: {selectedDays.map(d => DAYS_OF_WEEK[d].short).join(", ")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {startTime} - {endTime}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button
@@ -240,10 +317,10 @@ export default function TutorAvailabilityManagement() {
                   </Button>
                   <Button
                     onClick={handleSubmit}
-                    disabled={createMutation.isPending}
+                    disabled={createMutation.isPending || selectedDays.length === 0}
                     data-testid="button-submit-slot"
                   >
-                    {createMutation.isPending ? "Đang lưu..." : "Thêm ca dạy"}
+                    {createMutation.isPending ? "Đang lưu..." : `Thêm ${selectedDays.length} ca dạy`}
                   </Button>
                 </DialogFooter>
               </DialogContent>
