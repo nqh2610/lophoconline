@@ -4,96 +4,75 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import {
   Calendar,
   Clock,
-  CreditCard,
-  CheckCircle2,
+  DollarSign,
   User,
-  BookOpen,
   Star,
-  ChevronRight,
+  CheckCircle2,
+  ArrowLeft,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
-// Mock data
+// Mock data - trong thực tế sẽ lấy từ API dựa vào tutorId
 const MOCK_TUTOR = {
   id: "tutor-001",
   name: "Nguyễn Văn A",
-  subject: "Toán",
+  subject: "Toán THPT",
   rating: 4.9,
-  schedules: [
-    { id: "s1", days: [1, 3, 5], time: "18:00-19:30", price: 300000, label: "Thứ 2,4,6 • 18:00-19:30" },
-    { id: "s2", days: [2, 4, 6], time: "14:00-15:30", price: 280000, label: "Thứ 3,5,7 • 14:00-15:30" },
-    { id: "s3", days: [0, 6], time: "09:00-10:30", price: 350000, label: "T7,CN • 09:00-10:30" },
+  totalReviews: 128,
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=tutor1",
+  availableSlots: [
+    {
+      id: "slot-1",
+      days: [1, 3, 5], // Thứ 2, 4, 6
+      dayLabels: "Thứ 2, 4, 6",
+      startTime: "18:00",
+      endTime: "19:30",
+      price: 300000,
+      sessionsPerWeek: 3,
+    },
+    {
+      id: "slot-2",
+      days: [2, 4, 6], // Thứ 3, 5, 7
+      dayLabels: "Thứ 3, 5, 7",
+      startTime: "14:00",
+      endTime: "15:30",
+      price: 280000,
+      sessionsPerWeek: 3,
+    },
+    {
+      id: "slot-3",
+      days: [0, 6], // T7, CN
+      dayLabels: "Cuối tuần (T7, CN)",
+      startTime: "09:00",
+      endTime: "10:30",
+      price: 350000,
+      sessionsPerWeek: 2,
+    },
   ],
 };
 
-const PACKAGES = [
-  { id: "1m", months: 1, discount: 0, label: "1 tháng (giá gốc)" },
-  { id: "3m", months: 3, discount: 10, label: "3 tháng (giảm 10%)", popular: true },
-  { id: "6m", months: 6, discount: 15, label: "6 tháng (giảm 15%)" },
-  { id: "12m", months: 12, discount: 25, label: "12 tháng (giảm 25%)" },
-];
-
 export default function BookingFlow() {
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
-  const [selectedSchedule, setSelectedSchedule] = useState<string | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>("3m");
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
+  const [showPayment, setShowPayment] = useState(false);
 
-  const getSchedule = () => MOCK_TUTOR.schedules.find((s) => s.id === selectedSchedule);
-  const getPackage = () => PACKAGES.find((p) => p.id === selectedPackage);
+  const slot = MOCK_TUTOR.availableSlots.find((s) => s.id === selectedSlot);
 
-  const calculateTotal = () => {
-    const schedule = getSchedule();
-    const pkg = getPackage();
-    if (!schedule || !pkg) return null;
-
-    const sessionsPerWeek = schedule.days.length;
-    const totalWeeks = pkg.months * 4;
-    const totalSessions = sessionsPerWeek * totalWeeks;
-    const originalPrice = totalSessions * schedule.price;
-    const discountAmount = (originalPrice * pkg.discount) / 100;
-    const finalPrice = originalPrice - discountAmount;
-
-    return {
-      sessionsPerWeek,
-      totalWeeks,
-      totalSessions,
-      originalPrice,
-      discountAmount,
-      finalPrice,
-      pricePerSession: schedule.price,
-    };
-  };
-
-  const handleNextStep = () => {
-    if (step === 1 && !selectedSchedule) {
+  const handleContinue = () => {
+    if (!selectedSlot) {
       toast({
-        title: "Chưa chọn lịch học",
-        description: "Vui lòng chọn lịch học phù hợp",
+        title: "Chưa chọn ca học",
+        description: "Vui lòng chọn ca học phù hợp với bạn",
         variant: "destructive",
       });
       return;
     }
-    if (step === 2 && !selectedPackage) {
-      toast({
-        title: "Chưa chọn gói học",
-        description: "Vui lòng chọn gói học phù hợp",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (step === 3 && !startDate) {
+
+    if (!startDate) {
       toast({
         title: "Chưa chọn ngày bắt đầu",
         description: "Vui lòng chọn ngày bắt đầu học",
@@ -101,7 +80,8 @@ export default function BookingFlow() {
       });
       return;
     }
-    if (step < 4) setStep(step + 1);
+
+    setShowPayment(true);
   };
 
   const handleConfirmBooking = () => {
@@ -109,355 +89,271 @@ export default function BookingFlow() {
       title: "Đặt lịch thành công!",
       description: "Vui lòng thanh toán để bắt đầu học",
     });
-    // In real app: redirect to payment page
+    // Trong thực tế: chuyển đến trang thanh toán hoặc tạo booking trong DB
   };
 
-  const total = calculateTotal();
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
+  };
+
+  const calculateMonthlyPrice = () => {
+    if (!slot) return 0;
+    // 4 tuần/tháng
+    return slot.sessionsPerWeek * 4 * slot.price;
+  };
 
   return (
-    <div className="container max-w-6xl mx-auto py-8 px-4">
-      {/* Progress steps */}
+    <div className="container max-w-5xl mx-auto py-8 px-4">
+      {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between max-w-3xl mx-auto">
-          {[
-            { num: 1, label: "Chọn lịch", icon: Calendar },
-            { num: 2, label: "Chọn gói", icon: BookOpen },
-            { num: 3, label: "Xác nhận", icon: CheckCircle2 },
-            { num: 4, label: "Thanh toán", icon: CreditCard },
-          ].map((s, idx) => (
-            <div key={s.num} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${
-                    step >= s.num
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "border-muted-foreground text-muted-foreground"
-                  }`}
-                >
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <span className="text-xs mt-2">{s.label}</span>
-              </div>
-              {idx < 3 && (
-                <ChevronRight
-                  className={`mx-2 h-5 w-5 ${
-                    step > s.num ? "text-primary" : "text-muted-foreground"
-                  }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+        <Button variant="ghost" className="mb-4" data-testid="button-back">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Quay lại
+        </Button>
+        <h1 className="text-3xl font-bold" data-testid="heading-booking">
+          Đặt lịch học theo tháng
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Chọn ca học và ngày bắt đầu
+        </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
-        <div className="md:col-span-2">
-          {/* Step 1: Choose schedule */}
-          {step === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Chọn Lịch Học
-                </CardTitle>
-                <CardDescription>
-                  Chọn lịch học phù hợp với thời gian của bạn
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {MOCK_TUTOR.schedules.map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    className={`p-4 border rounded-lg cursor-pointer hover-elevate ${
-                      selectedSchedule === schedule.id
-                        ? "border-primary bg-primary/5"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedSchedule(schedule.id)}
-                    data-testid={`schedule-option-${schedule.id}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{schedule.label}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {schedule.days.length} buổi/tuần •{" "}
-                          {schedule.price.toLocaleString("vi-VN")}đ/buổi
-                        </p>
-                      </div>
-                      {selectedSchedule === schedule.id && (
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Choose package */}
-          {step === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Chọn Gói Học
-                </CardTitle>
-                <CardDescription>
-                  Gói dài hạn được giảm giá lên đến 25%
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {PACKAGES.map((pkg) => {
-                  const schedule = getSchedule();
-                  if (!schedule) return null;
-
-                  const sessionsPerWeek = schedule.days.length;
-                  const totalSessions = sessionsPerWeek * pkg.months * 4;
-                  const originalPrice = totalSessions * schedule.price;
-                  const discountAmount = (originalPrice * pkg.discount) / 100;
-                  const finalPrice = originalPrice - discountAmount;
-
-                  return (
-                    <div
-                      key={pkg.id}
-                      className={`p-4 border rounded-lg cursor-pointer hover-elevate ${
-                        selectedPackage === pkg.id
-                          ? "border-primary bg-primary/5"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedPackage(pkg.id)}
-                      data-testid={`package-option-${pkg.id}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-medium">{pkg.label}</p>
-                            {pkg.popular && (
-                              <Badge className="bg-primary">Phổ biến</Badge>
-                            )}
-                            {pkg.discount > 0 && (
-                              <Badge variant="secondary" className="bg-green-500/10 text-green-600">
-                                -{pkg.discount}%
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">
-                              {totalSessions} buổi học
-                            </p>
-                            {pkg.discount > 0 && (
-                              <p className="text-sm text-muted-foreground line-through">
-                                {originalPrice.toLocaleString("vi-VN")}đ
-                              </p>
-                            )}
-                            <p className="text-lg font-bold">
-                              {finalPrice.toLocaleString("vi-VN")}đ
-                            </p>
-                            {pkg.discount > 0 && (
-                              <p className="text-sm text-green-600 dark:text-green-400">
-                                Tiết kiệm {discountAmount.toLocaleString("vi-VN")}đ
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {selectedPackage === pkg.id && (
-                          <CheckCircle2 className="h-5 w-5 text-primary mt-1" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 3: Confirm details */}
-          {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5" />
-                  Xác Nhận Thông Tin
-                </CardTitle>
-                <CardDescription>
-                  Kiểm tra lại thông tin trước khi thanh toán
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="start-date" className="mb-2 block">
-                    Ngày bắt đầu học
-                  </Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    data-testid="input-start-date"
-                  />
+        <div className="lg:col-span-2 space-y-6">
+          {/* Tutor info */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                  <User className="h-8 w-8" />
                 </div>
+                <div className="flex-1">
+                  <CardTitle className="text-xl" data-testid="text-tutor-name">
+                    {MOCK_TUTOR.name}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {MOCK_TUTOR.subject}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-medium">
+                      {MOCK_TUTOR.rating}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      ({MOCK_TUTOR.totalReviews} đánh giá)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Thông tin đã chọn:</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Lịch học:</span>
-                      <span className="font-medium">
-                        {getSchedule()?.label}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Gói học:</span>
-                      <span className="font-medium">
-                        {getPackage()?.label}
-                      </span>
-                    </div>
-                    {startDate && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bắt đầu:</span>
-                        <span className="font-medium">
-                          {new Date(startDate).toLocaleDateString("vi-VN")}
+          {/* Step 1: Chọn ca học */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Chọn ca học
+              </CardTitle>
+              <CardDescription>
+                Chọn ca học phù hợp với lịch của bạn
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {MOCK_TUTOR.availableSlots.map((slot) => (
+                <button
+                  key={slot.id}
+                  onClick={() => setSelectedSlot(slot.id)}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all hover-elevate ${
+                    selectedSlot === slot.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border"
+                  }`}
+                  data-testid={`slot-option-${slot.id}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">{slot.dayLabels}</Badge>
+                        <Badge variant="secondary">
+                          {slot.sessionsPerWeek} buổi/tuần
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {slot.startTime} - {slot.endTime}
                         </span>
                       </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-lg">
+                        {formatPrice(slot.price)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">/buổi</p>
+                    </div>
+                    {selectedSlot === slot.id && (
+                      <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0" />
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </button>
+              ))}
+            </CardContent>
+          </Card>
 
-          {/* Step 4: Payment */}
-          {step === 4 && (
+          {/* Step 2: Chọn ngày bắt đầu */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Ngày bắt đầu học
+              </CardTitle>
+              <CardDescription>
+                Chọn ngày bắt đầu buổi học đầu tiên
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Ngày bắt đầu</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="max-w-xs"
+                  data-testid="input-start-date"
+                />
+                {startDate && (
+                  <p className="text-sm text-muted-foreground">
+                    Buổi học đầu tiên:{" "}
+                    {new Date(startDate).toLocaleDateString("vi-VN", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment section */}
+          {showPayment && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Thanh Toán
+                  <DollarSign className="h-5 w-5" />
+                  Thanh toán
                 </CardTitle>
-                <CardDescription>
-                  Quét mã QR để thanh toán và bắt đầu học
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-center">
-                  <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-muted-foreground">QR Code Placeholder</p>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="aspect-square max-w-xs mx-auto bg-muted rounded-lg flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">
+                      QR Code thanh toán
+                    </p>
                   </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Quét mã QR bằng ứng dụng ngân hàng để thanh toán
-                  </p>
-                  <p className="text-lg font-bold mt-2">
-                    {total?.finalPrice.toLocaleString("vi-VN")}đ
-                  </p>
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Tổng tiền thanh toán
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {formatPrice(calculateMonthlyPrice())}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      cho tháng đầu tiên
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleConfirmBooking}
+                    className="w-full"
+                    data-testid="button-confirm-payment"
+                  >
+                    Xác nhận đã thanh toán
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-3 mt-6">
-            {step > 1 && (
+          {!showPayment && (
+            <div className="flex gap-4">
               <Button
-                variant="outline"
-                onClick={() => setStep(step - 1)}
-                data-testid="button-back"
-              >
-                ← Quay lại
-              </Button>
-            )}
-            {step < 4 ? (
-              <Button
-                onClick={handleNextStep}
+                onClick={handleContinue}
                 className="flex-1"
-                data-testid="button-next"
+                disabled={!selectedSlot || !startDate}
+                data-testid="button-continue"
               >
-                Tiếp tục →
+                Tiếp tục thanh toán
               </Button>
-            ) : (
-              <Button
-                onClick={handleConfirmBooking}
-                className="flex-1"
-                data-testid="button-confirm"
-              >
-                Xác nhận thanh toán
-              </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Summary sidebar */}
-        <div>
+        <div className="lg:col-span-1">
           <Card className="sticky top-4">
             <CardHeader>
-              <CardTitle className="text-lg">Thông Tin Gia Sư</CardTitle>
+              <CardTitle className="text-lg">Tóm tắt đặt lịch</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                  <User className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="font-medium">{MOCK_TUTOR.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {MOCK_TUTOR.subject}
-                  </p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">
-                      {MOCK_TUTOR.rating}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {total && (
+              {slot ? (
                 <>
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-3">Chi Tiết Thanh Toán</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Số buổi/tuần:</span>
-                        <span>{total.sessionsPerWeek} buổi</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tổng số tuần:</span>
-                        <span>{total.totalWeeks} tuần</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tổng số buổi:</span>
-                        <span className="font-medium">{total.totalSessions} buổi</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Giá/buổi:</span>
-                        <span>{total.pricePerSession.toLocaleString("vi-VN")}đ</span>
-                      </div>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Lịch học
+                    </p>
+                    <p className="font-medium">{slot.dayLabels}</p>
+                    <p className="text-sm">
+                      {slot.startTime} - {slot.endTime}
+                    </p>
                   </div>
-
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Số buổi/tuần
+                    </p>
+                    <p className="font-medium">{slot.sessionsPerWeek} buổi</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Học phí/buổi
+                    </p>
+                    <p className="font-medium">{formatPrice(slot.price)}</p>
+                  </div>
                   <div className="border-t pt-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tạm tính:</span>
-                        <span>{total.originalPrice.toLocaleString("vi-VN")}đ</span>
-                      </div>
-                      {total.discountAmount > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Giảm giá:</span>
-                          <span className="text-green-600 dark:text-green-400">
-                            -{total.discountAmount.toLocaleString("vi-VN")}đ
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                        <span>Tổng cộng:</span>
-                        <span>{total.finalPrice.toLocaleString("vi-VN")}đ</span>
-                      </div>
-                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Học phí/tháng (ước tính)
+                    </p>
+                    <p className="text-xl font-bold">
+                      {formatPrice(calculateMonthlyPrice())}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      = {slot.sessionsPerWeek} buổi × 4 tuần × {formatPrice(slot.price)}
+                    </p>
                   </div>
                 </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Chưa chọn ca học
+                </p>
+              )}
+
+              {startDate && (
+                <div className="border-t pt-4">
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Ngày bắt đầu
+                  </p>
+                  <p className="font-medium">
+                    {new Date(startDate).toLocaleDateString("vi-VN")}
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
