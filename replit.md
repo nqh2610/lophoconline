@@ -32,6 +32,15 @@ Preferred communication style: Simple, everyday language.
       - Shows detailed summary with monthly price, discount breakdown, total payment, and savings
       - Package discounts: 1m (0%), 2m (5%), 3m (10% - Popular), 6m (15%), 12m (20%)
       - Auto-calculates: monthly price × months - discount% = total payment
+*   **Enhanced Schedule Display (October 14, 2025):** Improved tutor availability display in detail page:
+    - **Card-based layout**: Each time slot displayed as individual card with badges
+    - **Pattern grouping**: Slots organized by day patterns (T2,4,6 / T3,5,7 / T7,CN / etc)
+    - **Status indicators**: Visual badges showing availability status
+      - "Còn X chỗ" (orange) when ≤3 slots remaining
+      - "Đã đầy" (red) when fully booked
+    - **Rich information**: Time range, price per session, estimated monthly cost
+    - **Smart booking**: Disabled booking button for full slots, enabled for available slots
+    - **Responsive design**: Adapts to mobile and desktop layouts
 *   **Advanced Scheduling System (October 14, 2025):** Production-ready scheduling with comprehensive conflict prevention and data integrity:
     - **Tutor Availability Management** (`/tutor-availability`): Create, edit, and delete custom time slots with day-of-week selection and time ranges
     - **Student Timetable** (`/student-timetable`): View scheduled lessons in a weekly calendar format

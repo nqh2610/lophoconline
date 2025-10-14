@@ -51,6 +51,8 @@ interface AvailableSlot {
   endTime: string;
   price: number;
   sessionsPerWeek: number;
+  isBusy?: boolean;
+  remainingSlots?: number;
 }
 
 interface TutorDetailData {
@@ -100,8 +102,8 @@ const tutorData: Record<string, TutorDetailData> = {
     occupation: 'teacher' as const,
     availableSlots: ['T2, T4, T6 (19h-21h)', 'T7, CN (14h-20h)'],
     availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '19:00', endTime: '21:00', price: 300000, sessionsPerWeek: 3 },
-      { id: 'slot-2', dayLabels: 'Thứ 7, CN', startTime: '14:00', endTime: '20:00', price: 350000, sessionsPerWeek: 2 },
+      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '19:00', endTime: '21:00', price: 300000, sessionsPerWeek: 3, remainingSlots: 2 },
+      { id: 'slot-2', dayLabels: 'Thứ 7, CN', startTime: '14:00', endTime: '20:00', price: 350000, sessionsPerWeek: 2, remainingSlots: 5 },
     ],
     bio: 'Tôi là giáo viên Toán và Vật Lý với 5 năm kinh nghiệm giảng dạy tại trường THPT chuyên. Tôi đam mê giúp học sinh hiểu sâu bản chất của môn học và áp dụng vào thực tế.',
     education: [
@@ -163,8 +165,8 @@ const tutorData: Record<string, TutorDetailData> = {
     occupation: 'professional' as const,
     availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)'],
     availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 3, 5, 7', startTime: '18:00', endTime: '21:00', price: 500000, sessionsPerWeek: 3 },
-      { id: 'slot-2', dayLabels: 'Chủ nhật', startTime: '09:00', endTime: '18:00', price: 550000, sessionsPerWeek: 1 },
+      { id: 'slot-1', dayLabels: 'Thứ 3, 5, 7', startTime: '18:00', endTime: '21:00', price: 500000, sessionsPerWeek: 3, isBusy: true },
+      { id: 'slot-2', dayLabels: 'Chủ nhật', startTime: '09:00', endTime: '18:00', price: 550000, sessionsPerWeek: 1, remainingSlots: 3 },
     ],
     bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.5 và TOEFL 115. Chuyên luyện thi IELTS, TOEFL và giao tiếp thực tế.',
     education: [
@@ -722,23 +724,73 @@ export default function TutorDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {tutor.availableSlots.map((slot: string, index: number) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      data-testid={`slot-${index}`}
-                    >
-                      <span className="font-medium">{slot}</span>
-                      <Button 
-                        size="sm" 
-                        onClick={() => setRegularBookingOpen(true)}
-                        data-testid={`button-book-slot-${index}`}
+                <div className="space-y-4">
+                  {tutor.availableSlotDetails.map((slot: AvailableSlot) => {
+                    const isBusy = slot.isBusy || false;
+                    const remainingSlots = slot.remainingSlots || 10;
+                    
+                    return (
+                      <div 
+                        key={slot.id} 
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          isBusy 
+                            ? 'border-muted bg-muted/30 opacity-60' 
+                            : 'border-border bg-card hover-elevate'
+                        }`}
+                        data-testid={`slot-${slot.id}`}
                       >
-                        Đặt lịch
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <Badge variant="outline" className="font-semibold">
+                                {slot.dayLabels}
+                              </Badge>
+                              <Badge variant="secondary">
+                                {slot.sessionsPerWeek} buổi/tuần
+                              </Badge>
+                              {!isBusy && remainingSlots <= 3 && (
+                                <Badge variant="destructive" className="bg-orange-500">
+                                  Còn {remainingSlots} chỗ
+                                </Badge>
+                              )}
+                              {isBusy && (
+                                <Badge variant="destructive">
+                                  Đã đầy
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{slot.startTime} - {slot.endTime}</span>
+                              </div>
+                              <div className="font-semibold text-foreground">
+                                {new Intl.NumberFormat('vi-VN', {
+                                  style: 'currency',
+                                  currency: 'VND',
+                                }).format(slot.price)}/buổi
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Học phí/tháng: ~{new Intl.NumberFormat('vi-VN', {
+                                style: 'currency',
+                                currency: 'VND',
+                              }).format(slot.price * slot.sessionsPerWeek * 4)}
+                            </p>
+                          </div>
+                          <Button 
+                            size="default" 
+                            onClick={() => setRegularBookingOpen(true)}
+                            disabled={isBusy}
+                            data-testid={`button-book-${slot.id}`}
+                            className="shrink-0"
+                          >
+                            {isBusy ? 'Đã đầy' : 'Đặt lịch'}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">
                   * Bạn có thể đề xuất thời gian khác qua tin nhắn với gia sư
