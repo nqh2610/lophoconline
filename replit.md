@@ -18,7 +18,7 @@ Preferred communication style: Simple, everyday language.
 
 **Key Features:**
 
-*   **Authentication System:** Supports Google OAuth, Facebook OAuth, and email/password JWT authentication, including password reset functionality. Mock authentication flow (October 12, 2025): saves user data to localStorage on login, page reload to update UI, error handling for localStorage parsing, logout clears session. Logged-in users see personalized home page with greeting, quick access menu (Dashboard, Tìm gia sư, Lịch học), and stats cards. Navbar displays user dropdown menu with profile and logout options.
+*   **Authentication System:** Supports Google OAuth, Facebook OAuth, and email/password JWT authentication, including password reset functionality. Currently uses mock authentication flow (saves user data to localStorage). Logged-in users see personalized home page with greeting, quick access menu (Dashboard, Tìm gia sư, Lịch học), and stats cards. Navbar displays user dropdown menu with profile and logout options.
 *   **Notification System:** Real-time notifications for lessons, payments, and system alerts, accessible via a dropdown in the Navbar.
 *   **Tutor Discovery:** A dedicated page `/tutors` with filtering (subject, grade, price) and sorting options (price, rating, experience, review count). Tutor cards display detailed information and are visually enhanced. Pagination system shows 8 tutors per page with Previous/Next buttons and page numbers. Smooth scroll-to-top on page changes, automatic reset to page 1 when sort changes.
 *   **Tutor Registration:** A multi-step wizard form for prospective tutors, covering personal information, education, experience, teaching profile, and availability/rate. Includes profile photo and certificate uploads with validation.
@@ -30,6 +30,11 @@ Preferred communication style: Simple, everyday language.
     - **Data Integrity**: Type validation and coercion for all inputs (dayOfWeek, times, prices), immutable ID enforcement (tutorId, studentId cannot change after creation), sanitized data persistence only
     - **Security Features**: All update operations fetch by ID, validate types/formats, check conflicts before updates, and persist only validated data
     - **Data Models**: TutorAvailability (tutorId, dayOfWeek, startTime, endTime, isActive), Lessons (tutorId, studentId, date, startTime, endTime, subject, price, status, notes)
+*   **Recurring Schedule & Subscription System (October 14, 2025 - UI Prototype):** Mock UI implementation for recurring weekly schedules and multi-month subscription packages:
+    - **Recurring Schedule Setup** (`/tutor/recurring-schedule`): Tutor-facing interface with preset patterns (T2,4,6 / T3,5,7 / Weekends / Weekdays / Everyday), custom day selection, time/price inputs, live preview showing sessions/week and monthly revenue, schedule list management, and weekly calendar visualization
+    - **Subscription Packages** (`/packages`): Pricing table with 4 tiers - Cơ Bản (1 month, 0% discount), Tiết Kiệm (3 months, 10% discount), Phổ Biến (6 months, 15% discount), Ưu Đãi Nhất (12 months, 25% discount). Displays total sessions, price calculations, and savings amount
+    - **Booking Flow** (`/student/booking`): 4-step wizard for students - (1) Choose recurring schedule, (2) Choose subscription package with dynamic pricing, (3) Confirm with date picker, (4) Payment with QR placeholder. Features selection state persistence, back navigation, tutor info sidebar, and real-time price calculations
+    - **Note**: Currently UI-only with mock data for UX prototyping. Backend integration pending
 *   **Lesson Management:** Components for tracking lesson status (pending, confirmed, completed, cancelled).
 *   **Admin Dashboard System:** A comprehensive platform for administrators with distinct routes (`/admin/*`) and a destructive color theme. It includes sections for dashboard overview, tutor management (pending, active, blocked), student management, and transaction management.
 
