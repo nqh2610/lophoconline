@@ -23,6 +23,13 @@ Preferred communication style: Simple, everyday language.
 *   **Tutor Discovery:** A dedicated page `/tutors` with filtering (subject, grade, price) and sorting options (price, rating, experience, review count). Tutor cards display detailed information and are visually enhanced. Pagination system shows 8 tutors per page with Previous/Next buttons and page numbers. Smooth scroll-to-top on page changes, automatic reset to page 1 when sort changes.
 *   **Tutor Registration:** A multi-step wizard form for prospective tutors, covering personal information, education, experience, teaching profile, and availability/rate. Includes profile photo and certificate uploads with validation.
 *   **Complete Tutor Flow System:** An 8-stage journey for tutors, from registration to reputation building, with progress tracking. Stages include Dashboard, Verification (OCR, video selfie), Profile Setup (video introduction), Schedule Setup, Trial Requests, Online Teaching (video call integration placeholder), Feedback & Reviews, and Reputation & Stats.
+*   **Advanced Scheduling System (October 14, 2025):** Production-ready scheduling with comprehensive conflict prevention and data integrity:
+    - **Tutor Availability Management** (`/tutor-availability`): Create, edit, and delete custom time slots with day-of-week selection and time ranges
+    - **Student Timetable** (`/student-timetable`): View scheduled lessons in a weekly calendar format
+    - **Robust Conflict Detection**: Prevents overlapping time slots for both tutors and students with strict validation
+    - **Data Integrity**: Type validation and coercion for all inputs (dayOfWeek, times, prices), immutable ID enforcement (tutorId, studentId cannot change after creation), sanitized data persistence only
+    - **Security Features**: All update operations fetch by ID, validate types/formats, check conflicts before updates, and persist only validated data
+    - **Data Models**: TutorAvailability (tutorId, dayOfWeek, startTime, endTime, isActive), Lessons (tutorId, studentId, date, startTime, endTime, subject, price, status, notes)
 *   **Lesson Management:** Components for tracking lesson status (pending, confirmed, completed, cancelled).
 *   **Admin Dashboard System:** A comprehensive platform for administrators with distinct routes (`/admin/*`) and a destructive color theme. It includes sections for dashboard overview, tutor management (pending, active, blocked), student management, and transaction management.
 
