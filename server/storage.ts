@@ -20,6 +20,7 @@ export interface IStorage {
   // Tutor availability methods
   createTutorAvailability(availability: InsertTutorAvailability): Promise<TutorAvailability>;
   getTutorAvailability(tutorId: string): Promise<TutorAvailability[]>;
+  getTutorAvailabilityById(id: number): Promise<TutorAvailability | undefined>;
   updateTutorAvailability(id: number, updates: Partial<InsertTutorAvailability>): Promise<TutorAvailability | undefined>;
   deleteTutorAvailability(id: number): Promise<boolean>;
   checkAvailabilityConflict(tutorId: string, dayOfWeek: number, startTime: string, endTime: string, excludeId?: number): Promise<boolean>;
@@ -95,6 +96,10 @@ export class MemStorage implements IStorage {
   async getTutorAvailability(tutorId: string): Promise<TutorAvailability[]> {
     return Array.from(this.tutorAvailability.values())
       .filter(a => a.tutorId === tutorId);
+  }
+
+  async getTutorAvailabilityById(id: number): Promise<TutorAvailability | undefined> {
+    return this.tutorAvailability.get(id);
   }
 
   async updateTutorAvailability(id: number, updates: Partial<InsertTutorAvailability>): Promise<TutorAvailability | undefined> {
