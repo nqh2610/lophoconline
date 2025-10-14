@@ -6,7 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar as CalendarIcon, CheckCircle2, Package } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Clock, Calendar as CalendarIcon, CheckCircle2, Package, BookOpen } from "lucide-react";
+
+interface Subject {
+  name: string;
+  grades: string;
+}
 
 interface AvailableSlot {
   id: string;
@@ -25,6 +31,7 @@ interface BookingDialogProps {
   lessonDuration: number;
   isTrial?: boolean;
   availableSlots?: AvailableSlot[];
+  tutorSubjects?: Subject[];
 }
 
 const PACKAGES = [
@@ -42,13 +49,16 @@ export function BookingDialog({
   hourlyRate,
   lessonDuration,
   isTrial = false,
-  availableSlots = []
+  availableSlots = [],
+  tutorSubjects = []
 }: BookingDialogProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [selectedPackage, setSelectedPackage] = useState<string>("1m");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
 
   useEffect(() => {
     if (!open) {
@@ -57,8 +67,18 @@ export function BookingDialog({
       setSelectedSlot("");
       setStartDate("");
       setSelectedPackage("1m");
+      setSelectedSubjects([]);
+      setSelectedGrade("");
     }
   }, [open]);
+
+  const toggleSubject = (subjectName: string) => {
+    setSelectedSubjects(prev => 
+      prev.includes(subjectName) 
+        ? prev.filter(s => s !== subjectName)
+        : [...prev, subjectName]
+    );
+  };
 
   const calculateEndTime = (startTime: string, durationInHours: number): string => {
     const [hours, minutes] = startTime.split(':').map(Number);
@@ -105,6 +125,18 @@ export function BookingDialog({
   };
 
   const handleBooking = () => {
+    // Validate subjects and grade
+    if (tutorSubjects.length > 0) {
+      if (selectedSubjects.length === 0) {
+        alert("Vui lòng chọn ít nhất 1 môn học");
+        return;
+      }
+      if (!selectedGrade) {
+        alert("Vui lòng chọn lớp đang học");
+        return;
+      }
+    }
+
     if (isTrial) {
       if (!selectedDate || !selectedTime) {
         alert("Vui lòng chọn ngày và giờ học");
@@ -112,8 +144,9 @@ export function BookingDialog({
       }
       
       const endTime = calculateEndTime(selectedTime, 0.5);
+      const subjectsText = selectedSubjects.length > 0 ? `\nMôn học: ${selectedSubjects.join(", ")}\nLớp: ${selectedGrade}` : '';
       
-      alert(`Đã đặt lịch học thử với ${tutorName}\nNgày: ${selectedDate.toLocaleDateString('vi-VN')}\nCa học: ${selectedTime} - ${endTime}\nThời lượng: 30 phút\nHọc phí: Miễn phí`);
+      alert(`Đã đặt lịch học thử với ${tutorName}${subjectsText}\nNgày: ${selectedDate.toLocaleDateString('vi-VN')}\nCa học: ${selectedTime} - ${endTime}\nThời lượng: 30 phút\nHọc phí: Miễn phí`);
     } else {
       if (!selectedSlot || !startDate) {
         alert("Vui lòng chọn ca học và ngày bắt đầu");
@@ -124,8 +157,9 @@ export function BookingDialog({
       const totalPrice = calculateTotalPrice();
       const originalTotal = monthlyPrice * (pkg?.months || 1);
       const savings = originalTotal - totalPrice;
+      const subjectsText = selectedSubjects.length > 0 ? `Môn học: ${selectedSubjects.join(", ")}\nLớp: ${selectedGrade}\n` : '';
       
-      alert(`Đã đặt lịch học với ${tutorName}\nLịch học: ${slot?.dayLabels}\nCa học: ${slot?.startTime} - ${slot?.endTime}\nNgày bắt đầu: ${new Date(startDate).toLocaleDateString('vi-VN')}\nGói: ${pkg?.label}\nHọc phí/tháng: ${formatPrice(monthlyPrice)}\nTổng cộng: ${formatPrice(totalPrice)}${savings > 0 ? `\nTiết kiệm: ${formatPrice(savings)}` : ''}\n\n⚠️ Vui lòng thanh toán để bắt đầu học`);
+      alert(`Đã đặt lịch học với ${tutorName}\n${subjectsText}Lịch học: ${slot?.dayLabels}\nCa học: ${slot?.startTime} - ${slot?.endTime}\nNgày bắt đầu: ${new Date(startDate).toLocaleDateString('vi-VN')}\nGói: ${pkg?.label}\nHọc phí/tháng: ${formatPrice(monthlyPrice)}\nTổng cộng: ${formatPrice(totalPrice)}${savings > 0 ? `\nTiết kiệm: ${formatPrice(savings)}` : ''}\n\n⚠️ Vui lòng thanh toán để bắt đầu học`);
     }
     
     onOpenChange(false);
@@ -147,6 +181,70 @@ export function BookingDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Chọn môn học và lớp - hiển thị cho cả trial và monthly */}
+          {tutorSubjects.length > 0 && (
+            <>
+              <div>
+                <Label className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Môn học muốn học
+                </Label>
+                <div className="space-y-2">
+                  {tutorSubjects.map((subject) => (
+                    <div 
+                      key={subject.name} 
+                      className="flex items-center space-x-2 p-3 rounded-lg border hover-elevate"
+                      data-testid={`subject-${subject.name.toLowerCase()}`}
+                    >
+                      <Checkbox
+                        id={`subject-${subject.name}`}
+                        checked={selectedSubjects.includes(subject.name)}
+                        onCheckedChange={() => toggleSubject(subject.name)}
+                        data-testid={`checkbox-${subject.name.toLowerCase()}`}
+                      />
+                      <label
+                        htmlFor={`subject-${subject.name}`}
+                        className="flex-1 text-sm font-medium cursor-pointer"
+                      >
+                        {subject.name}
+                        <span className="text-muted-foreground ml-2">({subject.grades})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {selectedSubjects.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Đã chọn: <strong>{selectedSubjects.join(", ")}</strong>
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="grade" className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Lớp đang học
+                </Label>
+                <select
+                  id="grade"
+                  value={selectedGrade}
+                  onChange={(e) => setSelectedGrade(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  data-testid="select-grade"
+                >
+                  <option value="">Chọn lớp</option>
+                  <option value="6">Lớp 6</option>
+                  <option value="7">Lớp 7</option>
+                  <option value="8">Lớp 8</option>
+                  <option value="9">Lớp 9</option>
+                  <option value="10">Lớp 10</option>
+                  <option value="11">Lớp 11</option>
+                  <option value="12">Lớp 12</option>
+                  <option value="other">Khác</option>
+                </select>
+              </div>
+            </>
+          )}
+
           {isTrial ? (
             <>
               <div>

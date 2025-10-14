@@ -842,6 +842,7 @@ export default function TutorDetail() {
           hourlyRate={tutor.hourlyRate}
           lessonDuration={0.5} // Học thử 30 phút
           isTrial={true}
+          tutorSubjects={tutor.subjects}
         />
         <BookingDialog
           open={regularBookingOpen}
@@ -851,6 +852,7 @@ export default function TutorDetail() {
           lessonDuration={tutor.lessonDuration}
           isTrial={false}
           availableSlots={tutor.availableSlotDetails}
+          tutorSubjects={tutor.subjects}
         />
       </div>
     </div>
