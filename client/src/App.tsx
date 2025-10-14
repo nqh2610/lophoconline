@@ -37,6 +37,7 @@ import TutorDetail from "@/pages/TutorDetail";
 import RecurringScheduleSetup from "@/pages/RecurringScheduleSetup";
 import SubscriptionPackages from "@/pages/SubscriptionPackages";
 import BookingFlow from "@/pages/BookingFlow";
+import StudentBookingSimple from "@/pages/StudentBookingSimple";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/student/timetable" component={StudentTimetable} />
       <Route path="/student-timetable" component={StudentTimetable} />
       <Route path="/student/booking" component={BookingFlow} />
+      <Route path="/student/register" component={StudentBookingSimple} />
       <Route path="/packages" component={SubscriptionPackages} />
       
       <Route path="/tutors" component={Tutors} />
