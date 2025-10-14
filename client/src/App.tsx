@@ -34,6 +34,9 @@ import ForParents from "@/pages/ForParents";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import TutorDetail from "@/pages/TutorDetail";
+import RecurringScheduleSetup from "@/pages/RecurringScheduleSetup";
+import SubscriptionPackages from "@/pages/SubscriptionPackages";
+import BookingFlow from "@/pages/BookingFlow";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -45,6 +48,8 @@ function Router() {
       {/* Student Routes */}
       <Route path="/student/timetable" component={StudentTimetable} />
       <Route path="/student-timetable" component={StudentTimetable} />
+      <Route path="/student/booking" component={BookingFlow} />
+      <Route path="/packages" component={SubscriptionPackages} />
       
       <Route path="/tutors" component={Tutors} />
       <Route path="/tutor-registration" component={TutorRegistration} />
@@ -54,6 +59,7 @@ function Router() {
       <Route path="/tutor/verification" component={TutorVerification} />
       <Route path="/tutor/profile-setup" component={TutorProfileSetup} />
       <Route path="/tutor/schedule-setup" component={TutorScheduleSetup} />
+      <Route path="/tutor/recurring-schedule" component={RecurringScheduleSetup} />
       <Route path="/tutor/availability" component={TutorAvailabilityManagement} />
       <Route path="/tutor-availability" component={TutorAvailabilityManagement} />
       <Route path="/tutor/trial-requests" component={TutorTrialRequests} />
