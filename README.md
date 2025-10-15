@@ -68,7 +68,7 @@
 ### Backend
 - **Express.js** - REST API server
 - **TypeScript** - Type safety
-- **PostgreSQL** - Database (Neon serverless)
+- **PostgreSQL hoặc MySQL** - Database
 - **Drizzle ORM** - Type-safe ORM
 - **Express Session** - Session management
 
@@ -78,30 +78,35 @@
 
 ## 🚀 Hướng dẫn chạy trên máy local
 
-📚 **[XEM HƯỚNG DẪN CHI TIẾT TẠI ĐÂY →](./HUONG_DAN_CHAY_LOCAL.md)**
+### 📋 Chọn database của bạn:
 
-### Tóm tắt nhanh:
+#### Option 1: PostgreSQL (mặc định)
+📚 **[Hướng dẫn chi tiết PostgreSQL →](./HUONG_DAN_CHAY_LOCAL.md)**
 
 ```bash
 # 1. Clone/Download code về máy
-
-# 2. Cài đặt dependencies
-npm install
-
-# 3. Tạo database PostgreSQL
-createdb lophoc_online
-
-# 4. Copy file .env.example thành .env và điền thông tin
-cp .env.example .env
-
-# 5. Tạo bảng trong database
-npm run db:push
-
-# 6. Chạy ứng dụng
-npm run dev
-
-# 7. Mở trình duyệt tại http://localhost:5000
+# 2. npm install
+# 3. Tạo database: createdb lophoc_online
+# 4. Tạo file .env từ .env.example
+# 5. npm run db:push
+# 6. npm run dev
 ```
+
+#### Option 2: MySQL (nếu bạn chỉ có MySQL)
+🐬 **[Hướng dẫn chi tiết MySQL →](./HUONG_DAN_MYSQL.md)**  
+⚡ **[Hướng dẫn nhanh chuyển sang MySQL →](./CHUYEN_DOI_MYSQL_NHANH.md)**
+
+```bash
+# 1. Clone/Download code về máy
+# 2. Sửa 3 file config (xem hướng dẫn)
+# 3. npm install (với mysql2)
+# 4. Tạo database: CREATE DATABASE lophoc_online;
+# 5. Tạo file .env với MySQL connection
+# 6. npm run db:push
+# 7. npm run dev
+```
+
+### Mở trình duyệt tại: **http://localhost:5000** 🎉
 
 ## 📁 Cấu trúc project
 
