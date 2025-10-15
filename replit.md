@@ -2,7 +2,17 @@
 
 ## Overview
 
-LopHoc.Online is an online tutoring marketplace platform designed for the Vietnamese education market. It connects students with tutors, offering features such as tutor discovery, lesson scheduling, QR code-based payment processing, and a comprehensive review system. The platform aims to streamline the online tutoring experience in Vietnam.
+LopHoc.Online is an online tutoring marketplace platform designed for the Vietnamese education market. It connects students with tutors, offering features such as tutor discovery, lesson scheduling, QR code-based payment processing, and a comprehensive review system. The platform runs on MySQL database and can be easily set up locally with minimal configuration.
+
+## Recent Updates (October 15, 2025)
+
+- ✅ **Complete MySQL Migration**: Migrated from PostgreSQL to MySQL 8.0
+  - Removed all PostgreSQL dependencies (@neondatabase/serverless, connect-pg-simple)
+  - Added mysql2 for MySQL connection pooling
+  - Updated drizzle.config.ts to use MySQL dialect
+  - Created setup-mysql.js for automated configuration
+- ✅ **Simplified Setup**: README.md reduced to 4 simple steps
+- ✅ **Clean Codebase**: Removed all redundant documentation and template files
 
 ## User Preferences
 
