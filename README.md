@@ -28,14 +28,14 @@ NODE_ENV=development
 
 ⚠️ **Thay `root` và `mat_khau` bằng MySQL của bạn**
 
-### Bước 4: Chạy app
+### Bước 4: Khởi chạy Express server
 
 ```bash
-npm run db:push
-npm run dev
+npm run db:push      # Tạo bảng trong database
+npm run dev          # Chạy Express backend + React frontend
 ```
 
-Mở: **http://localhost:5000** 🎉
+Server sẽ chạy tại: **http://localhost:5000** 🎉
 
 ---
 
@@ -90,9 +90,10 @@ CREATE DATABASE lophoc_online CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ## 🔧 Lệnh hữu ích
 
 ```bash
-npm run dev        # Development
+npm run dev        # Chạy Express server + React (development)
 npm run build      # Build production
-npm run db:push    # Sync database
+npm run start      # Chạy production server
+npm run db:push    # Đồng bộ database schema
 ```
 
 ## 🛠️ Stack công nghệ
