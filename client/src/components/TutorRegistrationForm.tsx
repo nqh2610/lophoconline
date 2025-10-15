@@ -26,6 +26,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Upload, User, GraduationCap, BookOpen, Clock, DollarSign, FileText, Award, Camera, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { RichTextEditor } from "@/components/RichTextEditor";
+
+// Helper function to strip HTML tags for validation
+const stripHtml = (html: string): string => {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
 
 const tutorRegistrationSchema = z.object({
   // Personal Information
@@ -47,10 +55,19 @@ const tutorRegistrationSchema = z.object({
   subjects: z.array(z.string()).min(1, "Vui lòng chọn ít nhất 1 môn học"),
   grades: z.array(z.string()).min(1, "Vui lòng chọn ít nhất 1 cấp lớp"),
   
-  // Bio & Achievements
-  bio: z.string().min(50, "Giới thiệu phải có ít nhất 50 ký tự").max(1000, "Giới thiệu không quá 1000 ký tự"),
+  // Bio & Achievements (validate text content, not HTML)
+  bio: z.string().refine((val) => {
+    const text = stripHtml(val);
+    return text.length >= 50;
+  }, "Giới thiệu phải có ít nhất 50 ký tự").refine((val) => {
+    const text = stripHtml(val);
+    return text.length <= 1000;
+  }, "Giới thiệu không quá 1000 ký tự"),
   achievements: z.string().optional(),
-  teachingMethod: z.string().min(20, "Phương pháp giảng dạy phải có ít nhất 20 ký tự"),
+  teachingMethod: z.string().refine((val) => {
+    const text = stripHtml(val);
+    return text.length >= 20;
+  }, "Phương pháp giảng dạy phải có ít nhất 20 ký tự"),
   
   // Availability
   availableDays: z.array(z.string()).min(1, "Vui lòng chọn ít nhất 1 ngày"),
@@ -687,15 +704,15 @@ export function TutorRegistrationForm() {
                     <FormItem>
                       <FormLabel>Giới thiệu bản thân *</FormLabel>
                       <FormControl>
-                        <Textarea
+                        <RichTextEditor
+                          value={field.value || ''}
+                          onChange={field.onChange}
                           placeholder="Giới thiệu về bản thân, kinh nghiệm và điểm mạnh của bạn..."
-                          className="min-h-[120px]"
-                          {...field}
-                          data-testid="textarea-bio"
+                          minHeight="120px"
                         />
                       </FormControl>
                       <FormDescription>
-                        Tối thiểu 50 ký tự, tối đa 1000 ký tự
+                        Tối thiểu 50 ký tự, tối đa 1000 ký tự. Sử dụng toolbar để định dạng văn bản.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -712,15 +729,15 @@ export function TutorRegistrationForm() {
                         Thành tích nổi bật
                       </FormLabel>
                       <FormControl>
-                        <Textarea
+                        <RichTextEditor
+                          value={field.value || ''}
+                          onChange={field.onChange}
                           placeholder="Các giải thưởng, thành tích nổi bật trong quá trình giảng dạy..."
-                          className="min-h-[100px]"
-                          {...field}
-                          data-testid="textarea-achievements"
+                          minHeight="100px"
                         />
                       </FormControl>
                       <FormDescription>
-                        Không bắt buộc
+                        Không bắt buộc. Sử dụng danh sách để liệt kê thành tích.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -734,15 +751,15 @@ export function TutorRegistrationForm() {
                     <FormItem>
                       <FormLabel>Phương pháp giảng dạy *</FormLabel>
                       <FormControl>
-                        <Textarea
+                        <RichTextEditor
+                          value={field.value || ''}
+                          onChange={field.onChange}
                           placeholder="Mô tả phương pháp và phong cách giảng dạy của bạn..."
-                          className="min-h-[120px]"
-                          {...field}
-                          data-testid="textarea-teaching-method"
+                          minHeight="120px"
                         />
                       </FormControl>
                       <FormDescription>
-                        Tối thiểu 20 ký tự
+                        Tối thiểu 20 ký tự. Định dạng để làm nổi bật phương pháp của bạn.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
