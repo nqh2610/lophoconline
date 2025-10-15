@@ -93,17 +93,27 @@
 ```
 
 #### Option 2: MySQL (nếu bạn chỉ có MySQL)
-🐬 **[Hướng dẫn chi tiết MySQL →](./HUONG_DAN_MYSQL.md)**  
-⚡ **[Hướng dẫn nhanh chuyển sang MySQL →](./CHUYEN_DOI_MYSQL_NHANH.md)**
+🐬 **[Hướng dẫn đầy đủ MySQL →](./HUONG_DAN_MYSQL.md)**  
+⚡ **[Hướng dẫn nhanh →](./CHUYEN_DOI_MYSQL_NHANH.md)**  
+✅ **[Tổng hợp hoàn chỉnh →](./MYSQL_SETUP_COMPLETE.md)**  
+🤖 **[Scripts tự động →](./scripts/README_SCRIPTS.md)**
 
+**Cách 1 - Dùng script tự động (khuyên dùng):**
 ```bash
-# 1. Clone/Download code về máy
-# 2. Sửa 3 file config (xem hướng dẫn)
-# 3. npm install (với mysql2)
-# 4. Tạo database: CREATE DATABASE lophoc_online;
-# 5. Tạo file .env với MySQL connection
-# 6. npm run db:push
-# 7. npm run dev
+node scripts/switch-to-mysql.js  # Tự động chuyển đổi
+npm install
+# Tạo database + .env
+npm run db:push
+npm run dev
+```
+
+**Cách 2 - Thủ công:**
+```bash
+# 1. Copy 3 file config từ .mysql.ts → file gốc
+# 2. npm install (với mysql2)
+# 3. CREATE DATABASE lophoc_online;
+# 4. Tạo .env với MySQL connection
+# 5. npm run db:push && npm run dev
 ```
 
 ### Mở trình duyệt tại: **http://localhost:5000** 🎉

@@ -10,6 +10,7 @@ import * as schema from "@shared/schema";
 // 1. Backup file server/db.ts hiện tại
 // 2. Copy toàn bộ nội dung file này
 // 3. Paste vào server/db.ts
+// 4. Cài mysql2: npm install mysql2
 // ==========================================
 
 if (!process.env.DATABASE_URL) {
@@ -18,5 +19,13 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const connection = await mysql.createConnection(process.env.DATABASE_URL);
-export const db = drizzle(connection, { schema, mode: 'default' });
+// Tạo connection pool cho MySQL
+export const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  connectionLimit: 10, // Số lượng connection tối đa
+  waitForConnections: true,
+  queueLimit: 0,
+});
+
+// Tạo Drizzle instance với connection pool
+export const db = drizzle(pool, { schema, mode: 'default' });

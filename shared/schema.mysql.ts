@@ -13,8 +13,9 @@ import { z } from "zod";
 // 3. Paste vào shared/schema.ts
 // ==========================================
 
+// Users table - dùng serial ID cho MySQL
 export const users = mysqlTable("users", {
-  id: serial("id").primaryKey(),
+  id: serial("id").primaryKey(), // Auto-increment ID
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
 });
