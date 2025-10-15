@@ -83,7 +83,7 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 *   **UI Libraries:** @radix-ui/*, @tanstack/react-query, wouter, react-hook-form, date-fns, embla-carousel-react, lucide-react, class-variance-authority, clsx.
-*   **Backend Services:** mysql2 (MySQL), drizzle-orm, express, connect-pg-simple (session store).
+*   **Backend Services:** mysql2 (MySQL), drizzle-orm, express.
 *   **Development Tools:** TypeScript, Vite, tsx, esbuild, @replit/* plugins.
 *   **Payment Integration:** VietQR API (img.vietqr.io) for QR code generation.
 *   **Styling:** Tailwind CSS, PostCSS, Autoprefixer.

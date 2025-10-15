@@ -18,15 +18,17 @@ Download ZIP từ Replit hoặc clone repository
 
 #### 2.1. Sửa file `package.json`
 
-Mở file `package.json`, tìm dòng:
+Mở file `package.json`, tìm và **XÓA** dòng sau:
 ```json
 "@neondatabase/serverless": "^0.10.4",
 ```
 
-**XÓA** dòng trên và **THÊM** dòng này vào chỗ đó:
+Sau đó **THÊM** dòng này vào đúng chỗ đó (trong phần "dependencies"):
 ```json
 "mysql2": "^3.11.0",
 ```
+
+Lưu file lại.
 
 #### 2.2. Sửa file `drizzle.config.ts`
 
