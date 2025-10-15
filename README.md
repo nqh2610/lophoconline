@@ -1,144 +1,139 @@
-# 🎓 LopHoc.Online - Nền tảng kết nối gia sư trực tuyến
+# 🎓 LopHoc.Online - Nền tảng kết nối gia sư với học viên
 
-<div align="center">
+Ứng dụng web kết nối gia sư với học viên, được xây dựng với **React.js + Express.js + MySQL**
 
-**Giải pháp tìm gia sư và quản lý lịch học trực tuyến toàn diện cho thị trường Việt Nam**
+## 📋 Yêu cầu hệ thống
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://www.postgresql.org/)
+- **Node.js** >= 18.0
+- **MySQL** >= 8.0
+- **npm** hoặc **yarn**
 
-</div>
+## 🚀 Cài đặt và chạy trên máy local
 
----
+### Bước 1: Tải mã nguồn về máy
 
-## 📖 Giới thiệu
+Download ZIP từ Replit hoặc clone repository
 
-**LopHoc.Online** là nền tảng marketplace kết nối gia sư với học viên, được thiết kế đặc biệt cho thị trường giáo dục Việt Nam. Hệ thống cung cấp đầy đủ tính năng từ tìm kiếm gia sư, đặt lịch học, thanh toán đến quản lý và đánh giá.
+### Bước 2: Sửa 2 file cấu hình
 
-## ✨ Tính năng chính
+#### 2.1. Sửa file `package.json`
 
-### 🔐 Xác thực người dùng
-- Đăng nhập bằng **JWT Token**
-- Đăng nhập bằng **Google OAuth**
-- Đăng nhập bằng **Facebook OAuth**
-- Tính năng **quên mật khẩu** và đặt lại
-
-### 👨‍🏫 Dành cho Gia sư
-- **Rich Text Editor** để tạo hồ sơ giảng dạy chuyên nghiệp
-  - Định dạng văn bản: Bold, Italic, Headings
-  - Tạo danh sách có số và không số
-  - Undo/Redo
-- Tải lên ảnh đại diện và chứng chỉ
-- Thiết lập lịch dạy định kỳ (T2,4,6 / T3,5,7 / Cuối tuần)
-- Quản lý học viên và lịch dạy
-- Theo dõi doanh thu và thống kê
-
-### 👨‍🎓 Dành cho Học viên
-- Tìm kiếm gia sư với bộ lọc thông minh:
-  - Môn học và cấp độ
-  - Khoảng giá
-  - Đánh giá và kinh nghiệm
-  - Thời gian rảnh
-- **Chọn nhiều môn học** trong một lần đặt lịch
-- Chọn **gói subscription** linh hoạt (1-12 tháng)
-  - Giảm giá theo thời gian: 5% → 20%
-- Thanh toán QR code qua **VietQR**
-- Xem lịch học trên calendar
-- Đánh giá và phản hồi sau buổi học
-
-### 💼 Quản trị hệ thống
-- Dashboard quản lý tổng quan
-- Quản lý gia sư (duyệt, kích hoạt, chặn)
-- Quản lý học viên
-- Theo dõi giao dịch
-
-## 🛠️ Công nghệ sử dụng
-
-### Frontend
-- **React 18** + **TypeScript**
-- **Vite** - Build tool nhanh chóng
-- **Wouter** - Lightweight routing
-- **TanStack Query** - Server state management
-- **Shadcn/ui** + **Radix UI** - Component library
-- **Tailwind CSS** - Utility-first CSS
-- **TipTap Editor** - Rich text editing
-
-### Backend
-- **Express.js** - REST API server
-- **TypeScript** - Type safety
-- **PostgreSQL hoặc MySQL** - Database
-- **Drizzle ORM** - Type-safe ORM
-- **Express Session** - Session management
-
-### Thanh toán & Tích hợp
-- **VietQR API** - Thanh toán QR code
-- **Jitsi Meet** - Video call (placeholder)
-
-## 🚀 Hướng dẫn chạy trên máy local
-
-### 📋 Chọn database của bạn:
-
-#### Option 1: PostgreSQL (mặc định)
-📚 **[Hướng dẫn chi tiết PostgreSQL →](./HUONG_DAN_CHAY_LOCAL.md)**
-
-```bash
-# 1. Clone/Download code về máy
-# 2. npm install
-# 3. Tạo database: createdb lophoc_online
-# 4. Tạo file .env từ .env.example
-# 5. npm run db:push
-# 6. npm run dev
+Mở file `package.json`, tìm dòng:
+```json
+"@neondatabase/serverless": "^0.10.4",
 ```
 
-#### Option 2: MySQL (nếu bạn chỉ có MySQL)
-🐬 **[Hướng dẫn đầy đủ MySQL →](./HUONG_DAN_MYSQL.md)**  
-⚡ **[Hướng dẫn nhanh →](./CHUYEN_DOI_MYSQL_NHANH.md)**  
-✅ **[Tổng hợp hoàn chỉnh →](./MYSQL_SETUP_COMPLETE.md)**  
-🤖 **[Scripts tự động →](./scripts/README_SCRIPTS.md)**
+**XÓA** dòng trên và **THÊM** dòng này vào chỗ đó:
+```json
+"mysql2": "^3.11.0",
+```
 
-**Cách 1 - Dùng script tự động (khuyên dùng):**
+#### 2.2. Sửa file `drizzle.config.ts`
+
+Mở file `drizzle.config.ts`, tìm dòng:
+```typescript
+dialect: "postgresql",
+```
+
+**THAY** bằng:
+```typescript
+dialect: "mysql",
+```
+
+### Bước 3: Cài đặt packages
+
 ```bash
-node scripts/switch-to-mysql.js  # Tự động chuyển đổi
 npm install
-# Tạo database + .env
+```
+
+### Bước 4: Tạo database MySQL
+
+Mở **MySQL Command Line** hoặc **MySQL Workbench**, chạy:
+
+```sql
+CREATE DATABASE lophoc_online CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### Bước 5: Tạo file .env
+
+Tạo file `.env` trong thư mục gốc với nội dung:
+
+```bash
+DATABASE_URL=mysql://root:mat_khau_cua_ban@localhost:3306/lophoc_online
+SESSION_SECRET=abc123xyz789randomsecret12345678901234567890
+NODE_ENV=development
+```
+
+⚠️ **Thay đổi:**
+- `root` → username MySQL của bạn (thường là `root`)
+- `mat_khau_cua_ban` → mật khẩu MySQL của bạn
+- `abc123xyz...` → chuỗi bí mật bất kỳ (ít nhất 32 ký tự)
+
+### Bước 6: Tạo bảng trong database
+
+```bash
 npm run db:push
+```
+
+Nếu gặp lỗi, chạy:
+```bash
+npm run db:push -- --force
+```
+
+### Bước 7: Chạy ứng dụng
+
+```bash
 npm run dev
 ```
 
-**Cách 2 - Thủ công:**
-```bash
-# 1. Copy 3 file config từ .mysql.ts → file gốc
-# 2. npm install (với mysql2)
-# 3. CREATE DATABASE lophoc_online;
-# 4. Tạo .env với MySQL connection
-# 5. npm run db:push && npm run dev
-```
+### Bước 8: Mở trình duyệt
 
-### Mở trình duyệt tại: **http://localhost:5000** 🎉
+Truy cập: **http://localhost:5000**
+
+🎉 **Xong!** Ứng dụng đã chạy thành công!
+
+---
+
+## 🛠️ Công nghệ sử dụng
+
+- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + Shadcn/ui
+- **Backend:** Express.js + TypeScript
+- **Database:** MySQL 8.0
+- **ORM:** Drizzle ORM
+- **Rich Text:** TipTap Editor
 
 ## 📁 Cấu trúc project
 
 ```
 lophoc-online/
-├── client/                 # Frontend (React + TypeScript)
-│   ├── src/
-│   │   ├── components/    # UI Components
-│   │   ├── pages/         # Page Components  
-│   │   ├── lib/           # Utilities
-│   │   └── App.tsx
-├── server/                # Backend (Express + TypeScript)
-│   ├── routes.ts          # API Routes
-│   ├── storage.ts         # Data Layer
-│   └── index.ts           # Server Entry
-├── shared/                # Shared Types
-│   └── schema.ts          # Database Schema
-├── HUONG_DAN_CHAY_LOCAL.md  # 📖 Hướng dẫn chi tiết
-└── .env.example           # Template biến môi trường
+├── client/          # Frontend React
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       └── lib/
+├── server/          # Backend Express
+│   ├── db.ts       # MySQL connection
+│   ├── routes.ts   # API routes
+│   └── index.ts
+├── shared/          # Shared types
+│   └── schema.ts   # Database schema (MySQL)
+├── package.json
+├── drizzle.config.ts
+└── .env            # Biến môi trường (tự tạo)
 ```
 
-## 🔧 Các lệnh hữu ích
+## ✨ Tính năng chính
+
+✅ Đăng ký/đăng nhập gia sư và học viên  
+✅ Tìm kiếm gia sư với bộ lọc thông minh  
+✅ Rich Text Editor cho hồ sơ gia sư  
+✅ Đặt lịch học với gói subscription (1-12 tháng)  
+✅ Chọn nhiều môn học trong 1 lần đặt  
+✅ Thanh toán QR code (VietQR)  
+✅ Quản lý lịch học cho gia sư và học viên  
+✅ Hệ thống đánh giá và phản hồi  
+
+## 🔧 Lệnh hữu ích
 
 ```bash
 npm run dev        # Chạy development server
@@ -148,54 +143,66 @@ npm run check      # TypeScript type checking
 npm run db:push    # Sync database schema
 ```
 
-## 🎨 Giao diện
+## 🐛 Khắc phục sự cố
 
-- **Responsive design** - Tối ưu cho desktop & mobile
-- **Dark/Light mode** - Chế độ sáng/tối
-- **Vietnamese UI** - Giao diện hoàn toàn tiếng Việt
-- **Modern aesthetics** - Thiết kế hiện đại, chuyên nghiệp
+### ❌ Lỗi: "Client does not support authentication protocol"
+
+**Giải pháp:**
+```sql
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'mat_khau_cua_ban';
+FLUSH PRIVILEGES;
+```
+
+### ❌ Lỗi: "Access denied for user"
+
+**Giải pháp:**
+- Kiểm tra username/password trong file `.env`
+- Test kết nối: `mysql -u root -p`
+
+### ❌ Lỗi: "Unknown database 'lophoc_online'"
+
+**Giải pháp:**
+```sql
+CREATE DATABASE lophoc_online CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### ❌ Lỗi: "Port 5000 already in use"
+
+**Giải pháp:**
+```bash
+# Tìm process đang dùng port 5000
+# Windows
+netstat -ano | findstr :5000
+
+# macOS/Linux
+lsof -i :5000
+
+# Hoặc đổi port trong server/index.ts
+```
+
+## 📝 Checklist hoàn thành
+
+- [ ] Download mã nguồn về máy
+- [ ] Sửa `package.json` (xóa @neondatabase/serverless, thêm mysql2)
+- [ ] Sửa `drizzle.config.ts` (dialect: "mysql")
+- [ ] Chạy `npm install`
+- [ ] Tạo database `lophoc_online` trong MySQL
+- [ ] Tạo file `.env` với thông tin MySQL
+- [ ] Chạy `npm run db:push`
+- [ ] Chạy `npm run dev`
+- [ ] Mở http://localhost:5000 và test
 
 ## 🔐 Bảo mật
 
-✅ JWT Token authentication  
-✅ Password hashing  
-✅ Session management  
-✅ Environment variables cho secrets  
-✅ SQL injection prevention (Drizzle ORM)  
-✅ XSS protection  
+⚠️ **Quan trọng:**
+- KHÔNG commit file `.env` lên Git
+- Đổi `SESSION_SECRET` thành chuỗi ngẫu nhiên
+- Sử dụng mật khẩu mạnh cho MySQL
 
-## 📊 Database Schema
+## 📞 Liên hệ
 
-Xem chi tiết schema tại: `shared/schema.ts`
-
-Các bảng chính:
-- `users` - Người dùng
-- `tutors` - Gia sư
-- `students` - Học viên
-- `lessons` - Buổi học
-- `bookings` - Đặt lịch
-- `reviews` - Đánh giá
-- `transactions` - Giao dịch
-
-## 🤝 Đóng góp
-
-Mọi đóng góp đều được hoan nghênh! Vui lòng:
-
-1. Fork repository
-2. Tạo branch mới (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
-
-## 📝 License
-
-MIT License - xem file [LICENSE](LICENSE) để biết thêm chi tiết
-
-## 📞 Liên hệ & Hỗ trợ
-
-- **Email**: support@lophoc.online
-- **Website**: https://lophoc.online
-- **Địa chỉ**: Hà Nội, Việt Nam
+- **Email:** support@lophoc.online
+- **Website:** https://lophoc.online
 
 ---
 
@@ -203,6 +210,6 @@ MIT License - xem file [LICENSE](LICENSE) để biết thêm chi tiết
 
 **Được phát triển với ❤️ cho cộng đồng giáo dục Việt Nam**
 
-⭐ Nếu project này hữu ích, đừng quên cho chúng tôi một star!
+**React.js + Express.js + MySQL** 🚀
 
 </div>

@@ -76,14 +76,14 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Layer
 
-**Database:** PostgreSQL (Neon serverless) managed with Drizzle ORM for type-safe operations. A schema-first approach with Drizzle-Zod is used for validation.
+**Database:** MySQL 8.0 managed with Drizzle ORM for type-safe operations. A schema-first approach with Drizzle-Zod is used for validation.
 
 **Storage Abstraction:** An `IStorage` interface with a `MemStorage` implementation for development, designed for easy swap to database-backed storage.
 
 ## External Dependencies
 
 *   **UI Libraries:** @radix-ui/*, @tanstack/react-query, wouter, react-hook-form, date-fns, embla-carousel-react, lucide-react, class-variance-authority, clsx.
-*   **Backend Services:** @neondatabase/serverless (PostgreSQL), drizzle-orm, express, connect-pg-simple (session store).
+*   **Backend Services:** mysql2 (MySQL), drizzle-orm, express, connect-pg-simple (session store).
 *   **Development Tools:** TypeScript, Vite, tsx, esbuild, @replit/* plugins.
 *   **Payment Integration:** VietQR API (img.vietqr.io) for QR code generation.
 *   **Styling:** Tailwind CSS, PostCSS, Autoprefixer.
