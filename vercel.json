@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/auto-reject-lessons",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
