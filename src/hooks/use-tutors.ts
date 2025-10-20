@@ -45,7 +45,42 @@ async function fetchTutors(filters?: TutorFilters): Promise<EnrichedTutor[]> {
     throw new Error('Failed to fetch tutors');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Transform tutorSubjects to subjects format for easier consumption
+  return data.map((tutor: any) => {
+    const tutorSubjectData = tutor.tutorSubjects || [];
+
+    // Group by subject name and collect unique categories or grade levels
+    const subjectGroups = tutorSubjectData.reduce((acc: any, ts: any) => {
+      const subjectName = ts.subject?.name || ts.subjectName;
+      const category = ts.gradeLevel?.category || ts.category;
+      const gradeLevelName = ts.gradeLevel?.name || ts.gradeLevelName;
+
+      if (!subjectName) return acc;
+
+      if (!acc[subjectName]) {
+        acc[subjectName] = new Set<string>();
+      }
+      // For category "Khác", show specific grade level instead
+      if (category === 'Khác') {
+        acc[subjectName].add(gradeLevelName);
+      } else {
+        acc[subjectName].add(category);
+      }
+      return acc;
+    }, {});
+
+    const subjects = Object.entries(subjectGroups).map(([name, items]: [string, any]) => ({
+      name,
+      grades: Array.from(items).join(', ')
+    }));
+
+    return {
+      ...tutor,
+      subjects,
+    };
+  });
 }
 
 // Fetch single tutor by ID (returns enriched data with subjects and time slots)

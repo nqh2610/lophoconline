@@ -573,7 +573,7 @@ export class DatabaseStorage {
     return result[0];
   }
 
-  async updateLesson(id: number, updates: Partial<InsertLesson>): Promise<Lesson | undefined> {
+  async updateLesson(id: number, updates: Partial<InsertLesson> & { completedAt?: Date; cancelledBy?: number; cancellationReason?: string }): Promise<Lesson | undefined> {
     await db.update(lessons)
       .set(updates)
       .where(eq(lessons.id, id));

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const student = await storage.getStudentByUserId(session.user.id);
+    const student = await storage.getStudentByUserId(parseInt(session.user.id));
 
     if (!student) {
       return NextResponse.json(
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Ghi audit log
     await storage.createAuditLog({
-      userId: session.user.id,
+      userId: parseInt(session.user.id),
       action: 'payment_created',
       entityType: 'payment',
       entityId: payment.id,

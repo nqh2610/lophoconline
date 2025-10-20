@@ -95,16 +95,21 @@ export function TutorCard({
     return acc;
   }, {} as Record<string, Set<number>>);
 
-  // Format available slots for display by shift
-  const formattedSlots = Object.entries(slotsByShift).map(([shift, days]) => {
-    const sortedDays = Array.from(days).sort((a, b) => a - b);
-    const daysList = sortedDays.map(d => dayNames[d]).join(', ');
-    return `${shift}: ${daysList}`;
-  });
+  // Format availability with days
+  const formattedAvailability = Object.entries(slotsByShift)
+    .sort(([a], [b]) => {
+      const order = ['Sáng', 'Chiều', 'Tối'];
+      return order.indexOf(a) - order.indexOf(b);
+    })
+    .map(([shift, days]) => {
+      const sortedDays = Array.from(days).sort((a, b) => a - b);
+      const daysList = sortedDays.map(d => dayNames[d]).join(', ');
+      return { shift, days: daysList };
+    });
 
   return (
-    <Card className="h-full flex flex-col hover-elevate overflow-visible" data-testid={`card-tutor-${id}`}>
-      <CardContent className="p-0 flex-1 flex flex-col">
+    <Card className="h-full flex flex-col hover-elevate overflow-hidden" data-testid={`card-tutor-${id}`}>
+      <CardContent className="p-0 flex-1 flex flex-col min-h-0">
         {/* Header Section */}
         <div className="p-4 sm:p-6">
           <div className="flex gap-4 mb-4">
@@ -155,40 +160,58 @@ export function TutorCard({
         <div className="p-4 sm:p-6 space-y-4 flex-1">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-1 w-8 bg-primary rounded-full" />
+              <div className="h-1 w-8 bg-primary rounded-full flex-shrink-0" />
               <h4 className="text-sm font-semibold">Môn dạy</h4>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {subjects.map((subject, idx) => (
-                <Badge key={idx} variant="secondary" className="font-medium">
-                  {subject.name} <span className="text-muted-foreground ml-1">{subject.grades}</span>
-                </Badge>
-              ))}
-            </div>
+            {subjects && subjects.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {subjects.slice(0, 5).map((subject, idx) => (
+                  <Badge key={idx} variant="secondary" className="font-medium text-xs">
+                    {subject.name}
+                    {subject.grades && (
+                      <span className="text-muted-foreground ml-1">({subject.grades})</span>
+                    )}
+                  </Badge>
+                ))}
+                {subjects.length > 5 && (
+                  <Badge variant="outline" className="font-medium text-xs">
+                    +{subjects.length - 5}
+                  </Badge>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Chưa có thông tin môn dạy</p>
+            )}
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-primary" />
+              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
               <h4 className="text-sm font-semibold">Lịch còn trống</h4>
             </div>
-            {formattedSlots.length > 0 ? (
-              <div className="space-y-1">
-                {formattedSlots.slice(0, 3).map((slot, idx) => (
-                  <p key={idx} className="text-sm text-muted-foreground leading-relaxed">
-                    {slot}
-                  </p>
+            {formattedAvailability.length > 0 ? (
+              <div className="space-y-2">
+                {formattedAvailability.slice(0, 3).map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-xs">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                    <div className="leading-relaxed">
+                      <span className="font-medium text-foreground">{item.shift}:</span>{' '}
+                      <span className="text-muted-foreground">{item.days}</span>
+                    </div>
+                  </div>
                 ))}
-                {formattedSlots.length > 3 && (
-                  <p className="text-xs text-muted-foreground/70 italic">
-                    +{formattedSlots.length - 3} khung giờ khác
-                  </p>
+                {formattedAvailability.length > 3 && (
+                  <div className="flex items-center gap-2 text-xs text-primary">
+                    <Clock className="h-3 w-3" />
+                    <span>+{formattedAvailability.length - 3} ca khác</span>
+                  </div>
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic" data-testid={`text-availability-${id}`}>
-                Chưa có lịch trống
-              </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid={`text-availability-${id}`}>
+                <div className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                <span className="italic">Chưa có lịch trống</span>
+              </div>
             )}
           </div>
         </div>

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tutor = await storage.getTutorByUserId(session.user.id);
+    const tutor = await storage.getTutorByUserId(parseInt(session.user.id));
 
     if (!tutor) {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     // Get all admin users
     // TODO: Optimize this with a getAdminUsers method
     await storage.createAuditLog({
-      userId: session.user.id,
+      userId: parseInt(session.user.id),
       action: 'payout_request_created',
       entityType: 'payout_request',
       entityId: payoutRequest.id,
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tutor = await storage.getTutorByUserId(session.user.id);
+    const tutor = await storage.getTutorByUserId(parseInt(session.user.id));
 
     if (!tutor) {
       return NextResponse.json(

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         studentId: parseInt(data.studentId),
         tutorId: parseInt(data.tutorId),
         amount: data.price,
-        method: 'pending',
+        method: 'cash',
         status: data.isTrial ? 'completed' : 'pending',
         paymentData: JSON.stringify({
           subject: data.subject,

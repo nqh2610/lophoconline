@@ -51,7 +51,7 @@ export async function POST(
       );
     }
 
-    const user = await storage.getUserById(session.user.id);
+    const user = await storage.getUserById(parseInt(session.user.id));
 
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
@@ -191,7 +191,7 @@ export async function POST(
         relatedId: enrollmentId,
         relatedType: 'enrollment',
         description: `Thanh toán ${completedCount} buổi học - ${adminNote || 'Admin approved'}`,
-        performedBy: session.user.id,
+        performedBy: parseInt(session.user.id),
       });
 
       // 7.5. Lấy hoặc tạo wallet platform
@@ -223,7 +223,7 @@ export async function POST(
         relatedId: enrollmentId,
         relatedType: 'enrollment',
         description: `Phí nền tảng ${commissionRate}% - ${completedCount} buổi học`,
-        performedBy: session.user.id,
+        performedBy: parseInt(session.user.id),
       });
 
       // 7.8. Cập nhật session records
@@ -259,7 +259,7 @@ export async function POST(
 
     // 9. Ghi audit log
     await storage.createAuditLog({
-      userId: session.user.id,
+      userId: parseInt(session.user.id),
       action: 'enrollment_payout_processed',
       entityType: 'enrollment',
       entityId: enrollmentId,

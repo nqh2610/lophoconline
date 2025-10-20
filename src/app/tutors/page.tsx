@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { TutorCard } from "@/components/TutorCard";
 import { FilterPanel, type FilterValues } from "@/components/FilterPanel";
 import { Button } from "@/components/ui/button";
@@ -480,12 +481,13 @@ const transformTutorData = (tutor: Tutor, timeSlots: any[] = [], tutorSubjectDat
 };
 
 export default function Tutors() {
+  const searchParams = useSearchParams();
+  const tutorIdParam = searchParams.get("tutorId");
+
   const [sortBy, setSortBy] = useState<SortOption>('default');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<FilterValues>({});
-  const [tutorTimeSlots, setTutorTimeSlots] = useState<Record<number, any[]>>({});
-  const [tutorSubjects, setTutorSubjects] = useState<Record<number, any[]>>({});
 
   // Build query filters
   const queryFilters = useMemo(() => {
@@ -499,6 +501,11 @@ export default function Tutors() {
       shiftType: filters.shiftType,
     };
 
+    // If specific tutorId is provided in URL, filter by it
+    if (tutorIdParam) {
+      result.tutorId = parseInt(tutorIdParam);
+    }
+
     // If specific grade levels are selected, use the first one for API query
     // (The API currently supports single gradeLevelId, not array)
     if (filters.gradeLevelIds && filters.gradeLevelIds.length > 0) {
@@ -506,47 +513,10 @@ export default function Tutors() {
     }
 
     return result;
-  }, [searchText, filters]);
+  }, [searchText, filters, tutorIdParam]);
 
-  // Use React Query to fetch tutors - automatically handles caching, loading, error states
-  const { data: tutors = [], isLoading, error } = useTutors(queryFilters);
-
-  // Fetch time slots and subjects for all tutors
-  useEffect(() => {
-    async function fetchTutorDetails() {
-      if (tutors.length === 0) return;
-
-      const slotsMap: Record<number, any[]> = {};
-      const subjectsMap: Record<number, any[]> = {};
-
-      await Promise.all(
-        tutors.map(async (tutor) => {
-          try {
-            // Fetch time slots
-            const slotsResponse = await fetch(`/api/time-slots?tutorId=${tutor.id}`);
-            if (slotsResponse.ok) {
-              const slots = await slotsResponse.json();
-              slotsMap[tutor.id] = slots;
-            }
-
-            // Fetch tutor-subject relationships
-            const subjectsResponse = await fetch(`/api/tutor-subjects?tutorId=${tutor.id}`);
-            if (subjectsResponse.ok) {
-              const subjectsData = await subjectsResponse.json();
-              subjectsMap[tutor.id] = subjectsData;
-            }
-          } catch (error) {
-            console.error(`Error fetching details for tutor ${tutor.id}:`, error);
-          }
-        })
-      );
-
-      setTutorTimeSlots(slotsMap);
-      setTutorSubjects(subjectsMap);
-    }
-
-    fetchTutorDetails();
-  }, [tutors]);
+  // Use React Query to fetch tutors with enriched data (subjects + time slots) - ONE request instead of N+1
+  const { data: enrichedTutors = [], isLoading, error } = useTutors(queryFilters);
 
   // Reset to page 1 when sort changes
   useEffect(() => {
@@ -555,7 +525,7 @@ export default function Tutors() {
 
   // Sort tutors based on selected option
   const sortedTutors = useMemo(() => {
-    const sorted = [...tutors];
+    const sorted = [...enrichedTutors];
 
     switch (sortBy) {
       case 'price-asc':
@@ -571,7 +541,7 @@ export default function Tutors() {
       default:
         return sorted;
     }
-  }, [sortBy, tutors]);
+  }, [sortBy, enrichedTutors]);
 
   // Calculate pagination
   const totalPages = Math.ceil(sortedTutors.length / ITEMS_PER_PAGE);
@@ -649,16 +619,31 @@ export default function Tutors() {
             ) : displayedTutors.length > 0 ? (
               <>
                 <div className="grid gap-6 md:grid-cols-2">
-                  {displayedTutors.map((tutor) => (
-                    <TutorCard
-                      key={tutor.id}
-                      {...transformTutorData(
-                        tutor,
-                        tutorTimeSlots[tutor.id] || [],
-                        tutorSubjects[tutor.id] || []
-                      )}
-                    />
-                  ))}
+                  {displayedTutors.map((tutor: any) => {
+                    // Map occupation
+                    let occupation: 'student' | 'teacher' | 'professional' | 'tutor' = 'tutor';
+                    if (tutor.occupation === 'Sinh viên') occupation = 'student';
+                    else if (tutor.occupation === 'Giáo viên') occupation = 'teacher';
+                    else if (tutor.occupation === 'Chuyên gia') occupation = 'professional';
+
+                    return (
+                      <TutorCard
+                        key={tutor.id}
+                        id={tutor.id.toString()}
+                        name={tutor.fullName}
+                        avatar={tutor.avatar}
+                        subjects={tutor.subjects || []}
+                        rating={(tutor.rating || 0) / 10}
+                        reviewCount={tutor.totalReviews || 0}
+                        hourlyRate={tutor.hourlyRate}
+                        experience={`${tutor.experience || 0} năm kinh nghiệm`}
+                        verified={tutor.verificationStatus === 'verified'}
+                        hasVideo={!!tutor.videoIntro}
+                        occupation={occupation}
+                        availableSlots={tutor.timeSlots || []}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* Pagination */}

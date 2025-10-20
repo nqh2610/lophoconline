@@ -27,6 +27,21 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : undefined,
     };
 
+    // If tutorId is specified, fetch single tutor
+    const tutorId = searchParams.get('tutorId');
+    if (tutorId) {
+      const tutor = await storage.getTutorByIdEnriched(parseInt(tutorId));
+      if (!tutor) {
+        return NextResponse.json([], { status: 200 });
+      }
+      return NextResponse.json([tutor], {
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120'
+        }
+      });
+    }
+
     const tutors = await storage.getAllTutors(filters);
 
     // Add cache headers for better performance

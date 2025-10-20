@@ -29,7 +29,7 @@ export async function PATCH(
     }
 
     // Verify user owns this notification
-    if (notification.userId !== session.user.id) {
+    if (notification.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -74,7 +74,7 @@ export async function DELETE(
     }
 
     // Verify user owns this notification
-    if (notification.userId !== session.user.id) {
+    if (notification.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

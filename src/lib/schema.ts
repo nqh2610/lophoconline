@@ -844,3 +844,72 @@ export const selectStudentCreditSchema = createSelectSchema(studentCredits);
 
 export type InsertStudentCredit = z.infer<typeof insertStudentCreditSchema>;
 export type StudentCredit = typeof studentCredits.$inferSelect;
+
+// Video Call Sessions (Jitsi Meeting Rooms)
+export const videoCallSessions = mysqlTable("video_call_sessions", {
+  id: serial("id").primaryKey(),
+  enrollmentId: int("enrollment_id"), // FK → class_enrollments.id (null for individual lessons)
+  lessonId: int("lesson_id"), // FK → lessons.id (null for enrollment-based sessions)
+  sessionRecordId: int("session_record_id"), // FK → session_records.id (null for individual lessons)
+  tutorId: int("tutor_id").notNull(), // FK → users.id
+  studentId: int("student_id").notNull(), // FK → users.id
+  roomName: varchar("room_name", { length: 100 }).notNull().unique(), // Unique Jitsi room name
+  accessToken: varchar("access_token", { length: 500 }).notNull().unique(), // Unique access token for this session
+  tutorToken: varchar("tutor_token", { length: 500 }).notNull(), // JWT token for tutor (moderator)
+  studentToken: varchar("student_token", { length: 500 }).notNull(), // JWT token for student (participant)
+  scheduledStartTime: timestamp("scheduled_start_time").notNull(), // When class is scheduled to start
+  scheduledEndTime: timestamp("scheduled_end_time").notNull(), // When class is scheduled to end
+  tutorJoinedAt: timestamp("tutor_joined_at"), // When tutor actually joined
+  studentJoinedAt: timestamp("student_joined_at"), // When student actually joined
+  tutorLeftAt: timestamp("tutor_left_at"), // When tutor left
+  studentLeftAt: timestamp("student_left_at"), // When student left
+  sessionEndedAt: timestamp("session_ended_at"), // When session officially ended
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, active, completed, expired, cancelled
+  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default("unpaid"), // unpaid, paid, partially_paid
+  canStudentJoin: int("can_student_join").notNull().default(1), // 1=can join, 0=blocked (payment issue)
+  canTutorJoin: int("can_tutor_join").notNull().default(1), // 1=can join, 0=blocked (system issue)
+  expiresAt: timestamp("expires_at").notNull(), // Token expiration time (after scheduled end time)
+  usedCount: int("used_count").notNull().default(0), // How many times link was accessed (should be ≤2: tutor + student)
+  ipAddresses: text("ip_addresses"), // JSON array of IP addresses that accessed this session
+  recordingUrl: varchar("recording_url", { length: 500 }), // Optional: recording URL if enabled
+  notes: text("notes"), // Admin or system notes
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export const insertVideoCallSessionSchema = createInsertSchema(videoCallSessions, {
+  enrollmentId: z.number().int().positive().optional(),
+  lessonId: z.number().int().positive().optional(),
+  sessionRecordId: z.number().int().positive().optional(),
+  tutorId: z.number().int().positive(),
+  studentId: z.number().int().positive(),
+  roomName: z.string().min(10).max(100),
+  accessToken: z.string().min(20).max(500),
+  tutorToken: z.string().min(20).max(500),
+  studentToken: z.string().min(20).max(500),
+  scheduledStartTime: z.date().or(z.string()),
+  scheduledEndTime: z.date().or(z.string()),
+  status: z.enum(['pending', 'active', 'completed', 'expired', 'cancelled']).optional(),
+  paymentStatus: z.enum(['unpaid', 'paid', 'partially_paid']).optional(),
+  canStudentJoin: z.number().int().min(0).max(1).optional(),
+  canTutorJoin: z.number().int().min(0).max(1).optional(),
+  expiresAt: z.date().or(z.string()),
+  notes: z.string().optional(),
+}).omit({
+  id: true,
+  tutorJoinedAt: true,
+  studentJoinedAt: true,
+  tutorLeftAt: true,
+  studentLeftAt: true,
+  sessionEndedAt: true,
+  usedCount: true,
+  ipAddresses: true,
+  recordingUrl: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const selectVideoCallSessionSchema = createSelectSchema(videoCallSessions);
+
+export type InsertVideoCallSession = z.infer<typeof insertVideoCallSessionSchema>;
+export type VideoCallSession = typeof videoCallSessions.$inferSelect;

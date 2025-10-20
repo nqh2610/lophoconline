@@ -58,17 +58,22 @@ export function FilterPanel({ onFilterChange, onSearch }: FilterPanelProps) {
     return order.indexOf(a) - order.indexOf(b);
   });
 
-  const handleApplyFilters = () => {
-    onFilterChange({
-      subjectId: selectedSubjectId,
-      category: selectedCategory,
-      gradeLevelIds: selectedGradeLevelIds.length > 0 ? selectedGradeLevelIds : undefined,
-      minRate: priceRange[0],
-      maxRate: priceRange[1],
-      experience: selectedExperience,
-      shiftType: selectedShift,
-    });
-  };
+  // Auto-apply filters with debounce when any filter changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onFilterChange({
+        subjectId: selectedSubjectId,
+        category: selectedCategory,
+        gradeLevelIds: selectedGradeLevelIds.length > 0 ? selectedGradeLevelIds : undefined,
+        minRate: priceRange[0],
+        maxRate: priceRange[1],
+        experience: selectedExperience,
+        shiftType: selectedShift,
+      });
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [selectedSubjectId, selectedCategory, selectedGradeLevelIds, priceRange, selectedExperience, selectedShift, onFilterChange]);
 
   const handleReset = () => {
     setSelectedSubjectId(undefined);
@@ -253,10 +258,7 @@ export function FilterPanel({ onFilterChange, onSearch }: FilterPanelProps) {
         </div>
 
         {/* Action buttons */}
-        <div className="space-y-2">
-          <Button className="w-full" onClick={handleApplyFilters} data-testid="button-apply-filters">
-            Áp dụng bộ lọc
-          </Button>
+        <div>
           <Button
             variant="outline"
             className="w-full"

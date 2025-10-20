@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get tutor by user ID
-    const tutor = await storage.getTutorByUserId(session.user.id);
+    const tutor = await storage.getTutorByUserId(parseInt(session.user.id));
 
     if (!tutor) {
       return NextResponse.json(

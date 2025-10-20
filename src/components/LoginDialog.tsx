@@ -10,9 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, User as UserIcon } from "lucide-react";
 import { SiGoogle, SiFacebook } from "react-icons/si";
 import { ForgotPasswordDialog } from "./ForgotPasswordDialog";
+import { signIn } from "next-auth/react";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 interface LoginDialogProps {
   open: boolean;
@@ -21,27 +24,61 @@ interface LoginDialogProps {
 
 export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const handleEmailAuth = (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement JWT authentication
-    console.log("Email auth:", { email, password, name });
-    
-    // Simulate successful login - save to localStorage
-    const userData = {
-      name: isLogin ? email.split('@')[0] : name,
-      email: email,
-      loginMethod: 'email'
-    };
-    localStorage.setItem('user', JSON.stringify(userData));
-    
-    // Close dialog and reload to show updated home page
-    onOpenChange(false);
-    window.location.reload();
+    setLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        username,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast({
+          title: "Đăng nhập thất bại",
+          description: "Tên đăng nhập hoặc mật khẩu không đúng",
+          variant: "destructive",
+        });
+      } else {
+        // Check if there's a redirect path stored
+        const params = new URLSearchParams(window.location.search);
+        const redirectPath = params.get("redirect");
+
+        toast({
+          title: "Đăng nhập thành công",
+          description: redirectPath ? "Đang chuyển hướng..." : "Chào mừng bạn trở lại!",
+        });
+        onOpenChange(false);
+
+        // Wait a bit for session to be established
+        setTimeout(() => {
+          if (redirectPath) {
+            // Redirect to the intended page
+            window.location.href = redirectPath;
+          } else {
+            // Just reload to update the UI
+            window.location.reload();
+          }
+        }, 300);
+      }
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi khi đăng nhập",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleAuth = () => {
@@ -126,32 +163,20 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
 
           {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Họ và tên</Label>
-                <Input
-                  id="name"
-                  placeholder="Nguyễn Văn A"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required={!isLogin}
-                  data-testid="input-name"
-                />
-              </div>
-            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Tên đăng nhập</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@example.com"
+                  id="username"
+                  type="text"
+                  placeholder="admin, student1, tutor1..."
                   className="pl-9"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
-                  data-testid="input-email"
+                  disabled={loading}
+                  data-testid="input-username"
                 />
               </div>
             </div>
@@ -167,42 +192,20 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                   data-testid="input-password"
                 />
               </div>
             </div>
 
-            {isLogin && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setForgotPasswordOpen(true)}
-                  className="text-sm text-primary hover:underline"
-                  data-testid="button-forgot-password"
-                >
-                  Quên mật khẩu?
-                </button>
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" data-testid="button-submit-auth">
-              {isLogin ? "Đăng nhập" : "Đăng ký"}
+            <Button type="submit" className="w-full" disabled={loading} data-testid="button-submit-auth">
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
 
-          {/* Toggle Login/Register */}
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">
-              {isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?"}
-            </span>{" "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline font-medium"
-              data-testid="button-toggle-auth-mode"
-            >
-              {isLogin ? "Đăng ký ngay" : "Đăng nhập"}
-            </button>
+          <div className="text-center text-sm text-muted-foreground">
+            <p className="font-medium mb-1">Tài khoản test:</p>
+            <p className="text-xs">admin/123456 | student1/123456 | tutor1/123456</p>
           </div>
         </div>
       </DialogContent>

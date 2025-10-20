@@ -29,7 +29,35 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(enrichedTutor, {
+    // Transform the data to match frontend expectations
+    const transformedTutor = {
+      id: enrichedTutor.id,
+      userId: enrichedTutor.userId,
+      fullName: enrichedTutor.fullName,
+      avatar: enrichedTutor.avatar,
+      bio: enrichedTutor.bio,
+      experience: enrichedTutor.experience,
+      hourlyRate: enrichedTutor.hourlyRate,
+      rating: enrichedTutor.rating,
+      totalReviews: enrichedTutor.totalReviews,
+      totalStudents: enrichedTutor.totalStudents,
+      occupation: enrichedTutor.occupation,
+      education: enrichedTutor.education,
+      verificationStatus: enrichedTutor.verificationStatus,
+      videoIntro: enrichedTutor.videoIntro,
+      subjects: enrichedTutor.tutorSubjects.map(ts => ({
+        subjectName: ts.subject.name,
+        category: ts.gradeLevel.category,
+        gradeLevelName: ts.gradeLevel.name
+      })),
+      timeSlots: enrichedTutor.timeSlots.map(slot => ({
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        endTime: slot.endTime
+      }))
+    };
+
+    return NextResponse.json(transformedTutor, {
       status: 200,
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120'
@@ -78,7 +106,7 @@ export async function PUT(
     }
 
     // Check if user owns this tutor profile
-    if (tutor.userId !== session.user.id) {
+    if (tutor.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

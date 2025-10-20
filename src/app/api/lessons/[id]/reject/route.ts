@@ -30,7 +30,7 @@ export async function POST(
 
     // Verify that the current user is the tutor for this lesson
     const tutor = await storage.getTutorById(parseInt(lesson.tutorId));
-    if (!tutor || tutor.userId !== session.user.id) {
+    if (!tutor || tutor.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Unauthorized - Only the assigned tutor can reject this lesson' },
         { status: 403 }
@@ -58,7 +58,7 @@ export async function POST(
     // Update lesson status to cancelled
     const updatedLesson = await storage.updateLesson(lessonId, {
       status: 'cancelled',
-      cancelledBy: 'tutor',
+      cancelledBy: tutor.userId,
       cancellationReason: reason,
     });
 
@@ -76,7 +76,7 @@ export async function POST(
     if (student) {
       await storage.createNotification({
         userId: student.userId,
-        type: 'lesson_cancelled',
+        type: 'cancellation',
         title: 'Lịch học đã bị từ chối',
         message: `Gia sư ${tutor.fullName} đã từ chối lịch học vào ${new Date(lesson.date).toLocaleDateString('vi-VN')}. Lý do: ${reason}. ${transaction ? 'Học phí sẽ được hoàn lại trong 3-5 ngày làm việc.' : ''}`,
         link: `/dashboard`,
@@ -85,8 +85,8 @@ export async function POST(
     }
 
     // Update tutor cancellation rate
-    const allLessons = await storage.getLessonsByTutor(tutor.id);
-    const cancelledCount = allLessons.filter(l => l.status === 'cancelled' && l.cancelledBy === 'tutor').length;
+    const allLessons = await storage.getLessonsByTutor(tutor.id.toString());
+    const cancelledCount = allLessons.filter(l => l.status === 'cancelled' && l.cancelledBy === tutor.userId).length;
     const cancellationRate = (cancelledCount / allLessons.length) * 100;
 
     await storage.updateTutor(tutor.id, {

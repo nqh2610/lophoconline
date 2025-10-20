@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storage } from '@/lib/storage';
+import { db } from '@/lib/db';
+import { payments, classEnrollments } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
 import {
   verifyVNPayCallback,
   parseVNPayResponseCode,
@@ -93,11 +96,13 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Lấy payment từ DB
-    const payment = await storage.db
+    const payment = await db
       .select()
-      .from(storage.payments)
-      .where(storage.eq(storage.payments.enrollmentId, enrollmentId))
-      .where(storage.eq(storage.payments.status, 'pending'))
+      .from(payments)
+      .where(and(
+        eq(payments.enrollmentId, enrollmentId),
+        eq(payments.status, 'pending')
+      ))
       .limit(1);
 
     if (payment.length === 0) {
@@ -149,10 +154,10 @@ export async function GET(request: NextRequest) {
       const [enrollment, student, tutor] = await Promise.all([
         storage.getEnrollmentById(paymentData.enrollmentId),
         storage.getStudentById(paymentData.studentId),
-        storage.db
+        db
           .select()
-          .from(storage.classEnrollments)
-          .where(storage.eq(storage.classEnrollments.id, paymentData.enrollmentId))
+          .from(classEnrollments)
+          .where(eq(classEnrollments.id, paymentData.enrollmentId))
           .limit(1)
           .then(async (enrollments) => {
             if (enrollments.length > 0) {

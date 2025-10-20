@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Kiểm tra role admin
-    const user = await storage.getUserById(session.user.id);
+    const user = await storage.getUserById(parseInt(session.user.id));
 
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const result = await approvePayout({
       tutorId,
       amount,
-      performedBy: session.user.id,
+      performedBy: parseInt(session.user.id),
     });
 
     if (!result.success) {
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await storage.getUserById(session.user.id);
+    const user = await storage.getUserById(parseInt(session.user.id));
 
     if (!user || user.role !== 'admin') {
       return NextResponse.json(

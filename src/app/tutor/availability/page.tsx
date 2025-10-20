@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { TutorAvailability } from "@shared/schema";
+import { queryClient } from "@/lib/queryClient";
+import type { TutorAvailability } from "@/lib/schema";
 import {
   Select,
   SelectContent,
@@ -68,7 +68,13 @@ export default function TutorAvailabilityManagement() {
   // Create availability mutation
   const createMutation = useMutation({
     mutationFn: async (data: { tutorId: string; dayOfWeek: number; startTime: string; endTime: string }) => {
-      return await apiRequest('POST', '/api/tutor-availability', data);
+      const res = await fetch('/api/tutor-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to create');
+      return res.json();
     },
     onError: (error: any) => {
       toast({
@@ -82,7 +88,11 @@ export default function TutorAvailabilityManagement() {
   // Delete availability mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/tutor-availability/${id}`);
+      const res = await fetch(`/api/tutor-availability/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tutor-availability', tutorId] });

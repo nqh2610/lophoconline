@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await storage.getUserById(session.user.id);
+    const user = await storage.getUserById(parseInt(session.user.id));
 
     if (!user || user.role !== 'admin') {
       return NextResponse.json(

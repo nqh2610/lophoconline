@@ -35,7 +35,7 @@ export async function POST(
       );
     }
 
-    const tutorProfile = await storage.getTutorByUserId(session.user.id);
+    const tutorProfile = await storage.getTutorByUserId(parseInt(session.user.id));
 
     if (!tutorProfile) {
       return NextResponse.json(
@@ -118,7 +118,7 @@ export async function POST(
     if (student) {
       await storage.createNotification({
         userId: student.userId,
-        type: 'lesson_completed',
+        type: 'review_request',
         title: 'Buổi học đã hoàn thành',
         message: `Buổi học #${sessionRecord.sessionNumber} với gia sư ${tutorProfile.fullName} đã hoàn thành. ${
           studentAttended
@@ -132,7 +132,7 @@ export async function POST(
 
     // 10. Ghi audit log
     await storage.createAuditLog({
-      userId: session.user.id,
+      userId: parseInt(session.user.id),
       action: 'session_completed',
       entityType: 'session',
       entityId: sessionId,

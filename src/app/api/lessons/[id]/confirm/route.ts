@@ -30,7 +30,7 @@ export async function POST(
 
     // Verify that the current user is the tutor for this lesson
     const tutor = await storage.getTutorById(parseInt(lesson.tutorId));
-    if (!tutor || tutor.userId !== session.user.id) {
+    if (!tutor || tutor.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Unauthorized - Only the assigned tutor can confirm this lesson' },
         { status: 403 }
@@ -56,7 +56,7 @@ export async function POST(
     if (student) {
       await storage.createNotification({
         userId: student.userId,
-        type: 'lesson_confirmed',
+        type: 'confirmation',
         title: 'Lịch học đã được xác nhận',
         message: `Gia sư ${tutor.fullName} đã xác nhận lịch học của bạn vào ${new Date(lesson.date).toLocaleDateString('vi-VN')} lúc ${lesson.startTime}.`,
         link: `/dashboard`,

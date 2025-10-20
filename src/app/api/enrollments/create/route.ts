@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Lấy student profile
-    const student = await storage.getStudentByUserId(session.user.id);
+    const student = await storage.getStudentByUserId(parseInt(session.user.id));
 
     if (!student) {
       return NextResponse.json(
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     // 10. Ghi audit log
     await storage.createAuditLog({
-      userId: session.user.id,
+      userId: parseInt(session.user.id),
       action: 'enrollment_created',
       entityType: 'enrollment',
       entityId: enrollment.id,

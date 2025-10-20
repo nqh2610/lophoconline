@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Verify that the current user is the tutor
-    if (tutor.userId !== session.user.id) {
+    if (tutor.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Unauthorized - You can only view your own pending lessons' },
         { status: 403 }
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Get all lessons for this tutor
-    const allLessons = await storage.getLessonsByTutor(tutorId);
+    const allLessons = await storage.getLessonsByTutor(tutorId.toString());
 
     // Filter for pending lessons only
     const pendingLessons = allLessons.filter(lesson => lesson.status === 'pending');

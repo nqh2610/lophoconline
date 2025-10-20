@@ -30,7 +30,7 @@ export async function POST(
 
     // Verify the user is the tutor being reviewed
     const tutor = await storage.getTutorById(review.tutorId);
-    if (!tutor || tutor.userId !== session.user.id) {
+    if (!tutor || tutor.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Only the tutor can reply to this review' },
         { status: 403 }

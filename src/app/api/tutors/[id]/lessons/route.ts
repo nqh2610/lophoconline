@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Verify user is the tutor or is admin
-    if (tutor.userId !== session.user.id && session.user.role !== 'admin') {
+    if (tutor.userId !== parseInt(session.user.id) && session.user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

@@ -30,7 +30,7 @@ export async function POST(
 
     // Verify that the current user is the tutor for this lesson
     const tutor = await storage.getTutorById(parseInt(lesson.tutorId));
-    if (!tutor || tutor.userId !== session.user.id) {
+    if (!tutor || tutor.userId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Unauthorized - Only the assigned tutor can complete this lesson' },
         { status: 403 }
@@ -59,7 +59,7 @@ export async function POST(
     // Update lesson status to completed
     const updatedLesson = await storage.updateLesson(lessonId, {
       status: 'completed',
-      completedAt: new Date().toISOString(),
+      completedAt: new Date(),
     });
 
     // Update transaction status to completed (release payment to tutor)
@@ -75,7 +75,7 @@ export async function POST(
     if (student) {
       await storage.createNotification({
         userId: student.userId,
-        type: 'lesson_completed',
+        type: 'review_request',
         title: 'Buổi học đã hoàn thành',
         message: `Buổi học với gia sư ${tutor.fullName} đã hoàn thành. Hãy đánh giá để giúp các học sinh khác!`,
         link: `/tutor/${tutor.id}?review=true`,
@@ -84,7 +84,7 @@ export async function POST(
     }
 
     // Update tutor completion rate
-    const allLessons = await storage.getLessonsByTutor(tutor.id);
+    const allLessons = await storage.getLessonsByTutor(tutor.id.toString());
     const completedCount = allLessons.filter(l => l.status === 'completed').length;
     const completionRate = (completedCount / allLessons.length) * 100;
 

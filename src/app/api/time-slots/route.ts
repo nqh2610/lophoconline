@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const timeSlots = await storage.getTimeSlotsByTutorId(parseInt(tutorId));
+    const timeSlots = await storage.getTutorAvailability(tutorId);
     return NextResponse.json(timeSlots);
   } catch (error) {
     console.error('Error fetching time slots:', error);

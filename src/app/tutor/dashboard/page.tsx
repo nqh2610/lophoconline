@@ -5,18 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CheckCircle2, 
-  Circle, 
-  FileCheck, 
-  User, 
-  Calendar, 
-  BookOpen, 
-  Video, 
-  MessageSquare, 
-  Award 
+import {
+  CheckCircle2,
+  Circle,
+  FileCheck,
+  User,
+  Calendar,
+  BookOpen,
+  Video,
+  MessageSquare,
+  Award
 } from "lucide-react";
 import Link from "next/link";
+import { UpcomingVideoCallsCard } from "@/components/UpcomingVideoCallCard";
 
 type FlowStep = {
   id: string;
@@ -114,6 +115,11 @@ export default function TutorDashboard() {
           </p>
         </div>
 
+        {/* Video Calls Section */}
+        <div className="mb-8">
+          <UpcomingVideoCallsCard />
+        </div>
+
         {/* Progress Overview */}
         <Card className="mb-8">
           <CardHeader>
@@ -191,29 +197,66 @@ export default function TutorDashboard() {
         {/* Quick Actions */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Hành động nhanh</CardTitle>
+            <CardTitle>Chức năng gia sư</CardTitle>
+            <CardDescription>Tất cả các tính năng quản lý dành cho gia sư</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <Link href="/tutor/profile">
-              <Button variant="outline" data-testid="button-view-profile">
-                Xem hồ sơ của tôi
-              </Button>
-            </Link>
-            <Link href="/tutor/recurring-schedule">
-              <Button variant="outline" data-testid="button-create-recurring-schedule">
-                Tạo lịch dạy lặp lại
-              </Button>
-            </Link>
-            <Link href="/tutor/schedule">
-              <Button variant="outline" data-testid="button-view-schedule">
-                Xem lịch dạy
-              </Button>
-            </Link>
-            <Link href="/tutor/earnings">
-              <Button variant="outline" data-testid="button-view-earnings">
-                Thu nhập
-              </Button>
-            </Link>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <Link href="/tutor/profile-setup">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-profile-setup">
+                  <User className="h-6 w-6" />
+                  <span className="text-xs">Hồ sơ</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/verification">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-verification">
+                  <FileCheck className="h-6 w-6" />
+                  <span className="text-xs">Xác minh</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/availability">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-availability">
+                  <Calendar className="h-6 w-6" />
+                  <span className="text-xs">Lịch rảnh</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/recurring-schedule">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-recurring-schedule">
+                  <Calendar className="h-6 w-6" />
+                  <span className="text-xs">Lịch lặp lại</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/trial-requests">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-trial-requests">
+                  <BookOpen className="h-6 w-6" />
+                  <span className="text-xs">Học thử</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/teaching">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-teaching">
+                  <Video className="h-6 w-6" />
+                  <span className="text-xs">Dạy học</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/feedback">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-feedback">
+                  <MessageSquare className="h-6 w-6" />
+                  <span className="text-xs">Phản hồi</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/reputation">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-reputation">
+                  <Award className="h-6 w-6" />
+                  <span className="text-xs">Uy tín</span>
+                </Button>
+              </Link>
+              <Link href="/tutor/financial">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-financial">
+                  <Circle className="h-6 w-6" />
+                  <span className="text-xs">Tài chính</span>
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

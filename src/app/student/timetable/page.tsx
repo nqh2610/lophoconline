@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, BookOpen, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import type { Lesson } from "@shared/schema";
+import type { Lesson } from "@/lib/schema";
 import { format, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 

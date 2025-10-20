@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, LogIn, LogOut, User } from "lucide-react";
+import { LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo } from "./Logo";
 import { LoginDialog } from "./LoginDialog";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { SearchBar } from "./SearchBar";
+import { useSession, signOut } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,32 +19,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface UserData {
-  name: string;
-  email: string;
-  loginMethod: string;
-}
-
 export function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
-  const [user, setUser] = useState<UserData | null>(null);
+  const { data: session } = useSession();
 
+  // Auto-open login dialog when query param is present
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
-      }
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      localStorage.removeItem('user');
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("login") === "required") {
+      setLoginOpen(true);
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    window.location.reload();
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/" });
+  };
+
+  const getDashboardLink = () => {
+    if (!session?.user?.role) return "/";
+    switch (session.user.role) {
+      case "admin":
+        return "/admin";
+      case "tutor":
+        return "/tutor";
+      case "student":
+        return "/student";
+      default:
+        return "/";
+    }
   };
 
   return (
@@ -55,16 +60,8 @@ export function Navbar() {
               <Logo size="sm" />
             </Link>
 
-            <div className="flex-1 max-w-2xl hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Tìm gia sư theo môn học, cấp lớp..."
-                  className="pl-9"
-                  data-testid="input-search"
-                />
-              </div>
+            <div className="hidden md:block flex-1 max-w-2xl">
+              <SearchBar />
             </div>
 
             <div className="flex items-center gap-2">
@@ -75,24 +72,24 @@ export function Navbar() {
               </Link>
               <NotificationDropdown />
               <ThemeToggle />
-              
-              {user ? (
+
+              {session?.user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2" data-testid="button-user-menu">
                       <User className="h-4 w-4" />
-                      <span className="hidden sm:inline">{user.name}</span>
+                      <span className="hidden sm:inline">{session.user.name}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <Link href="/dashboard">
+                    <Link href={getDashboardLink()}>
                       <DropdownMenuItem data-testid="menu-dashboard">
                         Dashboard
                       </DropdownMenuItem>
                     </Link>
-                    <Link href="/dashboard">
+                    <Link href={getDashboardLink()}>
                       <DropdownMenuItem data-testid="menu-profile">
                         Hồ sơ của tôi
                       </DropdownMenuItem>

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           // Update lesson status to cancelled
           await storage.updateLesson(lesson.id, {
             status: 'cancelled',
-            cancelledBy: 'system',
+            cancelledBy: 0, // 0 represents system
             cancellationReason: 'Gia sư không phản hồi trong vòng 24 giờ. Hệ thống tự động hủy và hoàn tiền.',
           });
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
           if (student) {
             await storage.createNotification({
               userId: student.userId,
-              type: 'lesson_auto_rejected',
+              type: 'cancellation',
               title: 'Lịch học đã bị hủy tự động',
               message: `Lịch học vào ${new Date(lesson.date).toLocaleDateString('vi-VN')} đã bị hủy do gia sư không phản hồi trong 24 giờ. ${transaction ? 'Học phí sẽ được hoàn lại trong 3-5 ngày làm việc.' : ''}`,
               link: `/dashboard`,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             if (tutorUser) {
               await storage.createNotification({
                 userId: tutorUser.id,
-                type: 'lesson_auto_rejected',
+                type: 'cancellation',
                 title: 'Đã bỏ lỡ yêu cầu đặt lịch',
                 message: `Yêu cầu đặt lịch vào ${new Date(lesson.date).toLocaleDateString('vi-VN')} đã bị hủy do không phản hồi trong 24 giờ. Điều này ảnh hưởng đến tỷ lệ phản hồi của bạn.`,
                 link: `/tutor/dashboard`,
@@ -92,9 +92,9 @@ export async function POST(request: NextRequest) {
             }
 
             // Update tutor response rate (negative impact)
-            const tutorLessons = await storage.getLessonsByTutor(tutor.id);
+            const tutorLessons = await storage.getLessonsByTutor(tutor.id.toString());
             const missedCount = tutorLessons.filter(
-              l => l.status === 'cancelled' && l.cancelledBy === 'system'
+              l => l.status === 'cancelled' && l.cancelledBy === 0
             ).length;
             const totalRequests = tutorLessons.length;
             const responseRate = ((totalRequests - missedCount) / totalRequests) * 100;

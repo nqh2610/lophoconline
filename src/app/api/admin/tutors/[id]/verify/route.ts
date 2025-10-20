@@ -51,7 +51,7 @@ export async function POST(
     if (tutorUser) {
       await storage.createNotification({
         userId: tutorUser.id,
-        type: 'verification',
+        type: 'confirmation',
         title: action === 'approve' ? 'Hồ sơ đã được phê duyệt' : 'Hồ sơ bị từ chối',
         message: action === 'approve'
           ? 'Chúc mừng! Hồ sơ gia sư của bạn đã được phê duyệt. Bạn có thể bắt đầu nhận học sinh.'

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get student by user ID
-    const student = await storage.getStudentByUserId(session.user.id);
+    const student = await storage.getStudentByUserId(parseInt(session.user.id));
 
     if (!student) {
       return NextResponse.json(

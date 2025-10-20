@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
 
     const notifications = await storage.getNotificationsByUser(
-      session.user.id,
+      parseInt(session.user.id),
       limit,
       unreadOnly
     );
@@ -49,7 +49,7 @@ export async function HEAD(request: NextRequest) {
       return new NextResponse(null, { status: 401 });
     }
 
-    const count = await storage.getUnreadNotificationCount(session.user.id);
+    const count = await storage.getUnreadNotificationCount(parseInt(session.user.id));
 
     return NextResponse.json({ count }, {
       status: 200,
