@@ -46,8 +46,42 @@ async function main() {
   await clearDatabase();
 
   try {
+    // ==================== 0. CREATE TEST USERS (Admin, Tutor, Student) ====================
+    console.log('👥 Creating test users...');
+    const hashedPassword = await bcrypt.hash('123456', 10);
+
+    // Admin user
+    const adminResult = await db.insert(users).values({
+      username: 'admin',
+      email: 'admin@test.com',
+      password: hashedPassword,
+      role: 'admin'
+    });
+    const adminId = Number(adminResult[0].insertId);
+    console.log('  ✓ Admin: admin / 123456');
+
+    // Student user
+    const studentResult = await db.insert(users).values({
+      username: 'student',
+      email: 'student@test.com',
+      password: hashedPassword,
+      role: 'student'
+    });
+    const studentId = Number(studentResult[0].insertId);
+    console.log('  ✓ Student: student / 123456');
+
+    // Tutor user (will create profile later)
+    const tutorUserResult = await db.insert(users).values({
+      username: 'tutor',
+      email: 'tutor@test.com',
+      password: hashedPassword,
+      role: 'tutor'
+    });
+    const tutorUserId = Number(tutorUserResult[0].insertId);
+    console.log('  ✓ Tutor: tutor / 123456');
+
     // ==================== 1. SEED SUBJECTS ====================
-    console.log('📚 Seeding subjects...');
+    console.log('\n📚 Seeding subjects...');
     const subjectsData = [
       { name: 'Toán', description: 'Toán học các cấp' },
       { name: 'Tiếng Anh', description: 'Tiếng Anh giao tiếp và học thuật' },
@@ -115,6 +149,43 @@ async function main() {
     console.log('\n👨‍🏫 Seeding tutors...');
 
     const tutorsData = [
+      // Test tutor (liên kết với tutor user đã tạo ở trên)
+      {
+        userId: tutorUserId, // Use the test tutor user
+        username: 'tutor',
+        email: 'tutor@test.com',
+        fullName: 'Test Tutor',
+        avatar: 'https://i.pravatar.cc/150?img=1',
+        bio: 'Đây là tài khoản gia sư test. Tôi dạy Toán và Tiếng Anh cho học sinh THPT. Đây là profile mẫu để test các chức năng của hệ thống.',
+        teachingMethod: 'Phương pháp giảng dạy linh hoạt, tận tâm với học sinh. Tập trung vào việc giúp học sinh hiểu bản chất vấn đề.',
+        education: JSON.stringify([
+          {
+            degree: 'Cử nhân Sư phạm',
+            school: 'Đại học Sư phạm Hà Nội',
+            year: '2020'
+          }
+        ]),
+        subjects: ['Toán', 'Tiếng Anh'],
+        gradeLevels: ['Lớp 10', 'Lớp 11', 'Lớp 12'],
+        experience: 3,
+        hourlyRate: 150000,
+        occupation: 'Giáo viên',
+        rating: 45,
+        totalReviews: 10,
+        totalStudents: 5,
+        verificationStatus: 'verified',
+        certifications: JSON.stringify([
+          'Chứng chỉ giảng dạy THPT'
+        ]),
+        achievements: JSON.stringify([
+          'Tài khoản test'
+        ]),
+        timeSlots: [
+          { day: 1, shift: 'evening', start: '19:00', end: '21:00' },
+          { day: 3, shift: 'evening', start: '19:00', end: '21:00' },
+          { day: 5, shift: 'evening', start: '19:00', end: '21:00' },
+        ]
+      },
       {
         username: 'tutor_mai',
         email: 'mai@example.com',
@@ -637,20 +708,27 @@ async function main() {
       },
     ];
 
-    const hashedPassword = await bcrypt.hash('password123', 10);
-
+    // Use the same hashed password for all tutors
     for (const tutorData of tutorsData) {
       console.log(`\n  Creating ${tutorData.fullName}...`);
 
-      // Create user account
-      const userResult = await db.insert(users).values({
-        username: tutorData.username,
-        email: tutorData.email,
-        password: hashedPassword,
-        role: 'tutor'
-      });
-      const userId = Number(userResult[0].insertId);
-      console.log(`    ✓ User account created`);
+      let userId: number;
+
+      // Check if this tutor already has a userId (test tutor)
+      if (tutorData.userId) {
+        userId = tutorData.userId;
+        console.log(`    ✓ Using existing user account`);
+      } else {
+        // Create user account for other tutors
+        const userResult = await db.insert(users).values({
+          username: tutorData.username,
+          email: tutorData.email,
+          password: hashedPassword,
+          role: 'tutor'
+        });
+        userId = Number(userResult[0].insertId);
+        console.log(`    ✓ User account created`);
+      }
 
       // Create tutor profile
       const tutorResult = await db.insert(tutors).values({
@@ -708,16 +786,30 @@ async function main() {
 
     console.log('\n✅ Successfully seeded database!');
     console.log('\n📊 Summary:');
+    console.log(`  - 3 test users (admin, student, tutor)`);
     console.log(`  - ${insertedSubjects.length} subjects`);
     console.log(`  - ${insertedGradeLevels.length} grade levels`);
-    console.log(`  - ${tutorsData.length} tutors`);
+    console.log(`  - ${tutorsData.length} tutors (bao gồm 1 test tutor)`);
     console.log(`  - Tutor-subject relationships with normalized data`);
     console.log(`  - Time slots for all tutors`);
 
-    console.log('\n🔑 Login credentials:');
-    console.log('  Password: password123');
-    console.log('\n  Usernames:');
-    tutorsData.forEach(t => console.log(`    - ${t.username}`));
+    console.log('\n🔑 TEST ACCOUNTS:');
+    console.log('  Password for all: 123456');
+    console.log('\n  1. Admin:');
+    console.log('     Username: admin');
+    console.log('     Email: admin@test.com');
+    console.log('     Dashboard: /admin');
+    console.log('\n  2. Student:');
+    console.log('     Username: student');
+    console.log('     Email: student@test.com');
+    console.log('     Dashboard: /student/dashboard');
+    console.log('\n  3. Tutor:');
+    console.log('     Username: tutor');
+    console.log('     Email: tutor@test.com');
+    console.log('     Dashboard: /tutor/dashboard');
+
+    console.log('\n📝 OTHER TUTORS (password123):');
+    tutorsData.filter(t => t.username !== 'tutor').forEach(t => console.log(`  - ${t.username}`));
 
     console.log('\n✨ Seeding completed successfully!');
     process.exit(0);

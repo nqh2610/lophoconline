@@ -148,11 +148,63 @@ npm run seed         # Seed dữ liệu mẫu (XÓA dữ liệu cũ)
 
 ## 🔐 Tài khoản test
 
-Sau khi chạy `npm run seed`, bạn có thể đăng nhập với các tài khoản sau:
+Sau khi chạy `npm run seed`, hệ thống tạo 3 tài khoản test với 3 vai trò khác nhau:
 
-### Gia sư (10 tài khoản)
+### 🎯 3 Tài khoản Test Chính
 
-**Password cho tất cả:** `password123`
+**Password cho tất cả:** `123456`
+
+#### 1️⃣ Admin (Quản trị viên)
+```
+Username: admin
+Email: admin@test.com
+Password: 123456
+Dashboard: /admin
+```
+
+**Quyền hạn:**
+- Quản lý tất cả người dùng (CRUD)
+- Duyệt/từ chối gia sư mới
+- Quản lý giao dịch và thanh toán
+- Xem thống kê hệ thống
+- Quản lý lessons và bookings
+
+#### 2️⃣ Student (Học sinh)
+```
+Username: student
+Email: student@test.com
+Password: 123456
+Dashboard: /student/dashboard
+```
+
+**Chức năng:**
+- Tìm kiếm và đặt lịch với gia sư
+- Xem lịch học (pending, confirmed, completed)
+- Thanh toán học phí
+- Đánh giá gia sư
+- Quản lý hồ sơ cá nhân
+
+#### 3️⃣ Tutor (Gia sư)
+```
+Username: tutor
+Email: tutor@test.com
+Password: 123456
+Dashboard: /tutor/dashboard
+```
+
+**Chức năng:**
+- Xác nhận/từ chối yêu cầu đặt lịch
+- Quản lý lịch dạy và lịch rảnh
+- Xem danh sách học viên
+- Xem thu nhập và thống kê
+- Xem đánh giá từ học sinh
+- Cập nhật thông tin và hồ sơ
+
+---
+
+### 👥 Các Gia sư Khác (Dữ liệu mẫu)
+
+**Password:** `password123`
 
 | Username | Họ tên | Môn dạy | Giá/giờ |
 |----------|--------|---------|---------|
@@ -168,15 +220,6 @@ Sau khi chạy `npm run seed`, bạn có thể đăng nhập với các tài kho
 | tutor_anh | Nguyễn Minh Anh | Hóa học, Sinh học | 140,000đ |
 
 **Email:** `{username}@example.com` (ví dụ: tutor_mai@example.com)
-
-**Chức năng Gia sư:**
-- Xác nhận/từ chối yêu cầu đặt lịch
-- Quản lý lịch dạy và lịch rảnh
-- Xem danh sách học viên
-- Xem thu nhập và thống kê
-- Xem đánh giá từ học sinh
-- Cập nhật thông tin và hồ sơ
-- Thiết lập lịch dạy định kỳ
 
 ---
 

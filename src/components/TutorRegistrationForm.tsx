@@ -200,25 +200,11 @@ export function TutorRegistrationForm() {
   };
 
   const validateStep = async (step: number): Promise<boolean> => {
-    // TEMPORARY: Validation disabled for UI/UX flow review
-    // Will re-enable after design review is complete
-    return true;
-    
-    /* Original validation code (commented out for design review):
     let fieldsToValidate: (keyof TutorRegistrationFormValues)[] = [];
-    
+
     switch (step) {
       case 1:
         fieldsToValidate = ['fullName', 'email', 'phone'];
-        // Also check profile photo
-        if (!profilePhoto) {
-          toast({
-            title: "Thiếu ảnh đại diện",
-            description: "Vui lòng tải lên ảnh đại diện của bạn.",
-            variant: "destructive",
-          });
-          return false;
-        }
         break;
       case 2:
         fieldsToValidate = ['education', 'university', 'major', 'graduationYear'];
@@ -236,7 +222,6 @@ export function TutorRegistrationForm() {
 
     const result = await form.trigger(fieldsToValidate);
     return result;
-    */
   };
 
   const nextStep = async () => {
