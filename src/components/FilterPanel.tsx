@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X, Filter } from "lucide-react";
 import { useSubjects, useGradeLevels } from "@/hooks/use-tutors";
 import {
   Select,
@@ -19,7 +19,6 @@ import {
 
 interface FilterPanelProps {
   onFilterChange: (filters: FilterValues) => void;
-  onSearch: (searchText: string) => void;
 }
 
 export interface FilterValues {
@@ -32,11 +31,10 @@ export interface FilterValues {
   shiftType?: 'morning' | 'afternoon' | 'evening';
 }
 
-export function FilterPanel({ onFilterChange, onSearch }: FilterPanelProps) {
+export function FilterPanel({ onFilterChange }: FilterPanelProps) {
   const { data: subjects = [] } = useSubjects();
   const { data: gradeLevels = [] } = useGradeLevels();
 
-  const [searchText, setSearchText] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [selectedGradeLevelIds, setSelectedGradeLevelIds] = useState<number[]>([]);
@@ -44,19 +42,21 @@ export function FilterPanel({ onFilterChange, onSearch }: FilterPanelProps) {
   const [selectedExperience, setSelectedExperience] = useState<number | undefined>();
   const [selectedShift, setSelectedShift] = useState<'morning' | 'afternoon' | 'evening' | undefined>();
 
-  // Group grade levels by category
-  const gradeLevelsByCategory = gradeLevels.reduce((acc, gl) => {
-    if (!acc[gl.category]) {
-      acc[gl.category] = [];
-    }
-    acc[gl.category].push(gl);
-    return acc;
-  }, {} as Record<string, typeof gradeLevels>);
+  // Group grade levels by category - Memoized for performance
+  const gradeLevelsByCategory = useMemo(() => {
+    return gradeLevels.reduce((acc, gl) => {
+      if (!acc[gl.category]) {
+        acc[gl.category] = [];
+      }
+      acc[gl.category].push(gl);
+      return acc;
+    }, {} as Record<string, typeof gradeLevels>);
+  }, [gradeLevels]);
 
-  const categories = Object.keys(gradeLevelsByCategory).sort((a, b) => {
+  const categories = useMemo(() => {
     const order = ['Tiểu học', 'THCS', 'THPT', 'Luyện thi', 'Khác'];
-    return order.indexOf(a) - order.indexOf(b);
-  });
+    return Object.keys(gradeLevelsByCategory).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  }, [gradeLevelsByCategory]);
 
   // Auto-apply filters with debounce when any filter changes
   useEffect(() => {
@@ -75,56 +75,152 @@ export function FilterPanel({ onFilterChange, onSearch }: FilterPanelProps) {
     return () => clearTimeout(timer);
   }, [selectedSubjectId, selectedCategory, selectedGradeLevelIds, priceRange, selectedExperience, selectedShift, onFilterChange]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setSelectedSubjectId(undefined);
     setSelectedCategory(undefined);
     setSelectedGradeLevelIds([]);
     setPriceRange([50000, 500000]);
     setSelectedExperience(undefined);
     setSelectedShift(undefined);
-    setSearchText("");
-    onSearch("");
     onFilterChange({});
-  };
+  }, [onFilterChange]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchText);
-  };
-
-  const toggleGradeLevel = (gradeLevelId: number) => {
+  const toggleGradeLevel = useCallback((gradeLevelId: number) => {
     setSelectedGradeLevelIds(prev =>
       prev.includes(gradeLevelId)
         ? prev.filter(id => id !== gradeLevelId)
         : [...prev, gradeLevelId]
     );
-  };
+  }, []);
+
+  // Calculate active filter count - Memoized
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedSubjectId) count++;
+    if (selectedCategory) count++;
+    if (selectedGradeLevelIds.length > 0) count++;
+    if (priceRange[0] !== 50000 || priceRange[1] !== 500000) count++;
+    if (selectedExperience) count++;
+    if (selectedShift) count++;
+    return count;
+  }, [selectedSubjectId, selectedCategory, selectedGradeLevelIds, priceRange, selectedExperience, selectedShift]);
+
+  // Get active filter chips - Memoized
+  const activeFilters = useMemo(() => {
+    const filters: { key: string; label: string; onRemove: () => void }[] = [];
+
+    if (selectedSubjectId) {
+      const subject = subjects.find(s => s.id === selectedSubjectId);
+      filters.push({
+        key: 'subject',
+        label: subject?.name || 'Môn học',
+        onRemove: () => setSelectedSubjectId(undefined)
+      });
+    }
+
+    if (selectedCategory) {
+      filters.push({
+        key: 'category',
+        label: selectedCategory,
+        onRemove: () => {
+          setSelectedCategory(undefined);
+          setSelectedGradeLevelIds([]);
+        }
+      });
+    }
+
+    if (selectedGradeLevelIds.length > 0) {
+      selectedGradeLevelIds.forEach(id => {
+        const gradeLevel = gradeLevels.find(gl => gl.id === id);
+        if (gradeLevel) {
+          filters.push({
+            key: `grade-${id}`,
+            label: gradeLevel.name,
+            onRemove: () => toggleGradeLevel(id)
+          });
+        }
+      });
+    }
+
+    if (priceRange[0] !== 50000 || priceRange[1] !== 500000) {
+      filters.push({
+        key: 'price',
+        label: `${priceRange[0].toLocaleString('vi-VN')}đ - ${priceRange[1].toLocaleString('vi-VN')}đ`,
+        onRemove: () => setPriceRange([50000, 500000])
+      });
+    }
+
+    if (selectedExperience) {
+      filters.push({
+        key: 'experience',
+        label: `${selectedExperience}+ năm`,
+        onRemove: () => setSelectedExperience(undefined)
+      });
+    }
+
+    if (selectedShift) {
+      const shiftLabels = {
+        morning: 'Buổi sáng',
+        afternoon: 'Buổi chiều',
+        evening: 'Buổi tối'
+      };
+      filters.push({
+        key: 'shift',
+        label: shiftLabels[selectedShift],
+        onRemove: () => setSelectedShift(undefined)
+      });
+    }
+
+    return filters;
+  }, [selectedSubjectId, selectedCategory, selectedGradeLevelIds, priceRange, selectedExperience, selectedShift, subjects, gradeLevels, toggleGradeLevel]);
 
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Tìm kiếm & Lọc</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">Bộ lọc</CardTitle>
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <Filter className="h-3 w-3" />
+                {activeFilterCount}
+              </Badge>
+            )}
+          </div>
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="text-xs h-8"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Xóa tất cả
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Search by name */}
-        <div>
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <Input
-              placeholder="Tìm theo tên gia sư..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="pr-10"
-              data-testid="input-search"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              data-testid="button-search"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </form>
-        </div>
+        {/* Active Filter Chips */}
+        {activeFilters.length > 0 && (
+          <div className="flex flex-wrap gap-2 pb-4 border-b">
+            {activeFilters.map((filter) => (
+              <Badge
+                key={filter.key}
+                variant="secondary"
+                className="gap-1 pr-1"
+              >
+                {filter.label}
+                <button
+                  onClick={filter.onRemove}
+                  className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Subject filter */}
         <div>

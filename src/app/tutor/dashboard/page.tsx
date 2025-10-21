@@ -226,10 +226,10 @@ export default function TutorDashboard() {
                   <span className="text-xs">Lịch lặp lại</span>
                 </Button>
               </Link>
-              <Link href="/tutor/trial-requests">
-                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-trial-requests">
+              <Link href="/tutor/pending-lessons">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-pending-lessons">
                   <BookOpen className="h-6 w-6" />
-                  <span className="text-xs">Học thử</span>
+                  <span className="text-xs">Yêu cầu chờ</span>
                 </Button>
               </Link>
               <Link href="/tutor/teaching">

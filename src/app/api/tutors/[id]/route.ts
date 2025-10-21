@@ -36,6 +36,7 @@ export async function GET(
       fullName: enrichedTutor.fullName,
       avatar: enrichedTutor.avatar,
       bio: enrichedTutor.bio,
+      teachingMethod: enrichedTutor.teachingMethod,
       experience: enrichedTutor.experience,
       hourlyRate: enrichedTutor.hourlyRate,
       rating: enrichedTutor.rating,
@@ -43,6 +44,8 @@ export async function GET(
       totalStudents: enrichedTutor.totalStudents,
       occupation: enrichedTutor.occupation,
       education: enrichedTutor.education,
+      certifications: enrichedTutor.certifications,
+      achievements: enrichedTutor.achievements,
       verificationStatus: enrichedTutor.verificationStatus,
       videoIntro: enrichedTutor.videoIntro,
       subjects: enrichedTutor.tutorSubjects.map(ts => ({

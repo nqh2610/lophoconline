@@ -575,10 +575,7 @@ export default function Tutors() {
           {/* Filter Panel */}
           <aside className="lg:w-80 flex-shrink-0">
             <div className="sticky top-8">
-              <FilterPanel
-                onFilterChange={setFilters}
-                onSearch={setSearchText}
-              />
+              <FilterPanel onFilterChange={setFilters} />
             </div>
           </aside>
 

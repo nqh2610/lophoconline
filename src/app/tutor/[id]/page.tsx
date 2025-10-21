@@ -598,9 +598,21 @@ export default function TutorDetail() {
       availableSlots: [], // Legacy field
       availableSlotDetails,
       bio: data.bio || '',
-      education: data.education ? JSON.parse(data.education) : [],
-      certifications: data.certifications ? JSON.parse(data.certifications) : [],
-      achievements: data.achievements ? JSON.parse(data.achievements || '[]') : [],
+      education: data.education ? (
+        data.education.startsWith('[') || data.education.startsWith('{')
+          ? JSON.parse(data.education)
+          : [{ degree: data.education, school: '', year: '' }]
+      ) : [],
+      certifications: data.certifications ? (
+        data.certifications.startsWith('[') || data.certifications.startsWith('{')
+          ? JSON.parse(data.certifications)
+          : [data.certifications]
+      ) : [],
+      achievements: data.achievements ? (
+        data.achievements.startsWith('[') || data.achievements.startsWith('{')
+          ? JSON.parse(data.achievements)
+          : [data.achievements]
+      ) : [],
       teachingStyle: data.teachingMethod || '',
       languages: data.languages ? data.languages.split(',').map(l => l.trim()) : ['Tiếng Việt'],
       location: 'Hà Nội', // TODO: Add location to schema

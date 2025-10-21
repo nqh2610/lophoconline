@@ -91,10 +91,10 @@ export default function StudentDashboard() {
                   <span className="text-xs">Đặt lịch học</span>
                 </Button>
               </Link>
-              <Link href="/student/timetable">
+              <Link href="/student/my-lessons">
                 <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4">
-                  <Clock className="h-6 w-6" />
-                  <span className="text-xs">Thời khóa biểu</span>
+                  <BookOpen className="h-6 w-6" />
+                  <span className="text-xs">Lịch học của tôi</span>
                 </Button>
               </Link>
               <Link href="/student/financial">

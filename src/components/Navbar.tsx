@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { LogIn, LogOut, User } from "lucide-react";
+import { LogIn, LogOut, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo } from "./Logo";
 import { LoginDialog } from "./LoginDialog";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { SearchBar } from "./SearchBar";
+import { MobileSearchDialog } from "./MobileSearchDialog";
 import { useSession, signOut } from "next-auth/react";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import {
 
 export function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { data: session } = useSession();
 
   // Auto-open login dialog when query param is present
@@ -65,6 +67,16 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Mobile Search Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setMobileSearchOpen(true)}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+
               <Link href="/tutor-registration">
                 <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
                   Trở thành gia sư
@@ -118,6 +130,7 @@ export function Navbar() {
         </div>
       </nav>
       <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
+      <MobileSearchDialog open={mobileSearchOpen} onOpenChange={setMobileSearchOpen} />
     </>
   );
 }

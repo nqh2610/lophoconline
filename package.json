@@ -9,9 +9,7 @@
     "lint": "next lint",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "seed:tutors": "tsx --env-file=.env seed-tutors.ts",
-    "db:clean": "tsx --env-file=.env clean-db.ts",
-    "seed:optimized": "tsx --env-file=.env seed-optimized.ts"
+    "seed": "tsx --env-file=.env seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

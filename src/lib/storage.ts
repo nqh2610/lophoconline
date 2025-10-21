@@ -244,14 +244,22 @@ export class DatabaseStorage {
     // Filter by category (need to join gradeLevels if not already joined)
     if (filters?.category) {
       // Check if we already joined with gradeLevels
-      const hasGradeLevelJoin = filters?.subjectId || filters?.gradeLevelId || filters?.subject || filters?.gradeLevel;
+      const hasGradeLevelJoin = filters?.gradeLevel;
 
       if (!hasGradeLevelJoin) {
-        baseQuery = db
-          .selectDistinct({ tutors })
-          .from(tutors)
-          .innerJoin(tutorSubjects, eq(tutorSubjects.tutorId, tutors.id))
-          .innerJoin(gradeLevels, eq(gradeLevels.id, tutorSubjects.gradeLevelId)) as any;
+        // Need to ensure we have tutor_subjects join first
+        const hasTutorSubjectsJoin = filters?.subjectId || filters?.gradeLevelId || filters?.subject;
+
+        if (!hasTutorSubjectsJoin) {
+          baseQuery = db
+            .selectDistinct({ tutors })
+            .from(tutors)
+            .innerJoin(tutorSubjects, eq(tutorSubjects.tutorId, tutors.id))
+            .innerJoin(gradeLevels, eq(gradeLevels.id, tutorSubjects.gradeLevelId)) as any;
+        } else {
+          // Already have tutor_subjects, just add gradeLevels
+          baseQuery = baseQuery.innerJoin(gradeLevels, eq(gradeLevels.id, tutorSubjects.gradeLevelId)) as any;
+        }
       }
 
       conditions.push(eq(gradeLevels.category, filters.category));
