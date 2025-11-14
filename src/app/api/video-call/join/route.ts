@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { videoCallSessions } from '@/lib/schema';
+import { videoCallSessions, users } from '@/lib/schema';
 import { eq, and } from 'drizzle-orm';
 import { canJoinNow, isSessionValid, generateJitsiUrl } from '@/lib/jitsi';
 
@@ -25,19 +25,7 @@ import { canJoinNow, isSessionValid, generateJitsiUrl } from '@/lib/jitsi';
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authentication check
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Please login first' },
-        { status: 401 }
-      );
-    }
-
-    const userId = parseInt(session.user.id);
-    const userRole = session.user.role;
-
-    // 2. Parse request body
+    // 1. Parse request body first
     const body = await request.json();
     const { accessToken } = body;
 
@@ -48,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Get video call session by access token
+    // 2. Get video call session by access token (before auth check)
     const videoSession = await db
       .select()
       .from(videoCallSessions)
@@ -64,15 +52,73 @@ export async function POST(request: NextRequest) {
 
     const sessionData = videoSession[0];
 
-    // 4. Check if user is authorized (must be tutor or student)
-    const isTutor = userId === sessionData.tutorId;
-    const isStudent = userId === sessionData.studentId;
+    // 3. For Videolify provider, authentication is optional (accessToken is sufficient)
+    // For Jitsi provider, require authentication
+    let userId: number | null = null;
+    let userRole: string | null = null;
+    let userName = 'Anonymous User';
 
-    if (!isTutor && !isStudent) {
-      return NextResponse.json(
-        { error: 'Access denied - You are not a participant of this session' },
-        { status: 403 }
-      );
+    if (sessionData.provider === 'videolify') {
+      // Videolify: accessToken is enough, no login required
+      // We'll use a mock user based on session data
+      const session = await getServerSession(authOptions);
+      if (session?.user?.id) {
+        userId = parseInt(session.user.id);
+        userRole = session.user.role;
+      } else {
+        // No session - allow anonymous join for videolify
+        // Auto-detect role based on existing joins or use tutor as default
+        userId = null; // Will be set below
+      }
+    } else {
+      // Jitsi: require authentication
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized - Please login first (Jitsi requires authentication)' },
+          { status: 401 }
+        );
+      }
+      userId = parseInt(session.user.id);
+      userRole = session.user.role;
+    }
+
+    // 4. Determine user role for videolify (if not authenticated)
+    let isTutor = false;
+    let isStudent = false;
+
+    if (userId === null && sessionData.provider === 'videolify') {
+      // Auto-assign role based on who hasn't joined yet
+      if (!sessionData.tutorJoinedAt) {
+        isTutor = true;
+        userId = sessionData.tutorId;
+        userName = 'Tutor';
+      } else if (!sessionData.studentJoinedAt) {
+        isStudent = true;
+        userId = sessionData.studentId;
+        userName = 'Student';
+      } else {
+        // Both joined - allow as observer or assign to less recent joiner
+        isTutor = true;
+        userId = sessionData.tutorId;
+        userName = 'Tutor (Rejoin)';
+      }
+    } else if (userId !== null) {
+      // Authenticated user - check authorization
+      isTutor = userId === sessionData.tutorId;
+      isStudent = userId === sessionData.studentId;
+
+      if (!isTutor && !isStudent && sessionData.provider !== 'videolify') {
+        return NextResponse.json(
+          { error: 'Access denied - You are not a participant of this session' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // For Videolify, if still no role assigned, default to tutor
+    if (!isTutor && !isStudent && sessionData.provider === 'videolify') {
+      isTutor = true;
     }
 
     // 5. Check session expiry
@@ -145,11 +191,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 10. Check for duplicate join (prevent copy-paste of link)
+    // 10. Get user full name (needed for both first join and rejoin)
+    if (userId && userName === 'Anonymous User') {
+      const userData = await db
+        .select({
+          fullName: users.fullName,
+          username: users.username,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      userName = userData[0]?.fullName || userData[0]?.username || (isTutor ? 'Tutor' : 'Student');
+    }
+    
+    console.log('👤 [Video Call Join] userName:', userName, 'userId:', userId, 'isTutor:', isTutor);
+
+    // 11. Check for duplicate join (prevent copy-paste of link)
     // If user already joined once, don't allow again
     if (isTutor && sessionData.tutorJoinedAt) {
       // Tutor already joined - don't record again but allow rejoin
-      const jitsiUrl = generateJitsiUrl(sessionData.roomName, sessionData.tutorToken);
+      const jitsiUrl = generateJitsiUrl(sessionData.roomName, sessionData.tutorToken, userName);
 
       return NextResponse.json({
         success: true,
@@ -157,7 +219,9 @@ export async function POST(request: NextRequest) {
         sessionId: sessionData.id,
         jitsiUrl,
         roomName: sessionData.roomName,
+        userName, // ✅ ADDED
         role: 'tutor',
+        provider: sessionData.provider || 'jitsi', // ✅ Add provider
         moderator: true,
         joinedAt: sessionData.tutorJoinedAt,
       });
@@ -165,7 +229,7 @@ export async function POST(request: NextRequest) {
 
     if (isStudent && sessionData.studentJoinedAt) {
       // Student already joined - don't record again but allow rejoin
-      const jitsiUrl = generateJitsiUrl(sessionData.roomName, sessionData.studentToken);
+      const jitsiUrl = generateJitsiUrl(sessionData.roomName, sessionData.studentToken, userName);
 
       return NextResponse.json({
         success: true,
@@ -173,13 +237,15 @@ export async function POST(request: NextRequest) {
         sessionId: sessionData.id,
         jitsiUrl,
         roomName: sessionData.roomName,
+        userName, // ✅ ADDED
         role: 'student',
+        provider: sessionData.provider || 'jitsi', // ✅ Add provider
         moderator: false,
         joinedAt: sessionData.studentJoinedAt,
       });
     }
 
-    // 11. Get client IP address
+    // 12. Get client IP address
     const forwardedFor = request.headers.get('x-forwarded-for');
     const realIp = request.headers.get('x-real-ip');
     const clientIp = forwardedFor?.split(',')[0] || realIp || 'unknown';
@@ -224,18 +290,20 @@ export async function POST(request: NextRequest) {
       .set(updateData)
       .where(eq(videoCallSessions.id, sessionData.id));
 
-    // 14. Generate Jitsi meeting URL with appropriate token
+    // 14. Generate Jitsi meeting URL with appropriate token (userName already fetched above)
     const jitsiToken = isTutor ? sessionData.tutorToken : sessionData.studentToken;
-    const jitsiUrl = generateJitsiUrl(sessionData.roomName, jitsiToken);
+    const jitsiUrl = generateJitsiUrl(sessionData.roomName, jitsiToken, userName);
 
-    // 15. Return success response
+    // 15. Return success response with userName
     return NextResponse.json({
       success: true,
       message: 'Successfully joined video call session',
       sessionId: sessionData.id,
       jitsiUrl,
       roomName: sessionData.roomName,
+      userName, // ✅ Add userName for iframe API
       role: isTutor ? 'tutor' : 'student',
+      provider: sessionData.provider || 'jitsi', // ✅ Add provider
       moderator: isTutor,
       joinedAt: now.toISOString(),
       scheduledEndTime: scheduledEnd.toISOString(),

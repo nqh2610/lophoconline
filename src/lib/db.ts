@@ -8,17 +8,40 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Tạo connection pool cho MySQL với cấu hình tối ưu
-// Sau khi tối ưu queries (sử dụng enriched endpoints), số connections giảm đáng kể
+// Optimize connection pool based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+// ✅ PERFORMANCE: Optimized connection pool settings
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
-  connectionLimit: 15, // Đủ cho hệ thống đã được tối ưu (giảm từ 25)
+  // Connection pool settings (scaled for production)
+  connectionLimit: isProduction ? 20 : 10, // More connections in production
   waitForConnections: true,
-  queueLimit: 0,
-  maxIdle: 5, // Maximum idle connections (giảm từ 10)
-  idleTimeout: 60000, // 60 seconds - close idle connections
+  queueLimit: 0, // Unlimited queue
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
+  // ✅ FASTER: Reduced connection timeout for quicker failures
+  connectTimeout: 5000, // 5 seconds (down from 10)
+  // Idle connection cleanup
+  idleTimeout: 60000, // Close idle connections after 60 seconds
+  maxIdle: isProduction ? 10 : 5, // Keep more idle connections in production
+  // ✅ PERFORMANCE: Enable multiple statements for batch operations
+  multipleStatements: false, // Keep false for security
+  // ✅ FASTER: Compress protocol for large result sets
+  compress: isProduction, // Enable compression in production
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Closing database pool...');
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Closing database pool...');
+  await pool.end();
+  process.exit(0);
 });
 
 // Tạo Drizzle instance

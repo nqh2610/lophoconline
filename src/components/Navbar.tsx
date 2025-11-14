@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { LogIn, LogOut, User, Search } from "lucide-react";
+import { LogIn, LogOut, User, Search, GraduationCap, BookOpen, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo } from "./Logo";
-import { LoginDialog } from "./LoginDialog";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { SearchBar } from "./SearchBar";
 import { MobileSearchDialog } from "./MobileSearchDialog";
 import { useSession, signOut } from "next-auth/react";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,36 +21,50 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
-  const [loginOpen, setLoginOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
-  // Auto-open login dialog when query param is present
+  // ✅ REALTIME: Use custom hook to fetch fresh user roles from database
+  const { hasRole, refetch } = useUserRoles();
+
+  // ✅ REALTIME: Refetch roles when window gains focus (e.g., after booking in another tab or returning to the page)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("login") === "required") {
-      setLoginOpen(true);
-      // Clean up URL
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
+    const handleFocus = () => {
+      if (session?.user) {
+        refetch();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [session?.user, refetch]);
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });
   };
 
-  const getDashboardLink = () => {
-    if (!session?.user?.role) return "/";
-    switch (session.user.role) {
-      case "admin":
-        return "/admin";
-      case "tutor":
-        return "/tutor";
-      case "student":
-        return "/student";
-      default:
-        return "/";
+  // Render tutor button based on role
+  const renderTutorButton = () => {
+    // If user is logged in and has tutor role - show edit button
+    if (session?.user && hasRole('tutor')) {
+      return (
+        <Link href="/tutor-registration">
+          <Button variant="ghost" size="sm" className="hidden lg:flex gap-2" data-testid="button-edit-tutor">
+            <Edit className="h-4 w-4" />
+            Sửa thông tin gia sư
+          </Button>
+        </Link>
+      );
     }
+    
+    // For not logged in OR logged in without tutor role - show become tutor button
+    return (
+      <Link href="/tutor-registration">
+        <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
+          Trở thành gia sư
+        </Button>
+      </Link>
+    );
   };
 
   return (
@@ -77,11 +91,9 @@ export function Navbar() {
                 <Search className="h-5 w-5" />
               </Button>
 
-              <Link href="/tutor-registration">
-                <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
-                  Trở thành gia sư
-                </Button>
-              </Link>
+              {/* Tutor button - changes based on profile status */}
+              {renderTutorButton()}
+              
               <NotificationDropdown />
               <ThemeToggle />
 
@@ -96,16 +108,29 @@ export function Navbar() {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <Link href={getDashboardLink()}>
-                      <DropdownMenuItem data-testid="menu-dashboard">
-                        Dashboard
-                      </DropdownMenuItem>
-                    </Link>
-                    <Link href={getDashboardLink()}>
-                      <DropdownMenuItem data-testid="menu-profile">
-                        Hồ sơ của tôi
-                      </DropdownMenuItem>
-                    </Link>
+
+                    {/* Show tutor dashboard link if user has tutor role */}
+                    {hasRole('tutor') && (
+                      <Link href="/tutor/dashboard">
+                        <DropdownMenuItem data-testid="menu-tutor-dashboard">
+                          <GraduationCap className="h-4 w-4 mr-2" />
+                          Dashboard gia sư
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
+
+                    {/* Show student dashboard link if user has student role */}
+                    {hasRole('student') && (
+                      <Link href="/student/dashboard">
+                        <DropdownMenuItem data-testid="menu-student-dashboard">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Dashboard học viên
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
+
+                    {/* Don't show admin dashboard in menu for security (admin can access via URL) */}
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} data-testid="menu-logout">
                       <LogOut className="h-4 w-4 mr-2" />
@@ -114,22 +139,22 @@ export function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="gap-2" 
-                  onClick={() => setLoginOpen(true)}
-                  data-testid="button-login"
-                >
-                  <LogIn className="h-4 w-4" />
-                  <span className="hidden sm:inline">Đăng nhập</span>
-                </Button>
+                <Link href="/login">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2"
+                    data-testid="button-login"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    <span className="hidden sm:inline">Đăng nhập</span>
+                  </Button>
+                </Link>
               )}
             </div>
           </div>
         </div>
       </nav>
-      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
       <MobileSearchDialog open={mobileSearchOpen} onOpenChange={setMobileSearchOpen} />
     </>
   );

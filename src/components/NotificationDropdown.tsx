@@ -70,11 +70,26 @@ export function NotificationDropdown() {
 
   const unreadCount = notifications.filter(n => n.isRead === 0).length;
 
+  // Fetch notifications on mount and every 30 seconds
+  useEffect(() => {
+    if (session?.user) {
+      fetchNotifications();
+
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [session]);
+
+  // Also fetch when dropdown opens to get latest
   useEffect(() => {
     if (session?.user && isOpen) {
       fetchNotifications();
     }
-  }, [session, isOpen]);
+  }, [isOpen]);
 
   const fetchNotifications = async () => {
     try {

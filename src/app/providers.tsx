@@ -13,8 +13,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000, // 1 minute
+        staleTime: 0, // No cache by default - let individual hooks control caching
+        gcTime: 0, // Don't keep old data in memory
         refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        retry: 1, // Reduce retries from 3 to 1
       },
     },
   }));

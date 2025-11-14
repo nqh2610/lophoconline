@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { videoCallSessions, lessons, classEnrollments, users, subjects } from '@/lib/schema';
+import { videoCallSessions, trialBookings, classEnrollments, users, subjects } from '@/lib/schema';
 import { eq, and, or, gte, lte, desc } from 'drizzle-orm';
 import { canJoinNow } from '@/lib/jitsi';
 
@@ -138,12 +138,12 @@ export async function GET(request: NextRequest) {
           usedCount: videoSession.usedCount,
         };
 
-        // Get lesson details if exists
+        // Get trial lesson details if exists
         if (videoSession.lessonId) {
           const lesson = await db
             .select()
-            .from(lessons)
-            .where(eq(lessons.id, videoSession.lessonId))
+            .from(trialBookings)
+            .where(eq(trialBookings.id, videoSession.lessonId))
             .limit(1);
 
           if (lesson.length > 0) {
@@ -155,9 +155,9 @@ export async function GET(request: NextRequest) {
               startTime: lessonData.startTime,
               endTime: lessonData.endTime,
               status: lessonData.status,
-              price: lessonData.price,
-              isTrial: lessonData.isTrial === 1,
-              notes: lessonData.notes,
+              // Trial bookings are always free (no price field in schema)
+              isTrial: true,
+              notes: lessonData.notes || '',
             };
           }
         }

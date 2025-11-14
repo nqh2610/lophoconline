@@ -34,3 +34,8 @@ drizzle
 
 #claude 
 claude
+# Archive folder (cleanup)
+.archive/
+
+# Continue AI config with sensitive data
+.continue/

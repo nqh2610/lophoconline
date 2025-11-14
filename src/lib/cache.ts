@@ -1,18 +1,29 @@
 /**
- * In-memory cache for static/semi-static data
+ * In-memory LRU (Least Recently Used) cache for static/semi-static data
  * This reduces database queries for data that rarely changes
  *
- * For production, consider using Redis instead of in-memory cache
+ * Features:
+ * - Automatic eviction when max size is reached (LRU policy)
+ * - TTL (Time To Live) for each entry
+ * - Memory-safe with configurable max size
+ *
+ * For production with multiple servers, consider using Redis instead
  */
 
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
   ttl: number; // Time to live in milliseconds
+  lastAccessed: number;
 }
 
-class Cache {
+class LRUCache {
   private store: Map<string, CacheEntry<any>> = new Map();
+  private readonly maxSize: number;
+
+  constructor(maxSize: number = 100) {
+    this.maxSize = maxSize;
+  }
 
   /**
    * Get cached data if still valid
@@ -31,18 +42,50 @@ class Cache {
       return null;
     }
 
+    // Update last accessed time (LRU tracking)
+    entry.lastAccessed = now;
+    this.store.set(key, entry);
+
     return entry.data as T;
   }
 
   /**
    * Set cache data with TTL
+   * Automatically evicts LRU entries if max size is reached
    */
   set<T>(key: string, data: T, ttl: number): void {
+    const now = Date.now();
+
+    // If cache is full and key doesn't exist, evict LRU entry
+    if (this.store.size >= this.maxSize && !this.store.has(key)) {
+      this.evictLRU();
+    }
+
     this.store.set(key, {
       data,
-      timestamp: Date.now(),
-      ttl
+      timestamp: now,
+      ttl,
+      lastAccessed: now
     });
+  }
+
+  /**
+   * Evict the least recently used entry
+   */
+  private evictLRU(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.store.delete(oldestKey);
+    }
   }
 
   /**
@@ -82,8 +125,8 @@ class Cache {
   }
 }
 
-// Export singleton instance
-export const cache = new Cache();
+// Export singleton instance with max 200 entries (reasonable for in-memory cache)
+export const cache = new LRUCache(200);
 
 // Cache TTL constants (in milliseconds)
 export const CACHE_TTL = {

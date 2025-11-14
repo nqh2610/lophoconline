@@ -66,9 +66,10 @@ export async function generateJitsiToken(options: JitsiTokenOptions): Promise<st
         moderator,
       },
       features: {
-        livestreaming: moderator, // Only moderators can livestream
-        recording: moderator, // Only moderators can record
-        transcription: false,
+        livestreaming: false, // Disable livestreaming
+        recording: false, // Disable recording
+        transcription: false, // Disable transcription
+        // ✅ FIX: Use proper feature names (no hyphens in object keys)
       },
     },
     aud: JITSI_APP_ID,
@@ -91,10 +92,73 @@ export async function generateJitsiToken(options: JitsiTokenOptions): Promise<st
 }
 
 /**
- * Generate Jitsi meeting URL with JWT token
+ * Generate Jitsi meeting URL with disabled invite features
+ * NOTE: meet.jit.si does NOT support JWT authentication for free tier
+ * So we use public rooms with config parameters to hide invite buttons
  */
-export function generateJitsiUrl(roomName: string, jwt: string): string {
-  return `https://${JITSI_DOMAIN}/${roomName}?jwt=${jwt}`;
+export function generateJitsiUrl(roomName: string, jwt: string, userName?: string): string {
+  // Build URL with proper encoding
+  const baseUrl = `https://${JITSI_DOMAIN}/${roomName}`;
+
+  // ✅ FIX: Use hash fragment (#) for configs to work with meet.jit.si
+  // Query strings (?) don't auto-apply configs on meet.jit.si free tier
+  const configs: string[] = [];
+
+  // CRITICAL: Add user display name (must be in hash fragment)
+  if (userName) {
+    configs.push(`userInfo.displayName=${encodeURIComponent(userName)}`);
+  }
+
+  // NOTE: JWT is not used with meet.jit.si free tier (they don't support it)
+  // If you use self-hosted Jitsi or 8x8.vc, add jwt to configs
+
+  // Core config - disable prejoin and lobby
+  configs.push('config.prejoinPageEnabled=false');
+  configs.push('config.requireDisplayName=false');
+  configs.push('config.startWithAudioMuted=false');
+  configs.push('config.startWithVideoMuted=false');
+
+  // Disable lobby completely (no authentication)
+  configs.push('config.enableLobbyChat=false');
+  configs.push('config.disableLobby=true');
+  configs.push('config.enableInsecureRoomNameWarning=false');
+
+  // ✅ ONLY disable invite and sharing features - KEEP all other features
+  configs.push('config.disableInviteFunctions=true');
+  configs.push('config.hideAddRoomButton=true');
+
+  // ✅ Keep participants pane (useful for seeing who's in the call)
+  // configs.push('config.disableParticipantsPane=true'); // REMOVED - too restrictive
+
+  // ✅ Keep ALL standard toolbar buttons EXCEPT invite-related ones
+  // Jitsi will respect disableInviteFunctions and hide invite buttons automatically
+  const toolbarButtons = [
+    'microphone',
+    'camera',
+    'desktop',
+    'fullscreen',
+    'hangup',
+    'chat',
+    'raisehand',
+    'tileview',
+    'settings',           // ✅ Keep settings
+    'stats',              // ✅ Keep stats
+    'participants-pane',  // ✅ Keep participants pane (invite button will be hidden by disableInviteFunctions)
+    // 'invite' is automatically excluded due to config.disableInviteFunctions=true
+  ];
+
+  configs.push(`config.toolbarButtons=${JSON.stringify(toolbarButtons)}`);
+  configs.push(`interfaceConfig.TOOLBAR_BUTTONS=${JSON.stringify(toolbarButtons)}`);
+
+  // ✅ Hide only invite-related UI elements, keep other features
+  configs.push('interfaceConfig.HIDE_INVITE_MORE_HEADER=true');
+  configs.push('interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=false');
+  configs.push('interfaceConfig.SHOW_JITSI_WATERMARK=false');
+  configs.push('interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false');
+  configs.push('interfaceConfig.MOBILE_APP_PROMO=false');
+
+  // ✅ Use hash fragment (#) instead of query string (?)
+  return `${baseUrl}#${configs.join('&')}`;
 }
 
 /**

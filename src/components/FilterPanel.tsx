@@ -33,7 +33,6 @@ export interface FilterValues {
 
 export function FilterPanel({ onFilterChange }: FilterPanelProps) {
   const { data: subjects = [] } = useSubjects();
-  const { data: gradeLevels = [] } = useGradeLevels();
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
@@ -41,6 +40,9 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
   const [priceRange, setPriceRange] = useState<[number, number]>([50000, 500000]);
   const [selectedExperience, setSelectedExperience] = useState<number | undefined>();
   const [selectedShift, setSelectedShift] = useState<'morning' | 'afternoon' | 'evening' | undefined>();
+
+  // FIXED: Load grade levels filtered by selected subject
+  const { data: gradeLevels = [] } = useGradeLevels(selectedSubjectId);
 
   // Group grade levels by category - Memoized for performance
   const gradeLevelsByCategory = useMemo(() => {
@@ -58,6 +60,12 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
     return Object.keys(gradeLevelsByCategory).sort((a, b) => order.indexOf(a) - order.indexOf(b));
   }, [gradeLevelsByCategory]);
 
+  // FIXED: Reset grade selections when subject changes (grades are subject-specific)
+  useEffect(() => {
+    setSelectedCategory(undefined);
+    setSelectedGradeLevelIds([]);
+  }, [selectedSubjectId]);
+
   // Auto-apply filters with debounce when any filter changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -70,7 +78,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
         experience: selectedExperience,
         shiftType: selectedShift,
       });
-    }, 300); // 300ms debounce
+    }, 500); // Increased from 300ms to 500ms for better performance
 
     return () => clearTimeout(timer);
   }, [selectedSubjectId, selectedCategory, selectedGradeLevelIds, priceRange, selectedExperience, selectedShift, onFilterChange]);

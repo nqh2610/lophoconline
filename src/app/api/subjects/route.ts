@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { storage } from '@/lib/storage';
 import { withCache, CACHE_TTL } from '@/lib/cache';
 
+// Enable ISR - subjects rarely change
+export const revalidate = 3600; // Revalidate every 1 hour
+
 // GET /api/subjects - Get all subjects (with in-memory cache + CDN cache)
 export async function GET() {
   try {

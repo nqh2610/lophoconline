@@ -167,6 +167,11 @@ export async function GET(request: NextRequest) {
           }),
       ]);
 
+      // 6.4.1. Thêm role "student" cho user (nếu chưa có)
+      if (student) {
+        await storage.addUserRole(student.userId, 'student');
+      }
+
       // 6.5. Tạo notification cho học sinh
       if (student) {
         await storage.createNotification({

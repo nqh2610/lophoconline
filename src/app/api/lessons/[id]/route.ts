@@ -52,7 +52,7 @@ export async function PUT(
       startTime: updates.startTime || current.startTime,
       endTime: updates.endTime || current.endTime,
       subject: updates.subject || current.subject,
-      price: updates.price !== undefined ? parseInt(updates.price) : current.price,
+      // Trial bookings don't have price field - always free
       status: updates.status || current.status,
       notes: updates.notes !== undefined ? updates.notes : current.notes,
     };

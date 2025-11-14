@@ -21,7 +21,7 @@ export async function GET(
     const studentId = params.id;
 
     // Verify user is accessing their own data or is admin
-    if (session.user.id.toString() !== studentId && session.user.role !== 'admin') {
+    if (session.user.id.toString() !== studentId && !session.user.roles?.includes('admin')) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

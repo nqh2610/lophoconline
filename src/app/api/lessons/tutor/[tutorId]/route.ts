@@ -6,7 +6,8 @@ export async function GET(
   { params }: { params: { tutorId: string } }
 ) {
   try {
-    const lessons = await storage.getLessonsByTutor(params.tutorId);
+    const tutorId = parseInt(params.tutorId);
+    const lessons = await storage.getLessonsByTutor(tutorId);
     return NextResponse.json(lessons);
   } catch (error) {
     return NextResponse.json(

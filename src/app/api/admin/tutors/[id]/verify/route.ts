@@ -11,7 +11,7 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user || !session.user.roles?.includes('admin')) {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }
@@ -45,6 +45,11 @@ export async function POST(
       verificationStatus,
       isActive: action === 'approve' ? 1 : 0
     });
+
+    // Add "tutor" role when approved
+    if (action === 'approve') {
+      await storage.addUserRole(tutor.userId, 'tutor');
+    }
 
     // Create notification for tutor
     const tutorUser = await storage.getUserById(tutor.userId);

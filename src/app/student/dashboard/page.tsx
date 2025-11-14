@@ -7,6 +7,7 @@ import { BookOpen, Calendar, Clock, Star, TrendingUp, Search, CreditCard, User, 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { UpcomingVideoCallsCard } from "@/components/UpcomingVideoCallCard";
+import { TrialLessonsCard } from "@/components/TrialLessonsCard";
 
 export default function StudentDashboard() {
   const { data: session } = useSession();
@@ -112,6 +113,11 @@ export default function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Trial Lessons Section */}
+        <div className="mb-6">
+          <TrialLessonsCard />
+        </div>
 
         {/* Video Calls Section */}
         <div className="mb-6">

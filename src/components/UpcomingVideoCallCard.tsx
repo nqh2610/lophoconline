@@ -17,7 +17,6 @@ import {
   AlertCircle,
   ExternalLink
 } from 'lucide-react';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 interface Partner {
@@ -52,7 +51,6 @@ interface VideoCallSession {
     startTime: string;
     endTime: string;
     isTrial: boolean;
-    price: number;
   };
   enrollment?: {
     subjectName: string;
@@ -130,6 +128,54 @@ export function UpcomingVideoCallsCard() {
     return `${Math.floor(diffMins / 1440)} ngày nữa`;
   };
 
+  const handleJoinVideoCall = async (accessToken: string) => {
+    try {
+      console.log('🚀 [UpcomingVideoCallCard] Joining video call:', accessToken);
+
+      // Call API to get Jitsi URL
+      const response = await fetch('/api/video-call/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      });
+
+      const data = await response.json();
+      console.log('📥 [UpcomingVideoCallCard] API Response:', data);
+
+      if (!response.ok || !data.success) {
+        toast({
+          title: 'Lỗi',
+          description: data.error || 'Không thể vào lớp',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // ✅ Open Jitsi URL directly in new tab (STABLE APPROACH)
+      if (data.jitsiUrl) {
+        console.log('✅ [UpcomingVideoCallCard] Opening Jitsi in new tab');
+        window.open(data.jitsiUrl, '_blank', 'noopener,noreferrer');
+
+        toast({
+          title: 'Đã mở video call',
+          description: 'Video call đã mở trong tab mới',
+        });
+
+        // Refresh session list
+        setTimeout(() => {
+          fetchUpcomingSessions();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('❌ Error joining video call:', error);
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể kết nối video call',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const SessionCard = ({ session }: { session: VideoCallSession }) => {
     const isActive = session.status === 'active' && !session.sessionEndedAt;
     const canJoin = session.canJoin && session.canJoinNow;
@@ -195,11 +241,7 @@ export function UpcomingVideoCallsCard() {
             {session.lesson && (
               <div className="flex items-center gap-2 text-sm">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {session.lesson.isTrial
-                    ? 'Miễn phí'
-                    : `${session.lesson.price.toLocaleString('vi-VN')}đ`}
-                </span>
+                <span>Miễn phí (Học thử)</span>
               </div>
             )}
 
@@ -230,13 +272,15 @@ export function UpcomingVideoCallsCard() {
             {/* Action Button */}
             <div className="pt-2">
               {canJoin ? (
-                <Link href={`/video-call/${session.accessToken}`} target="_blank">
-                  <Button className="w-full gap-2" size="sm">
-                    <Video className="h-4 w-4" />
-                    {isActive ? 'Vào lớp ngay' : 'Sẵn sàng vào lớp'}
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full gap-2"
+                  size="sm"
+                  onClick={() => handleJoinVideoCall(session.accessToken)}
+                >
+                  <Video className="h-4 w-4" />
+                  {isActive ? 'Vào lớp ngay' : 'Sẵn sàng vào lớp'}
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
               ) : needsPayment ? (
                 <Button className="w-full" size="sm" variant="outline" disabled>
                   Cần thanh toán trước

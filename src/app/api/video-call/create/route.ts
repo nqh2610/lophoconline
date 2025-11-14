@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { videoCallSessions, classEnrollments, lessons, payments, escrowPayments } from '@/lib/schema';
+import { videoCallSessions, classEnrollments, trialBookings, payments, escrowPayments, tutors, students } from '@/lib/schema';
 import { eq, and, or } from 'drizzle-orm';
 import {
   generateRoomName,
@@ -75,22 +75,30 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Get lesson details
+      // Get trial lesson details
       const lesson = await db
         .select()
-        .from(lessons)
-        .where(eq(lessons.id, lessonId))
+        .from(trialBookings)
+        .where(eq(trialBookings.id, lessonId))
         .limit(1);
 
       if (lesson.length === 0) {
-        return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Trial lesson not found' }, { status: 404 });
       }
 
       const lessonData = lesson[0];
 
       // Check authorization - user must be tutor or student
-      tutorId = parseInt(lessonData.tutorId);
-      studentId = parseInt(lessonData.studentId);
+      // Note: trial_bookings stores tutor/student profile IDs, need to get user IDs
+      const tutorProfile = await db.select().from(tutors).where(eq(tutors.id, lessonData.tutorId)).limit(1);
+      const studentProfile = await db.select().from(students).where(eq(students.id, lessonData.studentId)).limit(1);
+
+      if (tutorProfile.length === 0 || studentProfile.length === 0) {
+        return NextResponse.json({ error: 'Invalid lesson data' }, { status: 500 });
+      }
+
+      tutorId = tutorProfile[0].userId;
+      studentId = studentProfile[0].userId;
 
       if (userId !== tutorId && userId !== studentId) {
         return NextResponse.json(
@@ -115,18 +123,10 @@ export async function POST(request: NextRequest) {
       scheduledStartTime = new Date(`${dateStr}T${startTimeStr}:00`);
       scheduledEndTime = new Date(`${dateStr}T${endTimeStr}:00`);
 
-      // Check payment status for trial lessons (free) or regular lessons
-      if (lessonData.isTrial === 0) {
-        // Regular lesson - check payment
-        // For now, assume paid if lesson is confirmed
-        // TODO: Implement actual payment check
-        paymentStatus = lessonData.status === 'confirmed' ? 'paid' : 'unpaid';
-        canStudentJoin = paymentStatus === 'paid' ? 1 : 0;
-      } else {
-        // Trial lesson - always allow
-        paymentStatus = 'paid';
-        canStudentJoin = 1;
-      }
+      // All bookings from trial_bookings table are trial lessons (always free)
+      // Trial lessons are always marked as paid since they're free
+      paymentStatus = 'paid';
+      canStudentJoin = 1;
     }
     // 5. Handle enrollment-based session
     else if (enrollmentId) {
@@ -256,23 +256,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Generate JWT tokens for Jitsi
+    // ✅ FIX: Calculate token expiry based on actual session duration + buffer
+    const currentTime = new Date();
+    const sessionDurationSeconds = Math.ceil((scheduledEndTime.getTime() - currentTime.getTime()) / 1000);
+    
+    // Add 30 minutes buffer to ensure token doesn't expire during session
+    const bufferSeconds = 30 * 60; // 30 minutes
+    
+    // Token expiry = remaining session time + buffer (minimum 30 minutes)
+    const tokenExpirySeconds = Math.max(sessionDurationSeconds + bufferSeconds, 1800);
+
+    // Generate JWT tokens for Jitsi with dynamic expiry
     const tutorToken = await generateJitsiToken({
       roomName,
       userId: tutorId.toString(),
-      userName: tutorUser[0].username,
+      userName: tutorUser[0].fullName || tutorUser[0].email || 'Tutor',
       email: tutorUser[0].email || undefined,
       moderator: true, // Tutor is moderator
-      expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
+      expiresIn: tokenExpirySeconds,
     });
 
     const studentToken = await generateJitsiToken({
       roomName,
       userId: studentId.toString(),
-      userName: studentUser[0].username,
+      userName: studentUser[0].fullName || studentUser[0].email || 'Student',
       email: studentUser[0].email || undefined,
       moderator: false, // Student is participant
-      expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
+      expiresIn: tokenExpirySeconds,
     });
 
     // 7. Create video call session

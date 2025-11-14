@@ -19,7 +19,7 @@ export default function AdminViewAsPage() {
 
   useEffect(() => {
     // Check if current user is admin
-    if (session && session.user.role !== "admin") {
+    if (session && !session.user.roles?.includes('admin')) {
       setError("Bạn không có quyền truy cập trang này");
       setLoading(false);
       return;

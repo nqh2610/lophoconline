@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { TutorCard } from "@/components/TutorCard";
+import { TutorCardSkeleton } from "@/components/TutorCardSkeleton";
 import { FilterPanel, type FilterValues } from "@/components/FilterPanel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -17,468 +18,9 @@ import {
 import type { Tutor } from "@/lib/schema";
 import { useTutors } from "@/hooks/use-tutors";
 
-const tutor1Avatar = "/images/tutor1.jpg";
-const tutor2Avatar = "/images/tutor2.jpg";
-const tutor3Avatar = "/images/tutor3.jpg";
-const tutor4Avatar = "/images/tutor4.jpg";
-
-const mockTutors = [
-  {
-    id: '1',
-    name: 'Nguyễn Thị Mai',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 10-12' },
-      { name: 'Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.9,
-    reviewCount: 128,
-    hourlyRate: 200000,
-    experience: '5 năm kinh nghiệm dạy THPT',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (19h-21h)', 'T7, CN (14h-20h)']
-  },
-  {
-    id: '2',
-    name: 'Trần Văn Hùng',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'IELTS 6.5+' }
-    ],
-    rating: 5.0,
-    reviewCount: 95,
-    hourlyRate: 250000,
-    experience: '7 năm kinh nghiệm IELTS, TOEFL',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)']
-  },
-  {
-    id: '3',
-    name: 'Lê Minh Tú',
-    avatar: tutor3Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 6-9' },
-      { name: 'Vật Lý', grades: 'lớp 8-9' },
-      { name: 'Tin học', grades: 'lớp 6-9' }
-    ],
-    rating: 4.7,
-    reviewCount: 76,
-    hourlyRate: 120000,
-    experience: '3 năm dạy THCS',
-    verified: true,
-    hasVideo: true,
-    occupation: 'student' as const,
-    availableSlots: ['T2-T6 (17h-20h)', 'T7 (14h-18h)']
-  },
-  {
-    id: '4',
-    name: 'Phạm Thu Hà',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Hóa học', grades: 'lớp 10-12' },
-      { name: 'Sinh học', grades: 'lớp 10-12' }
-    ],
-    rating: 4.8,
-    reviewCount: 54,
-    hourlyRate: 180000,
-    experience: '4 năm kinh nghiệm, chuyên luyện thi ĐH',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)']
-  },
-  {
-    id: '5',
-    name: 'Đỗ Văn Thành',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Lịch Sử', grades: 'lớp 10-12' },
-      { name: 'Địa Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.6,
-    reviewCount: 42,
-    hourlyRate: 150000,
-    experience: '4 năm dạy môn Xã hội',
-    verified: true,
-    hasVideo: false,
-    occupation: 'teacher' as const,
-    availableSlots: ['T3, T5 (18h-21h)', 'CN (9h-15h)']
-  },
-  {
-    id: '6',
-    name: 'Hoàng Thị Lan',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Ngữ Văn', grades: 'lớp 10-12' }
-    ],
-    rating: 4.9,
-    reviewCount: 88,
-    hourlyRate: 190000,
-    experience: '6 năm dạy Ngữ Văn THPT',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (19h-21h)', 'T7 (14h-19h)']
-  },
-  {
-    id: '7',
-    name: 'Bùi Minh Đức',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'SAT', grades: 'Math & Reading' },
-      { name: 'TOEFL', grades: '80+' }
-    ],
-    rating: 5.0,
-    reviewCount: 35,
-    hourlyRate: 300000,
-    experience: '5 năm luyện thi SAT/TOEFL',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T7, CN (9h-18h)']
-  },
-  {
-    id: '8',
-    name: 'Ngô Thị Hương',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'lớp 6-12' },
-      { name: 'IELTS', grades: '5.0-7.5' }
-    ],
-    rating: 4.8,
-    reviewCount: 67,
-    hourlyRate: 220000,
-    experience: '5 năm dạy Tiếng Anh',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)']
-  },
-  {
-    id: '9',
-    name: 'Vũ Minh Quân',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 10-12' },
-      { name: 'Vật Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.9,
-    reviewCount: 102,
-    hourlyRate: 210000,
-    experience: '6 năm dạy THPT, chuyên luyện thi',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (18h-21h)', 'CN (9h-15h)']
-  },
-  {
-    id: '10',
-    name: 'Đặng Thu Thảo',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Hóa học', grades: 'lớp 10-12' }
-    ],
-    rating: 4.7,
-    reviewCount: 58,
-    hourlyRate: 175000,
-    experience: '4 năm kinh nghiệm dạy Hóa',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T3, T5 (19h-21h)', 'T7 (14h-18h)']
-  },
-  {
-    id: '11',
-    name: 'Lý Văn Nam',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 6-9' },
-      { name: 'Lý', grades: 'lớp 8-9' }
-    ],
-    rating: 4.6,
-    reviewCount: 45,
-    hourlyRate: 130000,
-    experience: '3 năm dạy THCS',
-    verified: true,
-    hasVideo: false,
-    occupation: 'student' as const,
-    availableSlots: ['T2-T6 (17h-20h)']
-  },
-  {
-    id: '12',
-    name: 'Châu Bảo Ngọc',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'lớp 10-12' },
-      { name: 'TOEIC', grades: '600+' }
-    ],
-    rating: 4.8,
-    reviewCount: 71,
-    hourlyRate: 230000,
-    experience: '5 năm dạy Tiếng Anh, TOEIC',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T2, T4 (18h-21h)', 'T7, CN (14h-20h)']
-  },
-  {
-    id: '13',
-    name: 'Phan Đức Minh',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Sinh học', grades: 'lớp 10-12' }
-    ],
-    rating: 4.5,
-    reviewCount: 38,
-    hourlyRate: 160000,
-    experience: '3 năm dạy Sinh THPT',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T3, T5, T7 (19h-21h)']
-  },
-  {
-    id: '14',
-    name: 'Mai Phương Linh',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Ngữ Văn', grades: 'lớp 6-9' },
-      { name: 'Văn', grades: 'THCS' }
-    ],
-    rating: 4.7,
-    reviewCount: 52,
-    hourlyRate: 140000,
-    experience: '4 năm dạy Văn THCS',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (17h-20h)']
-  },
-  {
-    id: '15',
-    name: 'Trịnh Quốc Bảo',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Lịch Sử', grades: 'lớp 10-12' },
-      { name: 'Địa Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.6,
-    reviewCount: 44,
-    hourlyRate: 155000,
-    experience: '5 năm dạy Sử, Địa',
-    verified: true,
-    hasVideo: false,
-    occupation: 'teacher' as const,
-    availableSlots: ['T3, T5 (18h-21h)', 'CN (14h-18h)']
-  },
-  {
-    id: '16',
-    name: 'Võ Thị Ánh',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'lớp 1-5' },
-      { name: 'Tiếng Anh', grades: 'Tiểu học' }
-    ],
-    rating: 4.9,
-    reviewCount: 86,
-    hourlyRate: 110000,
-    experience: '4 năm dạy Tiếng Anh Tiểu học',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2-T6 (16h-19h)', 'T7 (9h-12h)']
-  },
-  {
-    id: '17',
-    name: 'Hồ Văn Tuấn',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 1-5' }
-    ],
-    rating: 4.8,
-    reviewCount: 63,
-    hourlyRate: 100000,
-    experience: '3 năm dạy Toán Tiểu học',
-    verified: true,
-    hasVideo: true,
-    occupation: 'student' as const,
-    availableSlots: ['T2, T4, T6 (16h-19h)']
-  },
-  {
-    id: '18',
-    name: 'Lương Khánh Ly',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Piano', grades: 'cơ bản-nâng cao' }
-    ],
-    rating: 5.0,
-    reviewCount: 47,
-    hourlyRate: 280000,
-    experience: '8 năm dạy Piano',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T7, CN (9h-18h)']
-  },
-  {
-    id: '19',
-    name: 'Đinh Công Thành',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Tin học', grades: 'lớp 10-12' },
-      { name: 'Lập trình', grades: 'Python, Java' }
-    ],
-    rating: 4.8,
-    reviewCount: 55,
-    hourlyRate: 240000,
-    experience: '5 năm dạy Tin học, Lập trình',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T2, T4, T6 (19h-22h)', 'CN (14h-20h)']
-  },
-  {
-    id: '20',
-    name: 'Nguyễn Thùy Dung',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 10-12' },
-      { name: 'Toán', grades: 'luyện thi ĐH' }
-    ],
-    rating: 4.9,
-    reviewCount: 115,
-    hourlyRate: 215000,
-    experience: '7 năm dạy Toán THPT và luyện thi',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (18h-21h)', 'T7, CN (14h-20h)']
-  },
-  {
-    id: '21',
-    name: 'Bùi Thanh Hải',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Vật Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.7,
-    reviewCount: 61,
-    hourlyRate: 195000,
-    experience: '5 năm dạy Vật Lý THPT',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T3, T5, T7 (18h-21h)']
-  },
-  {
-    id: '22',
-    name: 'Lê Thị Như Quỳnh',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Hóa học', grades: 'lớp 10-12' },
-      { name: 'Sinh học', grades: 'lớp 10-12' }
-    ],
-    rating: 4.8,
-    reviewCount: 74,
-    hourlyRate: 185000,
-    experience: '6 năm dạy Hóa và Sinh',
-    verified: true,
-    hasVideo: true,
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (19h-21h)', 'CN (14h-18h)']
-  },
-  {
-    id: '23',
-    name: 'Trương Minh Khang',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Guitar', grades: 'cơ bản-nâng cao' }
-    ],
-    rating: 4.9,
-    reviewCount: 82,
-    hourlyRate: 200000,
-    experience: '6 năm dạy Guitar',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)']
-  },
-  {
-    id: '24',
-    name: 'Đoàn Minh Anh',
-    avatar: tutor3Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'lớp 6-12' },
-      { name: 'Cambridge', grades: 'KET, PET, FCE' }
-    ],
-    rating: 4.9,
-    reviewCount: 93,
-    hourlyRate: 235000,
-    experience: '6 năm dạy Cambridge English',
-    verified: true,
-    hasVideo: true,
-    occupation: 'professional' as const,
-    availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)']
-  }
-];
-
 type SortOption = 'default' | 'price-asc' | 'price-desc' | 'rating-desc' | 'experience-desc' | 'reviews-desc';
 
 const ITEMS_PER_PAGE = 8;
-
-// Helper function to transform DB tutor to TutorCard props
-const transformTutorData = (tutor: Tutor, timeSlots: any[] = [], tutorSubjectData: any[] = []) => {
-  // Group by subject name and collect unique categories or grade levels
-  const subjectGroups = tutorSubjectData.reduce((acc: any, ts: any) => {
-    if (!acc[ts.subjectName]) {
-      acc[ts.subjectName] = new Set<string>();
-    }
-    // For category "Khác", show specific grade level instead
-    if (ts.category === 'Khác') {
-      acc[ts.subjectName].add(ts.gradeLevelName);
-    } else {
-      acc[ts.subjectName].add(ts.category);
-    }
-    return acc;
-  }, {});
-
-  const subjects = Object.entries(subjectGroups).map(([name, items]: [string, any]) => ({
-    name,
-    grades: Array.from(items).join(', ')
-  }));
-
-  // Determine occupation type
-  let occupation: 'student' | 'teacher' | 'professional' | 'tutor' = 'tutor';
-  if (tutor.occupation) {
-    const occ = tutor.occupation.toLowerCase();
-    if (occ.includes('sinh viên') || occ.includes('student')) {
-      occupation = 'student';
-    } else if (occ.includes('giáo viên') || occ.includes('teacher')) {
-      occupation = 'teacher';
-    } else if (occ === 'other') {
-      occupation = 'professional';
-    }
-  }
-
-  return {
-    id: tutor.id.toString(),
-    name: tutor.fullName,
-    avatar: tutor.avatar || undefined,
-    subjects: subjects,
-    rating: (tutor.rating || 0) / 10, // Convert from 0-50 to 0-5.0
-    reviewCount: tutor.totalReviews || 0,
-    hourlyRate: tutor.hourlyRate,
-    experience: `${tutor.experience || 0} năm kinh nghiệm`,
-    verified: tutor.verificationStatus === 'verified',
-    hasVideo: !!tutor.videoIntro,
-    occupation: occupation,
-    availableSlots: timeSlots
-  };
-};
 
 export default function Tutors() {
   const searchParams = useSearchParams();
@@ -489,7 +31,7 @@ export default function Tutors() {
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<FilterValues>({});
 
-  // Build query filters
+  // Build query filters - Memoized for performance
   const queryFilters = useMemo(() => {
     const result: any = {
       searchText: searchText || undefined,
@@ -516,15 +58,22 @@ export default function Tutors() {
   }, [searchText, filters, tutorIdParam]);
 
   // Use React Query to fetch tutors with enriched data (subjects + time slots) - ONE request instead of N+1
+  // Now with 30s cache for better performance
   const { data: enrichedTutors = [], isLoading, error } = useTutors(queryFilters);
 
-  // Reset to page 1 when sort changes
-  useEffect(() => {
+  // Reset to page 1 when sort or filters change - Memoized with useCallback
+  const resetPagination = useCallback(() => {
     setCurrentPage(1);
-  }, [sortBy]);
+  }, []);
 
-  // Sort tutors based on selected option
+  useEffect(() => {
+    resetPagination();
+  }, [sortBy, queryFilters, resetPagination]);
+
+  // Sort tutors based on selected option - Optimized with stable sort
   const sortedTutors = useMemo(() => {
+    if (sortBy === 'default') return enrichedTutors;
+    
     const sorted = [...enrichedTutors];
 
     switch (sortBy) {
@@ -543,11 +92,17 @@ export default function Tutors() {
     }
   }, [sortBy, enrichedTutors]);
 
-  // Calculate pagination
-  const totalPages = Math.ceil(sortedTutors.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const displayedTutors = sortedTutors.slice(startIndex, endIndex);
+  // Calculate pagination - Memoized
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(sortedTutors.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const displayedTutors = sortedTutors.slice(startIndex, endIndex);
+    
+    return { totalPages, startIndex, endIndex, displayedTutors };
+  }, [sortedTutors, currentPage]);
+
+  const { totalPages, displayedTutors } = paginationData;
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -604,9 +159,10 @@ export default function Tutors() {
             </div>
 
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Đang tải danh sách gia sư...</p>
+              <div className="grid gap-6 md:grid-cols-2">
+                {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                  <TutorCardSkeleton key={index} />
+                ))}
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-12">
@@ -633,7 +189,7 @@ export default function Tutors() {
                         rating={(tutor.rating || 0) / 10}
                         reviewCount={tutor.totalReviews || 0}
                         hourlyRate={tutor.hourlyRate}
-                        experience={`${tutor.experience || 0} năm kinh nghiệm`}
+                        experience={tutor.experience || 0}
                         verified={tutor.verificationStatus === 'verified'}
                         hasVideo={!!tutor.videoIntro}
                         occupation={occupation}

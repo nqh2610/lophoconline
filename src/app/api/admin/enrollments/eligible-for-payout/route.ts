@@ -3,8 +3,8 @@ import { storage } from '@/lib/storage';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { classEnrollments, payments } from '@/lib/schema';
-import { eq, sql } from 'drizzle-orm';
+import { classEnrollments, payments, users, tutors, students } from '@/lib/schema';
+import { eq, sql, inArray } from 'drizzle-orm';
 
 /**
  * API: Lấy danh sách lớp đủ điều kiện thanh toán
@@ -130,12 +130,6 @@ export async function GET(request: NextRequest) {
       const platformFee = Math.floor((amountToRelease * commissionRate) / 100);
       const tutorAmount = amountToRelease - platformFee;
 
-      // Lấy thông tin gia sư và học sinh
-      const [tutor, student] = await Promise.all([
-        storage.getTutorById(enrollment.tutorId),
-        storage.getStudentById(enrollment.studentId),
-      ]);
-
       eligibleEnrollments.push({
         enrollment: {
           id: enrollment.id,
@@ -145,17 +139,9 @@ export async function GET(request: NextRequest) {
           totalAmount: enrollment.totalAmount,
           status: enrollment.status,
           startDate: enrollment.startDate,
+          tutorId: enrollment.tutorId,
+          studentId: enrollment.studentId,
         },
-        tutor: tutor ? {
-          id: tutor.id,
-          fullName: tutor.fullName,
-          userId: tutor.userId,
-        } : null,
-        student: student ? {
-          id: student.id,
-          fullName: student.fullName,
-          userId: student.userId,
-        } : null,
         escrow: {
           id: escrow.id,
           totalAmount: escrow.totalAmount,
@@ -173,8 +159,68 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Fetch user data for all tutors and students in batch
+    const tutorIds = [...new Set(eligibleEnrollments.map(e => e.enrollment.tutorId))];
+    const studentIds = [...new Set(eligibleEnrollments.map(e => e.enrollment.studentId))];
+
+    const [tutorProfiles, studentProfiles] = await Promise.all([
+      tutorIds.length > 0 
+        ? db.select().from(tutors).where(inArray(tutors.id, tutorIds))
+        : Promise.resolve([]),
+      studentIds.length > 0
+        ? db.select().from(students).where(inArray(students.id, studentIds))
+        : Promise.resolve([]),
+    ]);
+
+    const tutorUserIds = tutorProfiles.map(t => t.userId);
+    const studentUserIds = studentProfiles.map(s => s.userId);
+    const allUserIds = [...tutorUserIds, ...studentUserIds];
+
+    const usersData = allUserIds.length > 0
+      ? await db.select().from(users).where(inArray(users.id, allUserIds))
+      : [];
+
+    // Create maps for quick lookup
+    const tutorMap = new Map(tutorProfiles.map(t => [t.id, t]));
+    const studentMap = new Map(studentProfiles.map(s => [s.id, s]));
+    const userMap = new Map(usersData.map(u => [u.id, u]));
+
+    // Enhance enrollments with user data
+    const enrichedEnrollments = eligibleEnrollments.map(item => {
+      const tutor = tutorMap.get(item.enrollment.tutorId);
+      const student = studentMap.get(item.enrollment.studentId);
+      const tutorUser = tutor ? userMap.get(tutor.userId) : null;
+      const studentUser = student ? userMap.get(student.userId) : null;
+
+      return {
+        enrollment: {
+          id: item.enrollment.id,
+          totalSessions: item.enrollment.totalSessions,
+          completedSessions: item.enrollment.completedSessions,
+          pricePerSession: item.enrollment.pricePerSession,
+          totalAmount: item.enrollment.totalAmount,
+          status: item.enrollment.status,
+          startDate: item.enrollment.startDate,
+        },
+        tutor: tutorUser ? {
+          id: tutor!.id,
+          fullName: tutorUser.fullName,
+          userId: tutor!.userId,
+        } : null,
+        student: studentUser ? {
+          id: student!.id,
+          fullName: studentUser.fullName,
+          userId: student!.userId,
+        } : null,
+        escrow: item.escrow,
+        reason: item.reason,
+        firstSessionDate: item.firstSessionDate,
+        lastSessionDate: item.lastSessionDate,
+      };
+    });
+
     // Sắp xếp theo thời gian buổi học đầu tiên (cũ nhất trước)
-    eligibleEnrollments.sort((a, b) => {
+    enrichedEnrollments.sort((a, b) => {
       const dateA = a.firstSessionDate ? new Date(a.firstSessionDate).getTime() : 0;
       const dateB = b.firstSessionDate ? new Date(b.firstSessionDate).getTime() : 0;
       return dateA - dateB;
@@ -182,12 +228,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      count: eligibleEnrollments.length,
-      enrollments: eligibleEnrollments,
+      count: enrichedEnrollments.length,
+      enrollments: enrichedEnrollments,
       summary: {
-        totalToRelease: eligibleEnrollments.reduce((sum, e) => sum + e.escrow.amountToRelease, 0),
-        totalPlatformFee: eligibleEnrollments.reduce((sum, e) => sum + e.escrow.platformFee, 0),
-        totalTutorAmount: eligibleEnrollments.reduce((sum, e) => sum + e.escrow.tutorAmount, 0),
+        totalToRelease: enrichedEnrollments.reduce((sum, e) => sum + e.escrow.amountToRelease, 0),
+        totalPlatformFee: enrichedEnrollments.reduce((sum, e) => sum + e.escrow.platformFee, 0),
+        totalTutorAmount: enrichedEnrollments.reduce((sum, e) => sum + e.escrow.tutorAmount, 0),
       },
     }, { status: 200 });
 

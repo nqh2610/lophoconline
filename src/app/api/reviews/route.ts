@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (lesson.studentId !== session.user.id.toString()) {
+    if (lesson.studentId !== parseInt(session.user.id)) {
       return NextResponse.json(
         { error: 'Only the student can review this lesson' },
         { status: 403 }

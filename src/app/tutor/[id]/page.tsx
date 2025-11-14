@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookingDialog } from "@/components/BookingDialog";
 import type { Tutor } from "@/lib/schema";
 import { useTutor, type EnrichedTutor } from "@/hooks/use-tutors";
 import { calculateHours, calculateFee } from "@/lib/schema";
@@ -27,10 +26,11 @@ import {
   AlertCircle
 } from "lucide-react";
 
+// Lazy load BookingDialog to reduce initial bundle size
+const BookingDialog = lazy(() => import("@/components/BookingDialog").then(mod => ({ default: mod.BookingDialog })));
+
+// Default avatar fallback
 const tutor1Avatar = "/images/tutor1.jpg";
-const tutor2Avatar = "/images/tutor2.jpg";
-const tutor3Avatar = "/images/tutor3.jpg";
-const tutor4Avatar = "/images/tutor4.jpg";
 
 interface Education {
   school: string;
@@ -53,6 +53,7 @@ interface Subject {
 
 interface AvailableSlot {
   id: string;
+  dayOfWeek?: number;
   dayLabels: string;
   startTime: string;
   endTime: string;
@@ -60,6 +61,8 @@ interface AvailableSlot {
   sessionsPerWeek: number;
   isBusy?: boolean;
   remainingSlots?: number;
+  bookingCount?: number;
+  slotIds?: number[];
 }
 
 interface TutorDetailData {
@@ -70,12 +73,15 @@ interface TutorDetailData {
   rating: number;
   reviewCount: number;
   hourlyRate: number;
-  lessonDuration: number; // Thời lượng buổi học (giờ) do gia sư đặt
+  lessonDuration: number;
   experience: string;
   verified: boolean;
   hasVideo: boolean;
   videoUrl?: string;
-  occupation: 'student' | 'teacher' | 'professional';
+  occupation?: {
+    id: number;
+    label: string;
+  } | 'student' | 'teacher' | 'professional' | 'tutor';
   availableSlots: string[];
   availableSlotDetails: AvailableSlot[];
   bio: string;
@@ -88,423 +94,28 @@ interface TutorDetailData {
   reviews: Review[];
 }
 
-// Mock data - sẽ thay bằng API call thực
-const tutorData: Record<string, TutorDetailData> = {
-  '1': {
-    id: '1',
-    name: 'Nguyễn Thị Mai',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 10-12' },
-      { name: 'Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.9,
-    reviewCount: 128,
-    hourlyRate: 200000,
-    lessonDuration: 1.5, // 1.5 giờ mỗi buổi
-    experience: '5 năm kinh nghiệm dạy THPT',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (19h-21h)', 'T7, CN (14h-20h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '19:00', endTime: '21:00', price: 300000, sessionsPerWeek: 3, remainingSlots: 2 },
-      { id: 'slot-2', dayLabels: 'Thứ 7, CN', startTime: '14:00', endTime: '20:00', price: 350000, sessionsPerWeek: 2, remainingSlots: 5 },
-    ],
-    bio: 'Tôi là giáo viên Toán và Vật Lý với 5 năm kinh nghiệm giảng dạy tại trường THPT chuyên. Tôi đam mê giúp học sinh hiểu sâu bản chất của môn học và áp dụng vào thực tế.',
-    education: [
-      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Toán học', year: '2018' },
-      { school: 'Đại học Sư phạm Hà Nội', degree: 'Thạc sĩ Giáo dục Toán', year: '2020' }
-    ],
-    certifications: [
-      'Chứng chỉ Giáo viên dạy giỏi cấp Thành phố',
-      'Chứng chỉ Bồi dưỡng học sinh giỏi Quốc gia'
-    ],
-    achievements: [
-      'Học sinh đạt 9.5+ môn Toán trong kỳ thi THPT Quốc gia: 45 em',
-      'Học sinh đỗ Đại học top 10: 38 em',
-      'Giải Nhì Hội giảng Giáo viên trẻ Hà Nội'
-    ],
-    teachingStyle: 'Phương pháp giảng dạy của tôi tập trung vào việc xây dựng nền tảng vững chắc, giúp học sinh tự tin giải quyết mọi dạng bài tập. Tôi luôn khuyến khích học sinh đặt câu hỏi và tư duy phản biện.',
-    languages: ['Tiếng Việt', 'Tiếng Anh (giao tiếp)'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Phạm Minh Anh',
-        rating: 5,
-        comment: 'Cô dạy rất dễ hiểu và nhiệt tình. Em đã tiến bộ rõ rệt sau 3 tháng học.',
-        date: '2024-03-15'
-      },
-      {
-        id: '2',
-        studentName: 'Trần Hoàng Nam',
-        rating: 5,
-        comment: 'Cô luôn chuẩn bị bài kỹ lưỡng và giải đáp mọi thắc mắc của em. Rất recommend!',
-        date: '2024-03-10'
-      },
-      {
-        id: '3',
-        studentName: 'Lê Thu Hà',
-        rating: 4,
-        comment: 'Phương pháp dạy của cô giúp em hiểu bản chất vấn đề. Tuy nhiên em mong cô có thêm bài tập về nhà.',
-        date: '2024-03-05'
-      }
-    ]
-  },
-  '2': {
-    id: '2',
-    name: 'Trần Văn Hùng',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'IELTS 6.5+' },
-      { name: 'Tiếng Anh', grades: 'giao tiếp' }
-    ],
-    rating: 5.0,
-    reviewCount: 95,
-    hourlyRate: 250000,
-    lessonDuration: 2, // 2 giờ mỗi buổi
-    experience: '7 năm kinh nghiệm IELTS, TOEFL',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'professional' as const,
-    availableSlots: ['T3, T5, T7 (18h-21h)', 'CN (9h-18h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 3, 5, 7', startTime: '18:00', endTime: '21:00', price: 500000, sessionsPerWeek: 3, isBusy: true },
-      { id: 'slot-2', dayLabels: 'Chủ nhật', startTime: '09:00', endTime: '18:00', price: 550000, sessionsPerWeek: 1, remainingSlots: 3 },
-    ],
-    bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.5 và TOEFL 115. Chuyên luyện thi IELTS, TOEFL và giao tiếp thực tế.',
-    education: [
-      { school: 'Đại học Ngoại ngữ - ĐHQGHN', degree: 'Cử nhân Ngôn ngữ Anh', year: '2016' },
-      { school: 'University of Leeds, UK', degree: 'Thạc sĩ TESOL', year: '2019' }
-    ],
-    certifications: [
-      'IELTS 8.5 Overall',
-      'TOEFL iBT 115',
-      'Cambridge CELTA',
-      'TESOL Certificate'
-    ],
-    achievements: [
-      'Học viên đạt IELTS 7.0+: 67 người',
-      'Học viên đạt TOEFL 100+: 32 người',
-      'Giảng viên xuất sắc tại British Council'
-    ],
-    teachingStyle: 'Tôi tin rằng học ngôn ngữ phải gắn liền với thực tế. Học viên sẽ được thực hành 4 kỹ năng qua các tình huống thực tế, kết hợp với luyện đề thi chuyên sâu.',
-    languages: ['Tiếng Việt', 'Tiếng Anh (bản ngữ)'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Nguyễn Thu Trang',
-        rating: 5,
-        comment: 'Thầy dạy rất professional và có lộ trình rõ ràng. Em đã đạt 7.5 IELTS!',
-        date: '2024-03-18'
-      },
-      {
-        id: '2',
-        studentName: 'Đỗ Minh Quân',
-        rating: 5,
-        comment: 'Thầy giúp em cải thiện speaking rất nhiều. Giờ em tự tin giao tiếp tiếng Anh.',
-        date: '2024-03-12'
-      }
-    ]
-  },
-  '3': {
-    id: '3',
-    name: 'Lê Minh Tú',
-    avatar: tutor3Avatar,
-    subjects: [
-      { name: 'Toán', grades: 'lớp 6-9' },
-      { name: 'Vật Lý', grades: 'lớp 8-9' },
-      { name: 'Tin học', grades: 'lớp 6-9' }
-    ],
-    rating: 4.7,
-    reviewCount: 76,
-    hourlyRate: 120000,
-    lessonDuration: 1.5,
-    experience: '3 năm dạy THCS',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'student' as const,
-    availableSlots: ['T2-T6 (17h-20h)', 'T7 (14h-18h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'T2-T6', startTime: '17:00', endTime: '20:00', price: 180000, sessionsPerWeek: 5 },
-      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '14:00', endTime: '18:00', price: 200000, sessionsPerWeek: 1 },
-    ],
-    bio: 'Tôi là sinh viên năm cuối ngành Sư phạm Toán - Tin. Đam mê dạy học và giúp các em THCS yêu thích môn Toán, Lý, Tin học.',
-    education: [
-      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Sư phạm Toán - Tin', year: '2025 (dự kiến)' }
-    ],
-    certifications: [
-      'Chứng chỉ Tin học quốc tế MOS',
-      'Giải Ba Olympic Toán sinh viên toàn quốc'
-    ],
-    achievements: [
-      'Học sinh đạt điểm cao môn Toán THCS: 28 em',
-      'Học sinh đỗ trường chuyên: 5 em'
-    ],
-    teachingStyle: 'Tôi dạy theo phương pháp học qua thực hành và game hóa, giúp các em hứng thú với môn học.',
-    languages: ['Tiếng Việt'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Nguyễn Minh Khang',
-        rating: 5,
-        comment: 'Anh dạy vui và dễ hiểu. Em thích học Toán hơn rồi!',
-        date: '2024-03-14'
-      }
-    ]
-  },
-  '4': {
-    id: '4',
-    name: 'Phạm Thu Hà',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Hóa học', grades: 'lớp 10-12' },
-      { name: 'Sinh học', grades: 'lớp 10-12' }
-    ],
-    rating: 4.8,
-    reviewCount: 54,
-    hourlyRate: 180000,
-    lessonDuration: 1.5,
-    experience: '4 năm kinh nghiệm, chuyên luyện thi ĐH',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (18h-21h)', 'T7 (15h-19h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '18:00', endTime: '21:00', price: 270000, sessionsPerWeek: 3 },
-      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '15:00', endTime: '19:00', price: 300000, sessionsPerWeek: 1 },
-    ],
-    bio: 'Tôi là giáo viên Hóa - Sinh với niềm đam mê truyền cảm hứng cho học sinh yêu khoa học tự nhiên.',
-    education: [
-      { school: 'Đại học Khoa học Tự nhiên - ĐHQGHN', degree: 'Cử nhân Hóa học', year: '2019' }
-    ],
-    certifications: [
-      'Chứng chỉ Giáo viên giỏi cấp Quận',
-      'Bồi dưỡng học sinh giỏi Hóa - Sinh'
-    ],
-    achievements: [
-      'Học sinh đạt 9.0+ môn Hóa trong kỳ thi THPT: 23 em',
-      'Học sinh đỗ khối B, D: 19 em'
-    ],
-    teachingStyle: 'Tôi tập trung vào việc giúp học sinh hiểu bản chất phản ứng và cơ chế sinh học, không chỉ học thuộc.',
-    languages: ['Tiếng Việt'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Trần Bảo Ngọc',
-        rating: 5,
-        comment: 'Cô dạy Hóa rất hay, giúp em hiểu sâu chứ không học vẹt.',
-        date: '2024-03-16'
-      }
-    ]
-  },
-  '5': {
-    id: '5',
-    name: 'Đỗ Văn Thành',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'Lịch Sử', grades: 'lớp 10-12' },
-      { name: 'Địa Lý', grades: 'lớp 10-12' }
-    ],
-    rating: 4.6,
-    reviewCount: 42,
-    hourlyRate: 150000,
-    lessonDuration: 2,
-    experience: '4 năm dạy môn Xã hội',
-    verified: true,
-    hasVideo: false,
-    occupation: 'teacher' as const,
-    availableSlots: ['T3, T5 (18h-21h)', 'CN (9h-15h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 3, 5', startTime: '18:00', endTime: '21:00', price: 300000, sessionsPerWeek: 2 },
-      { id: 'slot-2', dayLabels: 'Chủ nhật', startTime: '09:00', endTime: '15:00', price: 320000, sessionsPerWeek: 1 },
-    ],
-    bio: 'Tôi là giáo viên Lịch Sử - Địa Lý, yêu thích việc kể chuyện để giúp học sinh ghi nhớ kiến thức lâu dài.',
-    education: [
-      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Sư phạm Lịch Sử', year: '2019' }
-    ],
-    certifications: [
-      'Chứng chỉ Bồi dưỡng học sinh giỏi Quốc gia'
-    ],
-    achievements: [
-      'Học sinh đạt 9.0+ môn Lịch Sử trong kỳ thi THPT: 18 em',
-      'Học sinh đỗ khối C: 15 em'
-    ],
-    teachingStyle: 'Tôi sử dụng phương pháp kể chuyện và sơ đồ tư duy để giúp học sinh nhớ lâu và hiểu sâu.',
-    languages: ['Tiếng Việt'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Lê Minh Châu',
-        rating: 5,
-        comment: 'Thầy kể chuyện Lịch Sử rất hay, em nhớ lâu hơn!',
-        date: '2024-03-13'
-      }
-    ]
-  },
-  '6': {
-    id: '6',
-    name: 'Hoàng Thị Lan',
-    avatar: tutor1Avatar,
-    subjects: [
-      { name: 'Ngữ Văn', grades: 'lớp 10-12' },
-      { name: 'Văn', grades: 'luyện thi ĐH' }
-    ],
-    rating: 4.9,
-    reviewCount: 88,
-    hourlyRate: 190000,
-    lessonDuration: 2,
-    experience: '6 năm dạy Ngữ Văn THPT',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'teacher' as const,
-    availableSlots: ['T2, T4, T6 (19h-21h)', 'T7 (14h-19h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 2, 4, 6', startTime: '19:00', endTime: '21:00', price: 380000, sessionsPerWeek: 3 },
-      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '14:00', endTime: '19:00', price: 400000, sessionsPerWeek: 1 },
-    ],
-    bio: 'Tôi là giáo viên Ngữ Văn với niềm đam mê văn chương và nghệ thuật viết. Giúp học sinh yêu thích môn Văn.',
-    education: [
-      { school: 'Đại học Sư phạm Hà Nội', degree: 'Cử nhân Ngữ văn', year: '2017' },
-      { school: 'Đại học Sư phạm Hà Nội', degree: 'Thạc sĩ Văn học', year: '2019' }
-    ],
-    certifications: [
-      'Chứng chỉ Giáo viên dạy giỏi cấp Thành phố',
-      'Chứng chỉ Bồi dưỡng học sinh giỏi Văn'
-    ],
-    achievements: [
-      'Học sinh đạt 8.5+ môn Văn trong kỳ thi THPT Quốc gia: 52 em',
-      'Học sinh đỗ các trường top về Xã hội - Nhân văn: 31 em',
-      'Giải Nhất cuộc thi viết văn cấp Thành phố'
-    ],
-    teachingStyle: 'Tôi khuyến khích học sinh phát triển tư duy phản biện và kỹ năng viết sáng tạo thông qua thảo luận và luyện tập.',
-    languages: ['Tiếng Việt'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Vũ Thu Hương',
-        rating: 5,
-        comment: 'Cô dạy Văn rất tâm huyết, giúp em yêu thích môn Văn hơn.',
-        date: '2024-03-17'
-      }
-    ]
-  },
-  '7': {
-    id: '7',
-    name: 'Bùi Minh Đức',
-    avatar: tutor2Avatar,
-    subjects: [
-      { name: 'SAT', grades: 'Math & Reading' },
-      { name: 'TOEFL', grades: '80+' }
-    ],
-    rating: 5.0,
-    reviewCount: 35,
-    hourlyRate: 300000,
-    lessonDuration: 2,
-    experience: '5 năm luyện thi SAT/TOEFL',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'professional' as const,
-    availableSlots: ['T7, CN (9h-18h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'Thứ 7, CN', startTime: '09:00', endTime: '18:00', price: 600000, sessionsPerWeek: 2 },
-    ],
-    bio: 'Tôi là chuyên gia luyện thi SAT và TOEFL với nhiều học viên đạt điểm cao và nhập học các trường đại học hàng đầu Mỹ.',
-    education: [
-      { school: 'University of California, Berkeley', degree: 'Bachelor in Economics', year: '2015' },
-      { school: 'Columbia University', degree: 'Master in Education', year: '2018' }
-    ],
-    certifications: [
-      'SAT Perfect Score 1600',
-      'TOEFL iBT 118',
-      'Certified SAT/ACT Prep Instructor'
-    ],
-    achievements: [
-      'Học viên đạt SAT 1500+: 23 người',
-      'Học viên đạt TOEFL 100+: 41 người',
-      'Học viên nhập học Ivy League: 8 người'
-    ],
-    teachingStyle: 'Tôi sử dụng phương pháp luyện thi chiến lược, tập trung vào kỹ thuật làm bài và quản lý thời gian hiệu quả.',
-    languages: ['Tiếng Việt', 'Tiếng Anh (bản ngữ)'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Nguyễn Đức Anh',
-        rating: 5,
-        comment: 'Thầy dạy rất chuyên nghiệp, em đã đạt 1520 SAT!',
-        date: '2024-03-19'
-      }
-    ]
-  },
-  '8': {
-    id: '8',
-    name: 'Ngô Thị Hương',
-    avatar: tutor4Avatar,
-    subjects: [
-      { name: 'Tiếng Anh', grades: 'lớp 6-12' },
-      { name: 'IELTS', grades: '5.0-7.5' }
-    ],
-    rating: 4.8,
-    reviewCount: 67,
-    hourlyRate: 220000,
-    lessonDuration: 1.5,
-    experience: '5 năm dạy Tiếng Anh',
-    verified: true,
-    hasVideo: true,
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    occupation: 'professional' as const,
-    availableSlots: ['T2-T6 (18h-21h)', 'T7 (14h-20h)'],
-    availableSlotDetails: [
-      { id: 'slot-1', dayLabels: 'T2-T6', startTime: '18:00', endTime: '21:00', price: 330000, sessionsPerWeek: 5 },
-      { id: 'slot-2', dayLabels: 'Thứ 7', startTime: '14:00', endTime: '20:00', price: 350000, sessionsPerWeek: 1 },
-    ],
-    bio: 'Tôi là giảng viên Tiếng Anh với chứng chỉ IELTS 8.0, chuyên dạy IELTS và Tiếng Anh giao tiếp.',
-    education: [
-      { school: 'Đại học Ngoại ngữ - ĐHQGHN', degree: 'Cử nhân Ngôn ngữ Anh', year: '2018' }
-    ],
-    certifications: [
-      'IELTS 8.0 Overall',
-      'Cambridge TKT',
-      'TESOL Certificate'
-    ],
-    achievements: [
-      'Học viên đạt IELTS 7.0+: 45 người',
-      'Học viên cải thiện từ 5.0 lên 7.0 trong 6 tháng: 12 người'
-    ],
-    teachingStyle: 'Tôi tập trung vào phát triển 4 kỹ năng nghe-nói-đọc-viết một cách cân bằng, kết hợp luyện đề và phản hồi chi tiết.',
-    languages: ['Tiếng Việt', 'Tiếng Anh (thành thạo)'],
-    location: 'Hà Nội',
-    reviews: [
-      {
-        id: '1',
-        studentName: 'Phạm Thùy Linh',
-        rating: 5,
-        comment: 'Cô dạy IELTS rất tận tâm, em đã đạt 7.5!',
-        date: '2024-03-20'
-      }
-    ]
-  }
-};
-
 export default function TutorDetail() {
   const params = useParams();
   const tutorId = params?.id as string || '1';
 
   const [trialBookingOpen, setTrialBookingOpen] = useState(false);
   const [regularBookingOpen, setRegularBookingOpen] = useState(false);
+  const [preSelectedSlotId, setPreSelectedSlotId] = useState<string | undefined>(undefined);
+  const [openAsTrialMode, setOpenAsTrialMode] = useState<boolean>(false);
+
+  // ✅ UX: Handle slot selection and open booking dialog
+  const handleSlotBooking = (slotId: string) => {
+    setPreSelectedSlotId(slotId);
+    setOpenAsTrialMode(false); // Mở mode đăng ký thật khi click từ slot
+    setRegularBookingOpen(true);
+  };
+
+  // ✅ UX: Open dialog in trial mode
+  const handleTrialBooking = () => {
+    setPreSelectedSlotId(undefined);
+    setOpenAsTrialMode(true); // Mở mode học thử
+    setRegularBookingOpen(true);
+  };
 
   // Fetch tutor data using React Query
   const { data: enrichedData, isLoading, error: queryError } = useTutor(tutorId);
@@ -552,10 +163,23 @@ export default function TutorDetail() {
     let availableSlotDetails: AvailableSlot[] = [];
     if (data.timeSlots && data.timeSlots.length > 0) {
       const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      const dayOrder = { 'CN': 7, 'T2': 1, 'T3': 2, 'T4': 3, 'T5': 4, 'T6': 5, 'T7': 6 };
 
-      // Group time slots by shift type and time range
+      // ✅ OPTIMIZATION: Check if each slot has active booking (1-on-1 class)
+      const slotBookingStatus = new Map<number, boolean>();
+      if (data.timeSlots) {
+        data.timeSlots.forEach((slot: any) => {
+          // For 1-on-1: slot is busy if has ANY active booking
+          const hasBooking = slot.bookings?.some((b: any) => 
+            b.status !== 'cancelled' && b.status !== 'completed'
+          ) || false;
+          slotBookingStatus.set(slot.id, hasBooking);
+        });
+      }
+
+      // Group slots by time range and collect all days
       const slotGroups = new Map<string, any[]>();
-      data.timeSlots.forEach((slot) => {
+      data.timeSlots.forEach((slot: any) => {
         const key = `${slot.startTime}-${slot.endTime}`;
         if (!slotGroups.has(key)) {
           slotGroups.set(key, []);
@@ -564,37 +188,73 @@ export default function TutorDetail() {
       });
 
       availableSlotDetails = Array.from(slotGroups.entries()).map(([timeRange, slots], index) => {
+        // Sort slots by day of week
+        slots.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+        
         const firstSlot = slots[0];
         const dayLabels = slots.map(s => dayNames[s.dayOfWeek]).join(', ');
         const fee = calculateFee(firstSlot.startTime, firstSlot.endTime, data.hourlyRate);
-
-        return {
-          id: `slot-${index}`,
+        
+        // Count how many days in this group have bookings
+        const bookedDays = slots.filter(s => slotBookingStatus.get(s.id)).length;
+        const totalDays = slots.length;
+        const allBooked = bookedDays === totalDays;
+        
+        const slotGroup = {
+          id: `slot-${index}`, // Use index to ensure unique IDs
+          dayOfWeek: firstSlot.dayOfWeek,
           dayLabels,
           startTime: firstSlot.startTime,
           endTime: firstSlot.endTime,
           price: fee,
-          sessionsPerWeek: slots.length,
-          remainingSlots: 5, // TODO: Calculate based on actual bookings
+          sessionsPerWeek: totalDays,
+          remainingSlots: allBooked ? 0 : (totalDays - bookedDays),
+          isBusy: allBooked,
+          bookingCount: bookedDays,
+          slotIds: slots.map(s => s.id), // Keep track of all slot IDs in this group
         };
+        
+        return slotGroup;
+      });
+
+      // ✅ SORT: By day of week (T2 → CN), then by start time
+      availableSlotDetails.sort((a, b) => {
+        // First: Sort by earliest day in the week
+        const dayA = dayOrder[a.dayLabels.split(', ')[0] as keyof typeof dayOrder] || 0;
+        const dayB = dayOrder[b.dayLabels.split(', ')[0] as keyof typeof dayOrder] || 0;
+        if (dayA !== dayB) {
+          return dayA - dayB;
+        }
+        
+        // Second: Sort by start time
+        const timeA = a.startTime.split(':').map(Number);
+        const timeB = b.startTime.split(':').map(Number);
+        const minutesA = timeA[0] * 60 + timeA[1];
+        const minutesB = timeB[0] * 60 + timeB[1];
+        return minutesA - minutesB;
       });
     }
 
+    // Format experience display
+    const yearsOfExperience = data.experience || 0;
+    const experienceText = yearsOfExperience < 1 
+      ? "Dưới 1 năm kinh nghiệm"
+      : `${yearsOfExperience} năm kinh nghiệm`;
+
     return {
       id: data.id.toString(),
-      name: data.fullName,
+      name: data.fullName || 'Gia sư', // ✅ Provide fallback for null/undefined
       avatar: data.avatar || tutor1Avatar,
       subjects,
       rating: (data.rating || 0) / 10,
       reviewCount: data.totalReviews || 0,
       hourlyRate: data.hourlyRate,
       lessonDuration: 1.5, // Default 1.5 hours
-      experience: `${data.experience || 0} năm kinh nghiệm`,
+      experience: experienceText,
       verified: data.verificationStatus === 'verified',
       hasVideo: !!data.videoIntro,
       videoUrl: data.videoIntro || undefined,
-      occupation: data.occupation?.toLowerCase().includes('sinh viên') ? 'student' :
-                 data.occupation?.toLowerCase().includes('giáo viên') ? 'teacher' : 'professional',
+      occupation: (data as any).occupation || undefined,
       availableSlots: [], // Legacy field
       availableSlotDetails,
       bio: data.bio || '',
@@ -680,7 +340,12 @@ export default function TutorDetail() {
                   </Badge>
                 )}
                 <Badge variant="secondary" data-testid="badge-occupation">
-                  {occupationLabels[tutor.occupation]}
+                  {typeof tutor.occupation === 'object' && tutor.occupation && 'label' in tutor.occupation
+                    ? tutor.occupation.label
+                    : tutor.occupation === 'student' ? 'Sinh viên'
+                    : tutor.occupation === 'teacher' ? 'Giáo viên'
+                    : tutor.occupation === 'professional' ? 'Chuyên gia'
+                    : 'Gia sư'}
                 </Badge>
               </div>
 
@@ -738,21 +403,11 @@ export default function TutorDetail() {
                   <Button 
                     size="lg" 
                     className="gap-2" 
-                    onClick={() => setTrialBookingOpen(true)}
+                    onClick={handleTrialBooking}
                     data-testid="button-book-trial"
                   >
                     <Calendar className="h-5 w-5" />
                     Đặt lịch học thử miễn phí
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="default"
-                    className="gap-2" 
-                    onClick={() => setRegularBookingOpen(true)}
-                    data-testid="button-book-monthly"
-                  >
-                    <Calendar className="h-5 w-5" />
-                    Đặt lịch theo tháng
                   </Button>
                   <Button size="lg" variant="outline" className="gap-2" data-testid="button-message">
                     <MessageCircle className="h-5 w-5" />
@@ -874,81 +529,151 @@ export default function TutorDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
-                  Lịch trống trong tuần
+                  Lịch dạy trong tuần
                 </CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {tutor.availableSlotDetails.filter((s: AvailableSlot) => !s.isBusy).length} ca trống • {' '}
+                  {tutor.availableSlotDetails.filter((s: AvailableSlot) => s.isBusy).length} ca đã có học viên
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {tutor.availableSlotDetails.map((slot: AvailableSlot) => {
                     const isBusy = slot.isBusy || false;
-                    const remainingSlots = slot.remainingSlots || 10;
+                    const sessionsPerWeek = slot.sessionsPerWeek || 1;
+                    const bookedDays = slot.bookingCount || 0;
+                    const availableDays = sessionsPerWeek - bookedDays;
+                    const hasPartialBooking = bookedDays > 0 && bookedDays < sessionsPerWeek;
                     
                     return (
                       <div 
                         key={slot.id} 
                         className={`p-4 rounded-lg border-2 transition-all ${
                           isBusy 
-                            ? 'border-muted bg-muted/30 opacity-60' 
-                            : 'border-border bg-card hover-elevate'
+                            ? 'border-muted bg-muted/30 opacity-75' 
+                            : hasPartialBooking
+                            ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/10'
+                            : 'border-border bg-card hover:border-primary/50 hover:shadow-md'
                         }`}
                         data-testid={`slot-${slot.id}`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <Badge variant="outline" className="font-semibold">
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                              <Badge variant="outline" className="font-semibold text-base px-3 py-1">
                                 {slot.dayLabels}
                               </Badge>
-                              <Badge variant="secondary">
-                                {slot.sessionsPerWeek} buổi/tuần
+                              <Badge variant="secondary" className="text-sm">
+                                {sessionsPerWeek} buổi/tuần
                               </Badge>
-                              {!isBusy && remainingSlots <= 3 && (
-                                <Badge variant="destructive" className="bg-orange-500">
-                                  Còn {remainingSlots} chỗ
+                              
+                              {isBusy ? (
+                                <Badge variant="destructive" className="bg-red-600">
+                                  <span className="mr-1">�</span> Đã có học viên
                                 </Badge>
-                              )}
-                              {isBusy && (
-                                <Badge variant="destructive">
-                                  Đã đầy
+                              ) : hasPartialBooking ? (
+                                <Badge variant="default" className="bg-orange-600">
+                                  <span className="mr-1">⚡</span> Còn {availableDays}/{sessionsPerWeek} buổi
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                  <span className="mr-1">✓</span> Trống
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{slot.startTime} - {slot.endTime}</span>
+                            
+                            <div className="flex items-center gap-4 text-sm mb-2">
+                              <div className="flex items-center gap-1.5 text-foreground">
+                                <Clock className="h-4 w-4 text-primary" />
+                                <span className="font-medium">{slot.startTime} - {slot.endTime}</span>
                               </div>
-                              <div className="font-semibold text-foreground">
+                              <div className="font-bold text-primary text-base">
                                 {new Intl.NumberFormat('vi-VN', {
                                   style: 'currency',
                                   currency: 'VND',
                                 }).format(slot.price)}/buổi
                               </div>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-2">
+                            
+                            <p className="text-xs text-muted-foreground">
                               Học phí/tháng: ~{new Intl.NumberFormat('vi-VN', {
                                 style: 'currency',
                                 currency: 'VND',
-                              }).format(slot.price * slot.sessionsPerWeek * 4)}
+                              }).format(slot.price * sessionsPerWeek * 4)}
                             </p>
+                            
+                            {isBusy && (
+                              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Ca này đã có học viên đăng ký. Bạn có thể chọn ca khác hoặc liên hệ gia sư để đề xuất thời gian mới.
+                              </p>
+                            )}
                           </div>
+                          
                           <Button 
-                            size="default" 
-                            onClick={() => setRegularBookingOpen(true)}
+                            size="lg" 
+                            onClick={() => handleSlotBooking(slot.id)}
                             disabled={isBusy}
                             data-testid={`button-book-${slot.id}`}
-                            className="shrink-0"
+                            className={`shrink-0 min-w-[130px] ${
+                              isBusy 
+                                ? 'cursor-not-allowed' 
+                                : hasPartialBooking
+                                ? 'bg-orange-600 hover:bg-orange-700' 
+                                : ''
+                            }`}
+                            title={isBusy ? 'Ca này đã có học viên, vui lòng chọn ca khác' : 'Đặt lịch học ngay'}
                           >
-                            {isBusy ? 'Đã đầy' : 'Đặt lịch'}
+                            {isBusy ? (
+                              <>
+                                <span className="mr-1">🔒</span> Đã có học viên
+                              </>
+                            ) : hasPartialBooking ? (
+                              <>
+                                <span className="mr-1">⚡</span> Đặt ngay
+                              </>
+                            ) : (
+                              'Đặt lịch'
+                            )}
                           </Button>
                         </div>
                       </div>
                     );
                   })}
+                  
+                  {tutor.availableSlotDetails.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="font-medium mb-1">Gia sư chưa đăng ký ca dạy nào</p>
+                      <p className="text-sm">Vui lòng liên hệ trực tiếp với gia sư để sắp xếp lịch học</p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-muted-foreground mt-4">
-                  * Bạn có thể đề xuất thời gian khác qua tin nhắn với gia sư
-                </p>
+                
+                <div className="mt-6 pt-6 border-t">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Lưu ý khi đặt lịch
+                  </h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>Đây là lớp <strong className="text-foreground">kèm riêng 1-1</strong>, mỗi ca chỉ dành cho 1 học viên</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-600 mt-0.5">•</span>
+                      <span>Ca có badge <Badge variant="destructive" className="inline-flex mx-1 bg-red-600 text-xs">Đã có học viên</Badge> nghĩa là đã có người đăng ký, không thể chọn ca này</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-orange-500 mt-0.5">•</span>
+                      <span>Một số ca học nhiều buổi/tuần (VD: T2,4,6) có thể còn một vài buổi trống - bạn vẫn có thể đăng ký</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-600 mt-0.5">•</span>
+                      <span>Bạn có thể đề xuất thời gian khác qua tin nhắn với gia sư nếu các ca hiện tại không phù hợp</span>
+                    </li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -988,26 +713,21 @@ export default function TutorDetail() {
           </TabsContent>
         </Tabs>
 
-        {/* Booking Dialogs */}
-        <BookingDialog
-          open={trialBookingOpen}
-          onOpenChange={setTrialBookingOpen}
-          tutorName={tutor.name}
-          hourlyRate={tutor.hourlyRate}
-          lessonDuration={0.5} // Học thử 30 phút
-          isTrial={true}
-          tutorSubjects={tutor.subjects}
-        />
-        <BookingDialog
-          open={regularBookingOpen}
-          onOpenChange={setRegularBookingOpen}
-          tutorName={tutor.name}
-          hourlyRate={tutor.hourlyRate}
-          lessonDuration={tutor.lessonDuration}
-          isTrial={false}
-          availableSlots={tutor.availableSlotDetails}
-          tutorSubjects={tutor.subjects}
-        />
+        {/* Booking Dialog - Single unified dialog */}
+        <Suspense fallback={null}>
+          <BookingDialog
+            open={regularBookingOpen}
+            onOpenChange={setRegularBookingOpen}
+            tutorId={parseInt(tutorId)}
+            tutorName={tutor.name}
+            hourlyRate={tutor.hourlyRate}
+            lessonDuration={tutor.lessonDuration}
+            availableSlots={tutor.availableSlotDetails}
+            tutorSubjects={tutor.subjects}
+            preSelectedSlotId={preSelectedSlotId}
+            openAsTrialMode={openAsTrialMode}
+          />
+        </Suspense>
       </div>
     </div>
   );

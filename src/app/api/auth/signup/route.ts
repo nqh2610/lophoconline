@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const existingUser = await storage.getUserByUsername(data.username);
     if (existingUser) {
       return NextResponse.json(
-        { error: "Username đã tồn tại" },
+        { error: "Thông tin đăng ký không hợp lệ. Vui lòng thử lại với thông tin khác" },
         { status: 400 }
       );
     }
@@ -20,14 +20,17 @@ export async function POST(request: NextRequest) {
       const existingEmail = await storage.getUserByEmail(data.email);
       if (existingEmail) {
         return NextResponse.json(
-          { error: "Email đã được sử dụng" },
+          { error: "Thông tin đăng ký không hợp lệ. Vui lòng thử lại với thông tin khác" },
           { status: 400 }
         );
       }
     }
 
-    // Create user (password will be hashed in storage.createUser)
-    const user = await storage.createUser(data);
+    // Create user with empty roles array (new users have no roles by default)
+    const user = await storage.createUser({
+      ...data,
+      role: '[]', // Empty roles array for new users
+    });
 
     // Return user without password
     const { password, ...userWithoutPassword } = user;

@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
         and(
           eq(lessons.studentId, userId),
           or(
-            eq(lessons.isTrial, 1),
             eq(lessons.status, "confirmed"),
             eq(lessons.status, "completed")
           )

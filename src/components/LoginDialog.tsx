@@ -51,19 +51,35 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
       } else {
         // Check if there's a redirect path stored
         const params = new URLSearchParams(window.location.search);
-        const redirectPath = params.get("redirect");
+        const redirectPath = params.get("redirectTo") || params.get("redirect");
+
+        // Validate redirect path to prevent open redirect vulnerability
+        let safeRedirectPath = "/";
+        if (redirectPath) {
+          try {
+            const decoded = decodeURIComponent(redirectPath);
+            // Only allow relative paths (must start with /)
+            // Reject absolute URLs or protocol-relative URLs
+            if (decoded.startsWith("/") && !decoded.startsWith("//")) {
+              safeRedirectPath = decoded;
+            }
+          } catch {
+            // Invalid redirect path, use default
+            safeRedirectPath = "/";
+          }
+        }
 
         toast({
           title: "Đăng nhập thành công",
-          description: redirectPath ? "Đang chuyển hướng..." : "Chào mừng bạn trở lại!",
+          description: safeRedirectPath !== "/" ? "Đang chuyển hướng..." : "Chào mừng bạn trở lại!",
         });
         onOpenChange(false);
 
         // Wait a bit for session to be established
         setTimeout(() => {
-          if (redirectPath) {
+          if (safeRedirectPath !== "/") {
             // Redirect to the intended page
-            window.location.href = redirectPath;
+            router.push(safeRedirectPath);
           } else {
             // Just reload to update the UI
             window.location.reload();
@@ -82,35 +98,21 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   };
 
   const handleGoogleAuth = () => {
-    // TODO: Implement Google OAuth
-    console.log("Google auth");
-    
-    // Simulate successful login
-    const userData = {
-      name: 'Người dùng Google',
-      email: 'user@gmail.com',
-      loginMethod: 'google'
-    };
-    localStorage.setItem('user', JSON.stringify(userData));
-    
-    onOpenChange(false);
-    window.location.reload();
+    // Google OAuth not yet implemented
+    toast({
+      title: "Tính năng chưa hỗ trợ",
+      description: "Đăng nhập bằng Google sẽ được hỗ trợ trong tương lai. Vui lòng sử dụng tài khoản email.",
+      variant: "default",
+    });
   };
 
   const handleFacebookAuth = () => {
-    // TODO: Implement Facebook OAuth
-    console.log("Facebook auth");
-    
-    // Simulate successful login
-    const userData = {
-      name: 'Người dùng Facebook',
-      email: 'user@facebook.com',
-      loginMethod: 'facebook'
-    };
-    localStorage.setItem('user', JSON.stringify(userData));
-    
-    onOpenChange(false);
-    window.location.reload();
+    // Facebook OAuth not yet implemented
+    toast({
+      title: "Tính năng chưa hỗ trợ",
+      description: "Đăng nhập bằng Facebook sẽ được hỗ trợ trong tương lai. Vui lòng sử dụng tài khoản email.",
+      variant: "default",
+    });
   };
 
   return (

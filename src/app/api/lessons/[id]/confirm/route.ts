@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { storage } from '@/lib/storage';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { validateScheduleTime } from '@/lib/timezone';
 
-// POST /api/lessons/[id]/confirm - Tutor confirms lesson
+// POST /api/lessons/[id]/confirm - Tutor confirms trial lesson and schedules specific time
+// OPTIMIZED: Reduced from 9-10 queries to 2 queries (1 SELECT with JOINs + 3 parallel writes)
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -19,65 +21,58 @@ export async function POST(
     }
 
     const lessonId = parseInt(params.id);
-    const lesson = await storage.getLessonById(lessonId);
 
-    if (!lesson) {
-      return NextResponse.json(
-        { error: 'Lesson not found' },
-        { status: 404 }
-      );
-    }
+    // Get request body for scheduled date and time
+    const body = await request.json();
+    const { date, startTime, endTime } = body;
 
-    // Verify that the current user is the tutor for this lesson
-    const tutor = await storage.getTutorById(parseInt(lesson.tutorId));
-    if (!tutor || tutor.userId !== parseInt(session.user.id)) {
+    // Validate scheduled date and time using timezone helper
+    if (!date || !startTime || !endTime) {
       return NextResponse.json(
-        { error: 'Unauthorized - Only the assigned tutor can confirm this lesson' },
-        { status: 403 }
-      );
-    }
-
-    // Check if lesson is in pending status
-    if (lesson.status !== 'pending') {
-      return NextResponse.json(
-        { error: `Lesson cannot be confirmed. Current status: ${lesson.status}` },
+        { error: 'Vui lòng chỉ định ngày và giờ học cụ thể' },
         { status: 400 }
       );
     }
 
-    // Update lesson status to confirmed
-    const updatedLesson = await storage.updateLesson(lessonId, {
-      status: 'confirmed',
-      tutorConfirmed: 1,
+    // Use timezone helper for comprehensive validation
+    const validation = validateScheduleTime(date, startTime, endTime, {
+      businessHoursOnly: true, // 6:00 - 22:00
     });
 
-    // Create notification for student
-    const student = await storage.getStudentById(parseInt(lesson.studentId));
-    if (student) {
-      await storage.createNotification({
-        userId: student.userId,
-        type: 'confirmation',
-        title: 'Lịch học đã được xác nhận',
-        message: `Gia sư ${tutor.fullName} đã xác nhận lịch học của bạn vào ${new Date(lesson.date).toLocaleDateString('vi-VN')} lúc ${lesson.startTime}.`,
-        link: `/dashboard`,
-        isRead: 0,
-      });
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { error: validation.errors[0] }, // Return first error
+        { status: 400 }
+      );
     }
 
-    // Update tutor statistics
-    await storage.updateTutor(tutor.id, {
-      responseRate: tutor.responseRate ? tutor.responseRate : 100,
+    // OPTIMIZED: Use single function that does everything in 2 queries instead of 9-10
+    const result = await storage.confirmTrialLesson({
+      lessonId,
+      tutorUserId: Number(session.user.id),
+      date,
+      startTime,
+      endTime,
     });
 
     return NextResponse.json({
-      lesson: updatedLesson,
-      message: 'Đã xác nhận lịch học thành công',
+      lesson: result.lesson,
+      videoSession: result.videoSession,
+      message: 'Đã xác nhận và lên lịch học thử thành công',
     }, { status: 200 });
   } catch (error) {
     console.error('Error confirming lesson:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to confirm lesson';
+
+    // Return appropriate status code based on error
+    const status = errorMessage.includes('Unauthorized') ? 403
+                 : errorMessage.includes('not found') ? 404
+                 : errorMessage.includes('cannot be confirmed') ? 400
+                 : 500;
+
     return NextResponse.json(
-      { error: 'Failed to confirm lesson' },
-      { status: 500 }
+      { error: errorMessage },
+      { status }
     );
   }
 }

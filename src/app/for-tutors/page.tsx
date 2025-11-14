@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DollarSign, Clock, Users, TrendingUp } from "lucide-react";
+import Link from "next/link";
 
 export default function ForTutors() {
   const benefits = [
@@ -50,9 +51,11 @@ export default function ForTutors() {
             <p className="text-xl text-muted-foreground mb-8">
               Chia sẻ kiến thức, kiếm thu nhập hấp dẫn và phát triển sự nghiệp giảng dạy của bạn
             </p>
-            <Button size="lg" className="text-lg px-8">
-              Đăng ký ngay
-            </Button>
+            <Link href="/tutor-registration">
+              <Button size="lg" className="text-lg px-8">
+                Đăng ký ngay
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -119,9 +122,11 @@ export default function ForTutors() {
           <p className="text-xl text-muted-foreground mb-8">
             Tham gia cùng hàng nghìn gia sư đang kiếm thu nhập ổn định trên LopHoc.Online
           </p>
-          <Button size="lg" className="text-lg px-8">
-            Đăng ký làm gia sư
-          </Button>
+          <Link href="/tutor-registration">
+            <Button size="lg" className="text-lg px-8">
+              Đăng ký làm gia sư
+            </Button>
+          </Link>
         </div>
       </section>
     </div>

@@ -37,7 +37,7 @@ export default function AdminUserDetailPage() {
 
   useEffect(() => {
     // Check if current user is admin
-    if (session && session.user.role !== "admin") {
+    if (session && !session.user.roles?.includes('admin')) {
       toast({
         title: "Không có quyền",
         description: "Bạn không có quyền truy cập trang này",

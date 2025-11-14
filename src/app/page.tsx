@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense, lazy } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useTutors } from "@/hooks/use-tutors";
 import { HeroSection } from "@/components/HeroSection";
-import { TutorCard } from "@/components/TutorCard";
-import { FeatureCard } from "@/components/FeatureCard";
-import { TestimonialCard } from "@/components/TestimonialCard";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,12 +17,27 @@ import {
   Users,
   GraduationCap,
   CheckCircle2,
-  Award
+  Award,
+  Loader2
 } from "lucide-react";
+
+// Lazy load non-critical components
+const TutorCard = dynamic(() => import("@/components/TutorCard").then(mod => ({ default: mod.TutorCard })), {
+  loading: () => null,
+  ssr: false
+});
+const FeatureCard = dynamic(() => import("@/components/FeatureCard").then(mod => ({ default: mod.FeatureCard })), {
+  ssr: true
+});
+const TestimonialCard = dynamic(() => import("@/components/TestimonialCard").then(mod => ({ default: mod.TestimonialCard })), {
+  loading: () => null,
+  ssr: false
+});
 
 export default function HomePage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const [shouldLoadTutors, setShouldLoadTutors] = useState(false);
 
   // Handle login required or unauthorized errors
   useEffect(() => {
@@ -46,34 +59,55 @@ export default function HomePage() {
     }
   }, [searchParams, toast]);
 
+  // Intersection Observer - Load tutors when section is visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setShouldLoadTutors(true);
+        }
+      },
+      { rootMargin: '200px' } // Load 200px before visible
+    );
+
+    const tutorSection = document.getElementById('tutors-section');
+    if (tutorSection) {
+      observer.observe(tutorSection);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   // Fetch top tutors with enriched data (subjects + time slots) in ONE request
-  const { data: enrichedTutors = [] } = useTutors({
-    sortBy: 'rating',
-    sortOrder: 'desc',
-    limit: 8
-  });
+  const { data: enrichedTutors = [], isLoading } = useTutors(
+    {
+      sortBy: 'rating',
+      sortOrder: 'desc',
+      limit: 8
+    },
+    {
+      enabled: shouldLoadTutors, // Only fetch when section is visible
+      staleTime: 60 * 1000, // Cache for 60s on homepage
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 mins
+    }
+  );
 
   // Transform tutor data for TutorCard
   const featuredTutors = useMemo(() => {
     return enrichedTutors.map((tutor: any) => {
-      // Map occupation to the expected type
-      let occupation: 'student' | 'teacher' | 'professional' | 'tutor' = 'tutor';
-      if (tutor.occupation === 'Sinh viên') occupation = 'student';
-      else if (tutor.occupation === 'Giáo viên') occupation = 'teacher';
-      else if (tutor.occupation === 'Chuyên gia') occupation = 'professional';
-
       return {
         id: tutor.id.toString(),
         name: tutor.fullName,
         avatar: tutor.avatar || '/images/default-avatar.jpg',
         subjects: tutor.subjects || [],
+        tutorSubjects: tutor.tutorSubjects || [],
         rating: (tutor.rating || 0) / 10, // Convert from 0-50 to 0-5.0
         reviewCount: tutor.totalReviews || 0,
         hourlyRate: tutor.hourlyRate,
-        experience: `${tutor.experience} năm kinh nghiệm`,
+        experience: tutor.experience || 0, // Pass raw number - component will format
         verified: tutor.verificationStatus === 'verified',
         hasVideo: !!tutor.videoIntro,
-        occupation,
+        occupation: tutor.occupation, // Pass occupation object directly
         availableSlots: tutor.timeSlots || []
       };
     });
@@ -162,7 +196,7 @@ export default function HomePage() {
       </section>
 
       {/* Tutors Section */}
-      <section className="py-8 bg-muted/50">
+      <section id="tutors-section" className="py-8 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Gia sư nổi bật</h2>
@@ -171,19 +205,23 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredTutors.slice(0, 8).map((tutor) => (
-              <TutorCard key={tutor.id} {...tutor} />
-            ))}
-          </div>
+          {isLoading ? null : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {featuredTutors.slice(0, 8).map((tutor) => (
+                  <TutorCard key={tutor.id} {...tutor} tutorSubjects={tutor.tutorSubjects || []} />
+                ))}
+              </div>
 
-          <div className="mt-12 flex justify-center">
-            <Link href="/tutors">
-              <Button size="lg" data-testid="button-view-all-tutors">
-                Xem tất cả gia sư
-              </Button>
-            </Link>
-          </div>
+              <div className="mt-12 flex justify-center">
+                <Link href="/tutors" prefetch={true}>
+                  <Button size="lg" data-testid="button-view-all-tutors">
+                    Xem tất cả gia sư
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

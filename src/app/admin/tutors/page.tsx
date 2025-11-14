@@ -1,121 +1,217 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle, Search, Eye, Lock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CheckCircle, XCircle, Search, Eye, Lock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+type Tutor = {
+  id: number;
+  userId: number;
+  fullName: string;
+  phone: string | null;
+  avatar: string | null;
+  bio: string | null;
+  subjects: string; // JSON string
+  hourlyRate: number;
+  rating: number;
+  totalReviews: number;
+  totalStudents: number;
+  approvalStatus: string;
+  isActive: number;
+  createdAt: string;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+};
+
 export default function AdminTutors() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [rejectDialog, setRejectDialog] = useState<{
+    isOpen: boolean;
+    tutorId: number | null;
+    tutorName: string;
+  }>({ isOpen: false, tutorId: null, tutorName: '' });
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const pendingTutors = [
-    {
-      id: 1,
-      name: 'Nguyễn Văn A',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tutor1',
-      email: 'nguyenvana@email.com',
-      phone: '0912345678',
-      subjects: ['Toán', 'Vật Lý'],
-      education: 'Thạc sĩ - ĐH Bách Khoa',
-      experience: '5 năm',
-      registeredDate: '12/10/2025',
-    },
-    {
-      id: 2,
-      name: 'Trần Thị B',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tutor2',
-      email: 'tranthib@email.com',
-      phone: '0987654321',
-      subjects: ['Tiếng Anh', 'IELTS'],
-      education: 'Cử nhân - ĐH Ngoại Ngữ',
-      experience: '3 năm',
-      registeredDate: '12/10/2025',
-    },
-    {
-      id: 3,
-      name: 'Lê Văn C',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tutor3',
-      email: 'levanc@email.com',
-      phone: '0901234567',
-      subjects: ['Hóa học', 'Sinh học'],
-      education: 'Tiến sĩ - ĐH Y Dược',
-      experience: '8 năm',
-      registeredDate: '11/10/2025',
-    },
-  ];
+  // Check admin authentication
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session?.user) {
+      router.push('/auth/signin');
+      return;
+    }
+    // TODO: Check if user role is admin
+  }, [session, status, router]);
 
-  const activeTutors = [
-    {
-      id: 4,
-      name: 'Phạm Văn D',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tutor4',
-      email: 'phamvand@email.com',
-      subjects: ['Toán', 'Hóa học'],
-      rating: 4.8,
-      students: 45,
-      lessons: 128,
-      status: 'active',
-    },
-    {
-      id: 5,
-      name: 'Hoàng Thị E',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tutor5',
-      email: 'hoangthie@email.com',
-      subjects: ['Tiếng Anh', 'TOEFL'],
-      rating: 4.9,
-      students: 67,
-      lessons: 203,
-      status: 'active',
-    },
-  ];
+  // Fetch tutors
+  useEffect(() => {
+    async function fetchTutors() {
+      try {
+        const response = await fetch('/api/tutors');
+        if (!response.ok) throw new Error('Failed to fetch tutors');
+        const data = await response.json();
+        setTutors(data);
+      } catch (error) {
+        console.error('Error fetching tutors:', error);
+        toast({
+          title: 'Lỗi',
+          description: 'Không thể tải danh sách gia sư',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-  const blockedTutors = [
-    {
-      id: 6,
-      name: 'Võ Văn F',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tutor6',
-      email: 'vovanf@email.com',
-      subjects: ['Vật Lý'],
-      reason: 'Vi phạm quy định',
-      blockedDate: '05/10/2025',
-    },
-  ];
+    if (session?.user) {
+      fetchTutors();
+    }
+  }, [session, toast]);
 
-  const handleApprove = (tutorId: number, tutorName: string) => {
-    toast({
-      title: "Đã phê duyệt",
-      description: `Gia sư ${tutorName} đã được phê duyệt thành công.`,
-    });
+  // Filter tutors by approval status
+  const pendingTutors = tutors.filter(t => t.approvalStatus === 'pending');
+  const approvedTutors = tutors.filter(t => t.approvalStatus === 'approved' && t.isActive === 1);
+  const rejectedTutors = tutors.filter(t => t.approvalStatus === 'rejected');
+
+  // Parse subjects JSON
+  const parseSubjects = (subjectsJson: string): string[] => {
+    try {
+      const parsed = JSON.parse(subjectsJson);
+      if (Array.isArray(parsed)) {
+        return parsed.map((s: any) => s.subject || s.name || String(s));
+      }
+      return [];
+    } catch {
+      return [];
+    }
   };
 
-  const handleReject = (tutorId: number, tutorName: string) => {
-    toast({
-      title: "Đã từ chối",
-      description: `Đã từ chối hồ sơ gia sư ${tutorName}.`,
-      variant: "destructive",
-    });
+  const handleApprove = async (tutorId: number, tutorName: string) => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch(`/api/admin/tutors/${tutorId}/approve`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to approve tutor');
+      }
+
+      toast({
+        title: "Đã phê duyệt",
+        description: `Gia sư ${tutorName} đã được phê duyệt thành công.`,
+      });
+
+      // Refresh tutors list
+      const refreshResponse = await fetch('/api/tutors');
+      const refreshedData = await refreshResponse.json();
+      setTutors(refreshedData);
+    } catch (error) {
+      console.error('Error approving tutor:', error);
+      toast({
+        title: 'Lỗi',
+        description: error instanceof Error ? error.message : 'Không thể phê duyệt gia sư',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleBlock = (tutorId: number, tutorName: string) => {
-    toast({
-      title: "Đã khóa tài khoản",
-      description: `Tài khoản gia sư ${tutorName} đã bị khóa.`,
-      variant: "destructive",
+  const handleRejectClick = (tutorId: number, tutorName: string) => {
+    setRejectDialog({
+      isOpen: true,
+      tutorId,
+      tutorName,
     });
+    setRejectionReason('');
   };
 
-  const handleUnblock = (tutorId: number, tutorName: string) => {
-    toast({
-      title: "Đã mở khóa",
-      description: `Tài khoản gia sư ${tutorName} đã được mở khóa.`,
-    });
+  const handleRejectConfirm = async () => {
+    if (!rejectDialog.tutorId) return;
+    if (rejectionReason.length < 10) {
+      toast({
+        title: 'Lỗi',
+        description: 'Lý do từ chối phải có ít nhất 10 ký tự',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const response = await fetch(`/api/admin/tutors/${rejectDialog.tutorId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reject tutor');
+      }
+
+      toast({
+        title: "Đã từ chối",
+        description: `Đã từ chối hồ sơ gia sư ${rejectDialog.tutorName}.`,
+        variant: "destructive",
+      });
+
+      // Refresh tutors list
+      const refreshResponse = await fetch('/api/tutors');
+      const refreshedData = await refreshResponse.json();
+      setTutors(refreshedData);
+
+      // Close dialog
+      setRejectDialog({ isOpen: false, tutorId: null, tutorName: '' });
+      setRejectionReason('');
+    } catch (error) {
+      console.error('Error rejecting tutor:', error);
+      toast({
+        title: 'Lỗi',
+        description: error instanceof Error ? error.message : 'Không thể từ chối gia sư',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Đang tải danh sách gia sư...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-8">
@@ -149,209 +245,245 @@ export default function AdminTutors() {
               Chờ phê duyệt ({pendingTutors.length})
             </TabsTrigger>
             <TabsTrigger value="active" data-testid="tab-active-tutors">
-              Đã xác minh ({activeTutors.length})
+              Đã xác minh ({approvedTutors.length})
             </TabsTrigger>
-            <TabsTrigger value="blocked" data-testid="tab-blocked-tutors">
-              Bị khóa ({blockedTutors.length})
+            <TabsTrigger value="rejected" data-testid="tab-rejected-tutors">
+              Bị từ chối ({rejectedTutors.length})
             </TabsTrigger>
           </TabsList>
 
           {/* Pending Tutors */}
           <TabsContent value="pending" className="space-y-4">
-            {pendingTutors.map((tutor) => (
-              <Card key={tutor.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={tutor.avatar} />
-                        <AvatarFallback>{tutor.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-2">
-                        <div>
-                          <h3 className="font-semibold text-lg">{tutor.name}</h3>
-                          <p className="text-sm text-muted-foreground">{tutor.email}</p>
-                          <p className="text-sm text-muted-foreground">{tutor.phone}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {tutor.subjects.map((subject) => (
-                            <Badge key={subject} variant="secondary">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="text-sm space-y-1">
-                          <p><span className="font-medium">Học vấn:</span> {tutor.education}</p>
-                          <p><span className="font-medium">Kinh nghiệm:</span> {tutor.experience}</p>
-                          <p className="text-muted-foreground">Đăng ký: {tutor.registeredDate}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full md:w-auto"
-                        data-testid={`button-view-${tutor.id}`}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Xem chi tiết
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="w-full md:w-auto"
-                        onClick={() => handleApprove(tutor.id, tutor.name)}
-                        data-testid={`button-approve-${tutor.id}`}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Phê duyệt
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="w-full md:w-auto"
-                        onClick={() => handleReject(tutor.id, tutor.name)}
-                        data-testid={`button-reject-${tutor.id}`}
-                      >
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Từ chối
-                      </Button>
-                    </div>
-                  </div>
+            {pendingTutors.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  Không có gia sư nào đang chờ phê duyệt
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              pendingTutors.map((tutor) => (
+                <Card key={tutor.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={tutor.avatar || undefined} />
+                          <AvatarFallback>{tutor.fullName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-2">
+                          <div>
+                            <h3 className="font-semibold text-lg">{tutor.fullName}</h3>
+                            <p className="text-sm text-muted-foreground">{tutor.phone || 'Chưa có SĐT'}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {parseSubjects(tutor.subjects).map((subject, idx) => (
+                              <Badge key={idx} variant="secondary">
+                                {subject}
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="text-sm space-y-1">
+                            <p><span className="font-medium">Học phí:</span> {tutor.hourlyRate.toLocaleString('vi-VN')} VNĐ/giờ</p>
+                            <p className="text-muted-foreground">Đăng ký: {new Date(tutor.createdAt).toLocaleDateString('vi-VN')}</p>
+                          </div>
+                          {tutor.bio && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">{tutor.bio}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="w-full md:w-auto"
+                          onClick={() => handleApprove(tutor.id, tutor.fullName)}
+                          disabled={isProcessing}
+                          data-testid={`button-approve-${tutor.id}`}
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Phê duyệt
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="w-full md:w-auto"
+                          onClick={() => handleRejectClick(tutor.id, tutor.fullName)}
+                          disabled={isProcessing}
+                          data-testid={`button-reject-${tutor.id}`}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Từ chối
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           {/* Active Tutors */}
           <TabsContent value="active" className="space-y-4">
-            {activeTutors.map((tutor) => (
-              <Card key={tutor.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={tutor.avatar} />
-                        <AvatarFallback>{tutor.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{tutor.name}</h3>
-                            <Badge variant="default" className="bg-green-500">
-                              Hoạt động
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{tutor.email}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {tutor.subjects.map((subject) => (
-                            <Badge key={subject} variant="secondary">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex gap-4 text-sm">
+            {approvedTutors.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  Chưa có gia sư nào được phê duyệt
+                </CardContent>
+              </Card>
+            ) : (
+              approvedTutors.map((tutor) => (
+                <Card key={tutor.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={tutor.avatar || undefined} />
+                          <AvatarFallback>{tutor.fullName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-2">
                           <div>
-                            <span className="font-medium">Rating:</span>{' '}
-                            <span className="text-yellow-500">{tutor.rating}⭐</span>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">{tutor.fullName}</h3>
+                              <Badge variant="default" className="bg-green-500">
+                                Hoạt động
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{tutor.phone || 'Chưa có SĐT'}</p>
                           </div>
-                          <div>
-                            <span className="font-medium">Học viên:</span> {tutor.students}
+                          <div className="flex flex-wrap gap-2">
+                            {parseSubjects(tutor.subjects).map((subject, idx) => (
+                              <Badge key={idx} variant="secondary">
+                                {subject}
+                              </Badge>
+                            ))}
                           </div>
-                          <div>
-                            <span className="font-medium">Buổi học:</span> {tutor.lessons}
+                          <div className="flex gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Rating:</span>{' '}
+                              <span className="text-yellow-500">{(tutor.rating / 10).toFixed(1)}⭐</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Học viên:</span> {tutor.totalStudents}
+                            </div>
+                            <div>
+                              <span className="font-medium">Đánh giá:</span> {tutor.totalReviews}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full md:w-auto"
-                        data-testid={`button-view-active-${tutor.id}`}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Xem chi tiết
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="w-full md:w-auto"
-                        onClick={() => handleBlock(tutor.id, tutor.name)}
-                        data-testid={`button-block-${tutor.id}`}
-                      >
-                        <Lock className="h-4 w-4 mr-2" />
-                        Khóa tài khoản
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
-          {/* Blocked Tutors */}
-          <TabsContent value="blocked" className="space-y-4">
-            {blockedTutors.map((tutor) => (
-              <Card key={tutor.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={tutor.avatar} />
-                        <AvatarFallback>{tutor.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{tutor.name}</h3>
-                            <Badge variant="destructive">Đã khóa</Badge>
+          {/* Rejected Tutors */}
+          <TabsContent value="rejected" className="space-y-4">
+            {rejectedTutors.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  Không có gia sư nào bị từ chối
+                </CardContent>
+              </Card>
+            ) : (
+              rejectedTutors.map((tutor) => (
+                <Card key={tutor.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={tutor.avatar || undefined} />
+                          <AvatarFallback>{tutor.fullName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">{tutor.fullName}</h3>
+                              <Badge variant="destructive">Đã từ chối</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{tutor.phone || 'Chưa có SĐT'}</p>
                           </div>
-                          <p className="text-sm text-muted-foreground">{tutor.email}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {tutor.subjects.map((subject) => (
-                            <Badge key={subject} variant="secondary">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="text-sm space-y-1">
-                          <p><span className="font-medium text-destructive">Lý do:</span> {tutor.reason}</p>
-                          <p className="text-muted-foreground">Khóa ngày: {tutor.blockedDate}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {parseSubjects(tutor.subjects).map((subject, idx) => (
+                              <Badge key={idx} variant="secondary">
+                                {subject}
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="text-sm space-y-1">
+                            <p><span className="font-medium text-destructive">Lý do:</span> {tutor.rejectionReason || 'Không có lý do'}</p>
+                            {tutor.approvedAt && (
+                              <p className="text-muted-foreground">
+                                Từ chối ngày: {new Date(tutor.approvedAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full md:w-auto"
-                        data-testid={`button-view-blocked-${tutor.id}`}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Xem chi tiết
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="w-full md:w-auto"
-                        onClick={() => handleUnblock(tutor.id, tutor.name)}
-                        data-testid={`button-unblock-${tutor.id}`}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Mở khóa
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
         </Tabs>
+
+        {/* Reject Dialog */}
+        <Dialog open={rejectDialog.isOpen} onOpenChange={(open) => {
+          if (!open) {
+            setRejectDialog({ isOpen: false, tutorId: null, tutorName: '' });
+            setRejectionReason('');
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Từ chối hồ sơ gia sư</DialogTitle>
+              <DialogDescription>
+                Bạn đang từ chối hồ sơ của <strong>{rejectDialog.tutorName}</strong>.
+                Vui lòng nhập lý do từ chối (tối thiểu 10 ký tự).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Textarea
+                placeholder="Lý do từ chối (ví dụ: Thiếu chứng chỉ giảng dạy, thông tin không rõ ràng...)"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRejectDialog({ isOpen: false, tutorId: null, tutorName: '' });
+                  setRejectionReason('');
+                }}
+                disabled={isProcessing}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRejectConfirm}
+                disabled={isProcessing || rejectionReason.length < 10}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Xác nhận từ chối'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

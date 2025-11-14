@@ -242,13 +242,13 @@ export default function MyLessonsPage() {
               )}
             </div>
             <div className="flex gap-2">
+              {/* NOTE: Video call button removed - use UpcomingVideoCallsCard component in dashboard instead */}
+              {/* Video call now requires accessToken, not lesson ID */}
               {canJoinNow && (
-                <Link href={`/video-call/${lesson.id}`}>
-                  <Button className="gap-2">
-                    <Video className="h-4 w-4" />
-                    Vào lớp học
-                  </Button>
-                </Link>
+                <Button className="gap-2" variant="outline" disabled>
+                  <Video className="h-4 w-4" />
+                  Vào dashboard để vào lớp
+                </Button>
               )}
               {lesson.status === 'completed' && (
                 <Link href={`/student/review/${lesson.id}`}>

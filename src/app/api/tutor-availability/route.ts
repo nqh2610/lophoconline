@@ -17,12 +17,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    
+    // Validate required fields
+    if (!body.tutorId || !body.recurringDays || !body.shiftType || !body.startTime || !body.endTime) {
+      return NextResponse.json(
+        { error: "Missing required fields: tutorId, recurringDays, shiftType, startTime, endTime" },
+        { status: 400 }
+      );
+    }
+
+    // Parse and validate with schema
     const data = insertTutorAvailabilitySchema.parse(body);
 
-    // Check for conflicts
+    // Check for conflicts (using recurringDays JSON)
     const hasConflict = await storage.checkAvailabilityConflict(
       data.tutorId,
-      data.dayOfWeek,
+      data.recurringDays, // Now accepts JSON string like "[1,3,5]"
       data.startTime,
       data.endTime
     );
@@ -39,7 +49,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create availability error:', error);
     return NextResponse.json(
-      { error: "Invalid data" },
+      { 
+        error: "Invalid data",
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 400 }
     );
   }

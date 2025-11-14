@@ -72,15 +72,34 @@ export async function POST(
 
     // Create notification for student (ask for review)
     const student = await storage.getStudentById(parseInt(lesson.studentId));
+    const tutorUser = await storage.getUserById(tutor.userId);
+    const tutorFullName = tutorUser?.fullName || tutor.userId.toString();
+
     if (student) {
-      await storage.createNotification({
-        userId: student.userId,
-        type: 'review_request',
-        title: 'Buổi học đã hoàn thành',
-        message: `Buổi học với gia sư ${tutor.fullName} đã hoàn thành. Hãy đánh giá để giúp các học sinh khác!`,
-        link: `/tutor/${tutor.id}?review=true`,
-        isRead: 0,
-      });
+      // Check if this was a trial lesson
+      const isTrial = lesson.meetingLink && lesson.meetingLink.includes('trial');
+
+      if (isTrial) {
+        // For trial lessons, suggest enrolling in paid lessons
+        await storage.createNotification({
+          userId: student.userId,
+          type: 'review_request',
+          title: '✅ Buổi học thử đã hoàn thành',
+          message: `Buổi học thử với gia sư ${tutorFullName} đã hoàn thành. Bạn có muốn đăng ký học chính thức với gia sư này không?`,
+          link: `/tutor/${tutor.id}?enroll=true`,
+          isRead: 0,
+        });
+      } else {
+        // For regular lessons, ask for review
+        await storage.createNotification({
+          userId: student.userId,
+          type: 'review_request',
+          title: 'Buổi học đã hoàn thành',
+          message: `Buổi học với gia sư ${tutorFullName} đã hoàn thành. Hãy đánh giá để giúp các học sinh khác!`,
+          link: `/tutor/${tutor.id}?review=true`,
+          isRead: 0,
+        });
+      }
     }
 
     // Update tutor completion rate

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { videoCallSessions, lessons, classEnrollments, sessionRecords, users } from '@/lib/schema';
+import { videoCallSessions, trialBookings, classEnrollments, sessionRecords, users, tutors, students, lessons } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import {
   generateRoomName,
@@ -26,15 +26,15 @@ export async function autoCreateVideoCallForLesson(lessonId: number): Promise<nu
       return existing[0].id;
     }
 
-    // 2. Get lesson details
+    // 2. Get trial lesson details
     const lesson = await db
       .select()
-      .from(lessons)
-      .where(eq(lessons.id, lessonId))
+      .from(trialBookings)
+      .where(eq(trialBookings.id, lessonId))
       .limit(1);
 
     if (lesson.length === 0) {
-      console.error(`Lesson ${lessonId} not found`);
+      console.error(`Trial lesson ${lessonId} not found`);
       return null;
     }
 
@@ -46,9 +46,19 @@ export async function autoCreateVideoCallForLesson(lessonId: number): Promise<nu
       return null;
     }
 
-    // 4. Get tutor and student info
-    const tutorId = parseInt(lessonData.tutorId);
-    const studentId = parseInt(lessonData.studentId);
+    // 4. Get tutor and student user IDs (trial_bookings stores profile IDs, not user IDs)
+    const [tutorProfile, studentProfile] = await Promise.all([
+      db.select().from(tutors).where(eq(tutors.id, lessonData.tutorId)).limit(1),
+      db.select().from(students).where(eq(students.id, lessonData.studentId)).limit(1),
+    ]);
+
+    if (tutorProfile.length === 0 || studentProfile.length === 0) {
+      console.error(`Tutor or student profile not found for lesson ${lessonId}`);
+      return null;
+    }
+
+    const tutorId = tutorProfile[0].userId;
+    const studentId = studentProfile[0].userId;
 
     const [tutorUser, studentUser] = await Promise.all([
       db.select().from(users).where(eq(users.id, tutorId)).limit(1),
@@ -69,33 +79,28 @@ export async function autoCreateVideoCallForLesson(lessonId: number): Promise<nu
     const scheduledEndTime = new Date(`${dateStr}T${endTimeStr}:00`);
     const expiresAt = getSessionExpiry(scheduledEndTime);
 
-    // 6. Generate tokens
+    // 6. Choose provider - Videolify for 1-on-1 via REST API signaling
+    // Trial bookings are always 1-on-1 (tutor + student = 2 people)
+    const provider: 'videolify' | 'jitsi' = 'videolify'; // Use Videolify with REST API signaling
+
+    // 7. Generate tokens
     const roomName = generateRoomName('lophoc');
     const accessToken = generateAccessToken();
 
-    const tutorToken = await generateJitsiToken({
-      roomName,
-      userId: tutorId.toString(),
-      userName: tutorUser[0].username,
-      email: tutorUser[0].email || undefined,
-      moderator: true,
-      expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
-    });
+    // Generate simple tokens for Videolify (REST API based, no pre-generated JWT needed)
+    let tutorToken = '';
+    let studentToken = '';
+    
+    tutorToken = `videolify-tutor-${tutorId}`;
+    studentToken = `videolify-student-${studentId}`;
+    
+    // Note: Jitsi tokens not needed for Videolify
 
-    const studentToken = await generateJitsiToken({
-      roomName,
-      userId: studentId.toString(),
-      userName: studentUser[0].username,
-      email: studentUser[0].email || undefined,
-      moderator: false,
-      expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
-    });
-
-    // 7. Determine payment status
-    const paymentStatus = lessonData.isTrial === 1 ? 'paid' : 'paid'; // Assume paid if confirmed
+    // 8. Determine payment status - all trial bookings are free
+    const paymentStatus = 'paid'; // Trial lessons are always marked as paid (free)
     const canStudentJoin = 1; // Allow join for confirmed lessons
 
-    // 8. Create video call session
+    // 9. Create video call session
     const result = await db.insert(videoCallSessions).values({
       lessonId,
       tutorId,
@@ -111,6 +116,7 @@ export async function autoCreateVideoCallForLesson(lessonId: number): Promise<nu
       canStudentJoin,
       canTutorJoin: 1,
       expiresAt,
+      provider, // Add provider field
     });
 
     // Get the created session ID
@@ -201,33 +207,23 @@ export async function autoCreateVideoCallForSessionRecord(
     const scheduledEndTime = new Date(`${dateStr}T${endTimeStr}:00`);
     const expiresAt = getSessionExpiry(scheduledEndTime);
 
-    // 6. Generate tokens
+    // 6. Choose provider - Videolify for 1-on-1 via REST API signaling
+    // Enrollment sessions are usually 1-on-1, use Videolify
+    const provider: 'videolify' | 'jitsi' = 'videolify';
+
+    // 7. Generate tokens
     const roomName = generateRoomName('lophoc');
     const accessToken = generateAccessToken();
 
-    const tutorToken = await generateJitsiToken({
-      roomName,
-      userId: tutorId.toString(),
-      userName: tutorUser[0].username,
-      email: tutorUser[0].email || undefined,
-      moderator: true,
-      expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
-    });
+    // Generate simple tokens for Videolify (REST API based)
+    let tutorToken = `videolify-tutor-${tutorId}`;
+    let studentToken = `videolify-student-${studentId}`;
 
-    const studentToken = await generateJitsiToken({
-      roomName,
-      userId: studentId.toString(),
-      userName: studentUser[0].username,
-      email: studentUser[0].email || undefined,
-      moderator: false,
-      expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
-    });
-
-    // 7. Check payment status (assume paid if enrollment is active)
+    // 8. Check payment status (assume paid if enrollment is active)
     const paymentStatus = enrollmentData.status === 'active' ? 'paid' : 'unpaid';
     const canStudentJoin = paymentStatus === 'paid' ? 1 : 0;
 
-    // 8. Create video call session
+    // 9. Create video call session
     const result = await db.insert(videoCallSessions).values({
       enrollmentId,
       sessionRecordId,
@@ -244,6 +240,7 @@ export async function autoCreateVideoCallForSessionRecord(
       canStudentJoin,
       canTutorJoin: 1,
       expiresAt,
+      provider, // Add provider field
     });
 
     // Get the created session ID

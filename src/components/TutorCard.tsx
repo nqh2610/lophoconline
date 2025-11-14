@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { useMemo } from "react";
 
 interface SubjectDetail {
   name: string;
@@ -22,22 +23,19 @@ interface TutorCardProps {
   name: string;
   avatar?: string;
   subjects: SubjectDetail[];
+  tutorSubjects?: any[];
   rating: number;
   reviewCount: number;
   hourlyRate: number;
-  experience: string;
+  experience: string | number; // Accept both string and number for flexibility
   verified: boolean;
   hasVideo: boolean;
-  occupation: 'student' | 'teacher' | 'professional' | 'tutor';
+  occupation?: {
+    id: number;
+    label: string;
+  } | 'student' | 'teacher' | 'professional' | 'tutor'; // Support both new and legacy formats
   availableSlots?: TimeSlot[];
 }
-
-const occupationLabels = {
-  student: 'Sinh viên',
-  teacher: 'Giáo viên',
-  professional: 'Đã đi làm',
-  tutor: 'Gia sư'
-};
 
 const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const shiftLabels: Record<string, string> = {
@@ -59,6 +57,7 @@ export function TutorCard({
   name,
   avatar,
   subjects,
+  tutorSubjects = [],
   rating,
   reviewCount,
   hourlyRate,
@@ -69,43 +68,93 @@ export function TutorCard({
   occupation,
   availableSlots = [],
 }: TutorCardProps) {
-  // Group time slots by day
-  const groupedSlots = availableSlots.reduce((acc, slot) => {
-    const key = `${slot.dayOfWeek}-${slot.shiftType}`;
-    if (!acc[key]) {
-      acc[key] = slot;
+  // Format experience display - handle both string and number
+  const experienceText = useMemo(() => {
+    // If already a formatted string, return as-is
+    if (typeof experience === 'string' && isNaN(Number(experience))) {
+      return experience;
     }
-    return acc;
-  }, {} as Record<string, TimeSlot>);
+    
+    // Convert to number and format
+    const years = typeof experience === 'number' ? experience : Number(experience) || 0;
+    return years < 1 
+      ? "Dưới 1 năm kinh nghiệm"
+      : `${years} năm kinh nghiệm`;
+  }, [experience]);
 
-  // Calculate session price (per session) and monthly price
-  const firstSlot = availableSlots[0];
-  const hoursPerSession = firstSlot ? calculateHours(firstSlot.startTime, firstSlot.endTime) : 2;
-  const pricePerSession = Math.round(hourlyRate * hoursPerSession);
-  const sessionsPerMonth = availableSlots.length * 4; // Assuming weekly schedule × 4 weeks
-  const pricePerMonth = pricePerSession * Math.min(sessionsPerMonth, 16); // Cap at 16 sessions/month
+  // Memoize displaySubjects to avoid re-computation on every render
+  const displaySubjects: SubjectDetail[] = useMemo(() => {
+    if (subjects && subjects.length > 0) return subjects;
 
-  // Group slots by shift type for display
-  const slotsByShift = availableSlots.reduce((acc, slot) => {
-    const shift = shiftLabels[slot.shiftType] || slot.shiftType;
-    if (!acc[shift]) {
-      acc[shift] = new Set<number>();
-    }
-    acc[shift].add(slot.dayOfWeek);
-    return acc;
-  }, {} as Record<string, Set<number>>);
+    const ts = Array.isArray(tutorSubjects) ? tutorSubjects : [];
+    if (ts.length === 0) return [];
 
-  // Format availability with days
-  const formattedAvailability = Object.entries(slotsByShift)
-    .sort(([a], [b]) => {
-      const order = ['Sáng', 'Chiều', 'Tối'];
-      return order.indexOf(a) - order.indexOf(b);
-    })
-    .map(([shift, days]) => {
-      const sortedDays = Array.from(days).sort((a, b) => a - b);
-      const daysList = sortedDays.map(d => dayNames[d]).join(', ');
-      return { shift, days: daysList };
+    const groups: Record<string, Set<string>> = {};
+    ts.forEach((t: any) => {
+      const subjectName = t?.subject?.name || t.subjectName || '';
+      const gradeName = t?.gradeLevel?.name || t.gradeLevelName || '';
+      if (!subjectName) return;
+      groups[subjectName] = groups[subjectName] || new Set<string>();
+      if (gradeName) groups[subjectName].add(gradeName);
     });
+
+    return Object.entries(groups).map(([name, set]) => ({ name, grades: Array.from(set).join(', ') }));
+  }, [subjects, tutorSubjects]);
+
+  // Format grades string for display: expand ranges like "Lớp 10-12" -> "10, 11, 12"
+  function formatGrades(grades: string | undefined) {
+    if (!grades) return '';
+    // Split by comma, semicolon or slash
+    const parts = grades.split(/[,;/]+/).map(p => p.trim()).filter(Boolean);
+    const out: string[] = [];
+
+    parts.forEach(p => {
+      // Match ranges like "Lớp 10-12" or "10-12"
+      const rangeMatch = p.match(/(?:[Ll]ớp\s*)?(\d{1,2})\s*-\s*(\d{1,2})/);
+      const singleMatch = p.match(/(?:[Ll]ớp\s*)?(\d{1,2})$/);
+      if (rangeMatch) {
+        const a = parseInt(rangeMatch[1], 10);
+        const b = parseInt(rangeMatch[2], 10);
+        if (!isNaN(a) && !isNaN(b) && b >= a) {
+          for (let i = a; i <= b; i++) out.push(String(i));
+          return;
+        }
+      }
+      if (singleMatch) {
+        out.push(singleMatch[1]);
+        return;
+      }
+      // If not a numeric class, keep original (e.g., "Luyện thi ĐH", "IELTS")
+      out.push(p);
+    });
+
+    // Deduplicate while preserving order
+    return Array.from(new Set(out)).join(', ');
+  }
+  // Memoize availability formatting to avoid re-computation
+  const formattedAvailability = useMemo(() => {
+    // Group slots by shift type for display
+    const slotsByShift = availableSlots.reduce((acc, slot) => {
+      const shift = shiftLabels[slot.shiftType] || slot.shiftType;
+      if (!acc[shift]) {
+        acc[shift] = new Set<number>();
+      }
+      acc[shift].add(slot.dayOfWeek);
+      return acc;
+    }, {} as Record<string, Set<number>>);
+
+    // Format availability with days
+    return Object.entries(slotsByShift)
+      .sort(([a], [b]) => {
+        const order = ['Sáng', 'Chiều', 'Tối'];
+        return order.indexOf(a) - order.indexOf(b);
+      })
+      .map(([shift, days]) => {
+        const sortedDays = Array.from(days).sort((a, b) => a - b);
+        const daysList = sortedDays.map(d => dayNames[d]).join(', ');
+        return { shift, days: daysList };
+      });
+  }, [availableSlots]);
 
   return (
     <Card className="h-full flex flex-col hover-elevate overflow-hidden" data-testid={`card-tutor-${id}`}>
@@ -123,11 +172,20 @@ export function TutorCard({
                   {name}
                 </h3>
               </Link>
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <Badge variant="secondary" className="gap-1.5">
-                  <Briefcase className="h-3 w-3" />
-                  <span className="text-xs" data-testid={`text-occupation-${id}`}>{occupationLabels[occupation]}</span>
-                </Badge>
+              <div className="flex items-center gap-2 mb-2 flex-wrap mt-2">
+                {occupation && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    <Briefcase className="h-3 w-3" />
+                    <span className="text-xs" data-testid={`text-occupation-${id}`}>
+                      {typeof occupation === 'object' && 'label' in occupation 
+                        ? occupation.label 
+                        : occupation === 'student' ? 'Sinh viên'
+                        : occupation === 'teacher' ? 'Giáo viên'
+                        : occupation === 'professional' ? 'Chuyên gia'
+                        : 'Gia sư'}
+                    </span>
+                  </Badge>
+                )}
                 {verified && (
                   <Badge variant="outline" className="gap-1 border-chart-2/30 text-chart-2 shrink-0">
                     <CheckCircle2 className="h-3 w-3" />
@@ -150,7 +208,7 @@ export function TutorCard({
               </div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{experience}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{experienceText}</p>
         </div>
 
         {/* Divider */}
@@ -163,19 +221,19 @@ export function TutorCard({
               <div className="h-1 w-8 bg-primary rounded-full flex-shrink-0" />
               <h4 className="text-sm font-semibold">Môn dạy</h4>
             </div>
-            {subjects && subjects.length > 0 ? (
+            {displaySubjects && displaySubjects.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {subjects.slice(0, 5).map((subject, idx) => (
+                {displaySubjects.slice(0, 5).map((subject, idx) => (
                   <Badge key={idx} variant="secondary" className="font-medium text-xs">
                     {subject.name}
                     {subject.grades && (
-                      <span className="text-muted-foreground ml-1">({subject.grades})</span>
+                      <span className="text-muted-foreground ml-1">({formatGrades(subject.grades)})</span>
                     )}
                   </Badge>
                 ))}
-                {subjects.length > 5 && (
+                {displaySubjects.length > 5 && (
                   <Badge variant="outline" className="font-medium text-xs">
-                    +{subjects.length - 5}
+                    +{displaySubjects.length - 5}
                   </Badge>
                 )}
               </div>
@@ -226,7 +284,7 @@ export function TutorCard({
           <span className="text-sm text-muted-foreground font-medium">/giờ</span>
         </div>
         <Button size="default" data-testid={`button-view-profile-${id}`} asChild>
-          <Link href={`/tutor/${id}`}>
+          <Link href={`/tutor/${id}`} prefetch={true}>
             Xem chi tiết
           </Link>
         </Button>

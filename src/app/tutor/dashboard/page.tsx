@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   CheckCircle2,
   Circle,
@@ -14,10 +17,16 @@ import {
   BookOpen,
   Video,
   MessageSquare,
-  Award
+  Award,
+  Edit,
+  AlertCircle,
+  Clock,
+  XCircle
 } from "lucide-react";
 import Link from "next/link";
 import { UpcomingVideoCallsCard } from "@/components/UpcomingVideoCallCard";
+import { TutorTrialLessonsCard } from "@/components/TutorTrialLessonsCard";
+import { useToast } from "@/hooks/use-toast";
 
 type FlowStep = {
   id: string;
@@ -29,8 +38,42 @@ type FlowStep = {
 };
 
 export default function TutorDashboard() {
-  // In production, this would come from API/database
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [tutorData, setTutorData] = useState<{
+    approvalStatus: string;
+    rejectionReason: string | null;
+  } | null>(null);
+  const [isLoadingTutor, setIsLoadingTutor] = useState(true);
+
+  // Fetch tutor data
+  useEffect(() => {
+    async function fetchTutorData() {
+      if (status === 'loading') return;
+      if (!session?.user?.id) return;
+
+      try {
+        const response = await fetch(`/api/tutors?userId=${session.user.id}`);
+        if (response.ok) {
+          const tutors = await response.json();
+          if (tutors && tutors.length > 0) {
+            setTutorData({
+              approvalStatus: tutors[0].approvalStatus || 'pending',
+              rejectionReason: tutors[0].rejectionReason || null,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching tutor data:', error);
+      } finally {
+        setIsLoadingTutor(false);
+      }
+    }
+
+    fetchTutorData();
+  }, [session, status]);
 
   const steps: FlowStep[] = [
     {
@@ -113,6 +156,52 @@ export default function TutorDashboard() {
           <p className="text-muted-foreground mt-2">
             Theo dõi tiến trình và quản lý hoạt động của bạn
           </p>
+        </div>
+
+        {/* Approval Status Alert */}
+        {!isLoadingTutor && tutorData && (
+          <>
+            {tutorData.approvalStatus === 'pending' && (
+              <Alert className="mb-6 border-yellow-500 bg-yellow-50">
+                <Clock className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800">
+                  <strong>Đang chờ phê duyệt:</strong> Hồ sơ của bạn đang được admin xem xét. 
+                  Bạn vẫn có thể{' '}
+                  <Link href="/tutor/edit-profile" className="underline font-medium">
+                    chỉnh sửa hồ sơ
+                  </Link>{' '}
+                  trong lúc chờ.
+                </AlertDescription>
+              </Alert>
+            )}
+            {tutorData.approvalStatus === 'rejected' && (
+              <Alert className="mb-6 border-red-500 bg-red-50">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  <strong>Hồ sơ không được phê duyệt:</strong>{' '}
+                  {tutorData.rejectionReason || 'Không có lý do cụ thể.'}{' '}
+                  Vui lòng{' '}
+                  <Link href="/tutor/edit-profile" className="underline font-medium">
+                    chỉnh sửa hồ sơ
+                  </Link>{' '}
+                  và gửi lại.
+                </AlertDescription>
+              </Alert>
+            )}
+            {tutorData.approvalStatus === 'approved' && (
+              <Alert className="mb-6 border-green-500 bg-green-50">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <strong>Hồ sơ đã được phê duyệt!</strong> Bạn có thể bắt đầu nhận yêu cầu từ học sinh.
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        )}
+
+        {/* Trial Lessons Section */}
+        <div className="mb-8">
+          <TutorTrialLessonsCard />
         </div>
 
         {/* Video Calls Section */}
@@ -202,10 +291,10 @@ export default function TutorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              <Link href="/tutor/profile-setup">
-                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4" data-testid="button-profile-setup">
-                  <User className="h-6 w-6" />
-                  <span className="text-xs">Hồ sơ</span>
+              <Link href="/tutor/edit-profile">
+                <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4 border-primary" data-testid="button-edit-profile">
+                  <Edit className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Chỉnh sửa hồ sơ</span>
                 </Button>
               </Link>
               <Link href="/tutor/verification">

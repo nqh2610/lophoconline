@@ -48,7 +48,7 @@ async function main() {
   try {
     // ==================== 0. CREATE TEST USERS (Admin, Tutor, Student) ====================
     console.log('👥 Creating test users...');
-    const hashedPassword = await bcrypt.hash('123456', 10);
+    const hashedPassword = await bcrypt.hash('Test1234', 10);
 
     // Admin user
     const adminResult = await db.insert(users).values({
@@ -58,7 +58,7 @@ async function main() {
       role: 'admin'
     });
     const adminId = Number(adminResult[0].insertId);
-    console.log('  ✓ Admin: admin / 123456');
+    console.log('  ✓ Admin: admin / Test1234');
 
     // Student user
     const studentResult = await db.insert(users).values({
@@ -68,7 +68,7 @@ async function main() {
       role: 'student'
     });
     const studentId = Number(studentResult[0].insertId);
-    console.log('  ✓ Student: student / 123456');
+    console.log('  ✓ Student: student / Test1234');
 
     // Tutor user (will create profile later)
     const tutorUserResult = await db.insert(users).values({
@@ -78,7 +78,7 @@ async function main() {
       role: 'tutor'
     });
     const tutorUserId = Number(tutorUserResult[0].insertId);
-    console.log('  ✓ Tutor: tutor / 123456');
+    console.log('  ✓ Tutor: tutor / Test1234');
 
     // ==================== 1. SEED SUBJECTS ====================
     console.log('\n📚 Seeding subjects...');
@@ -148,44 +148,9 @@ async function main() {
     // ==================== 3. SEED TUTORS ====================
     console.log('\n👨‍🏫 Seeding tutors...');
 
+    // NOTE: Test tutor account (tutor/123456) does NOT have a profile yet
+    // This allows testing the tutor registration flow
     const tutorsData = [
-      // Test tutor (liên kết với tutor user đã tạo ở trên)
-      {
-        userId: tutorUserId, // Use the test tutor user
-        username: 'tutor',
-        email: 'tutor@test.com',
-        fullName: 'Test Tutor',
-        avatar: 'https://i.pravatar.cc/150?img=1',
-        bio: 'Đây là tài khoản gia sư test. Tôi dạy Toán và Tiếng Anh cho học sinh THPT. Đây là profile mẫu để test các chức năng của hệ thống.',
-        teachingMethod: 'Phương pháp giảng dạy linh hoạt, tận tâm với học sinh. Tập trung vào việc giúp học sinh hiểu bản chất vấn đề.',
-        education: JSON.stringify([
-          {
-            degree: 'Cử nhân Sư phạm',
-            school: 'Đại học Sư phạm Hà Nội',
-            year: '2020'
-          }
-        ]),
-        subjects: ['Toán', 'Tiếng Anh'],
-        gradeLevels: ['Lớp 10', 'Lớp 11', 'Lớp 12'],
-        experience: 3,
-        hourlyRate: 150000,
-        occupation: 'Giáo viên',
-        rating: 45,
-        totalReviews: 10,
-        totalStudents: 5,
-        verificationStatus: 'verified',
-        certifications: JSON.stringify([
-          'Chứng chỉ giảng dạy THPT'
-        ]),
-        achievements: JSON.stringify([
-          'Tài khoản test'
-        ]),
-        timeSlots: [
-          { day: 1, shift: 'evening', start: '19:00', end: '21:00' },
-          { day: 3, shift: 'evening', start: '19:00', end: '21:00' },
-          { day: 5, shift: 'evening', start: '19:00', end: '21:00' },
-        ]
-      },
       {
         username: 'tutor_mai',
         email: 'mai@example.com',
@@ -715,8 +680,8 @@ async function main() {
       let userId: number;
 
       // Check if this tutor already has a userId (test tutor)
-      if (tutorData.userId) {
-        userId = tutorData.userId;
+      if ('userId' in tutorData && tutorData.userId) {
+        userId = (tutorData as any).userId;
         console.log(`    ✓ Using existing user account`);
       } else {
         // Create user account for other tutors
@@ -794,7 +759,7 @@ async function main() {
     console.log(`  - Time slots for all tutors`);
 
     console.log('\n🔑 TEST ACCOUNTS:');
-    console.log('  Password for all: 123456');
+    console.log('  Password for all: Test1234');
     console.log('\n  1. Admin:');
     console.log('     Username: admin');
     console.log('     Email: admin@test.com');
@@ -803,13 +768,15 @@ async function main() {
     console.log('     Username: student');
     console.log('     Email: student@test.com');
     console.log('     Dashboard: /student/dashboard');
-    console.log('\n  3. Tutor:');
+    console.log('\n  3. Tutor (NO PROFILE - Use for testing registration):');
     console.log('     Username: tutor');
     console.log('     Email: tutor@test.com');
-    console.log('     Dashboard: /tutor/dashboard');
+    console.log('     Registration: /tutor-registration');
+    console.log('     Note: This account has NO tutor profile yet.');
+    console.log('           Use it to test the tutor registration flow!');
 
     console.log('\n📝 OTHER TUTORS (password123):');
-    tutorsData.filter(t => t.username !== 'tutor').forEach(t => console.log(`  - ${t.username}`));
+    tutorsData.forEach(t => console.log(`  - ${t.username}`));
 
     console.log('\n✨ Seeding completed successfully!');
     process.exit(0);

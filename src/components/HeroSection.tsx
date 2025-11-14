@@ -59,7 +59,7 @@ export function HeroSection() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/for-tutors">
+            <Link href="/tutor-registration">
               <Button size="lg" variant="outline" className="h-12 px-8 text-base" data-testid="button-become-tutor">
                 Trở thành gia sư
               </Button>

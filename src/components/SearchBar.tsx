@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 interface SearchSuggestion {
   id: number;
@@ -18,16 +19,68 @@ interface SearchSuggestion {
   verified: boolean;
 }
 
+// Custom hook for search with React Query - includes caching and automatic request cancellation
+function useSearchTutors(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['tutors-search', query],
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
+      const response = await fetch(
+        `/api/tutors/search?q=${encodeURIComponent(query.trim())}`,
+        { signal }
+      );
+      if (!response.ok) throw new Error('Search failed');
+      return response.json() as Promise<SearchSuggestion[]>;
+    },
+    enabled: enabled && query.trim().length >= 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes - cached results appear instantly
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in memory
+    retry: 1,
+  });
+}
+
 export function SearchBar() {
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
+
+  // Debounce search query - OPTIMIZED: 600ms to reduce API calls while maintaining good UX
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    // Don't trigger search for short queries
+    if (searchText.trim().length < 2) {
+      setDebouncedQuery("");
+      setIsOpen(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchText);
+    }, 600); // OPTIMIZED: 600ms - balance between responsiveness and performance
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [searchText]);
+
+  // Fetch suggestions with React Query - automatic caching and request cancellation
+  const { data: suggestions = [], isLoading } = useSearchTutors(debouncedQuery, isOpen || searchText.trim().length >= 2);
+
+  // Update dropdown visibility when suggestions change
+  useEffect(() => {
+    if (suggestions.length > 0 && searchText.trim().length >= 2) {
+      setIsOpen(true);
+    }
+  }, [suggestions, searchText]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -40,45 +93,6 @@ export function SearchBar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Fetch suggestions with debounce
-  useEffect(() => {
-    // Clear previous timeout
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    // Don't search if query is too short
-    if (searchText.trim().length < 2) {
-      setSuggestions([]);
-      setIsOpen(false);
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Debounce the API call
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/tutors/search?q=${encodeURIComponent(searchText.trim())}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data);
-          setIsOpen(data.length > 0);
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 300); // 300ms debounce
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [searchText]);
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

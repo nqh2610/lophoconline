@@ -1,6 +1,37 @@
-import { mysqlTable, text, varchar, int, serial, timestamp } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, varchar, int, serial, timestamp, index, decimal } from "drizzle-orm/mysql-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Role types for multiple roles system
+export type UserRole = "admin" | "tutor" | "student";
+
+// Helper function to parse roles from JSON string
+export function parseRoles(roleJson: string): UserRole[] {
+  try {
+    const parsed = JSON.parse(roleJson);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(r => ["admin", "tutor", "student"].includes(r));
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+// Helper function to check if user has a specific role
+export function hasRole(roleJson: string, role: UserRole): boolean {
+  const roles = parseRoles(roleJson);
+  return roles.includes(role);
+}
+
+// Helper function to add role to user
+export function addRole(roleJson: string, role: UserRole): string {
+  const roles = parseRoles(roleJson);
+  if (!roles.includes(role)) {
+    roles.push(role);
+  }
+  return JSON.stringify(roles);
+}
 
 // Users table
 export const users = mysqlTable("users", {
@@ -8,20 +39,41 @@ export const users = mysqlTable("users", {
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(), // Will store bcrypt hash
   email: varchar("email", { length: 255 }).unique(),
-  role: varchar("role", { length: 50 }).notNull().default("student"), // student, tutor, admin
+  fullName: varchar("full_name", { length: 255 }), // ✅ MOVED from tutors/students to avoid duplication
+  role: text("role").notNull(), // JSON array: ["admin"], ["tutor"], ["student"], ["tutor","student"], etc.
   phone: varchar("phone", { length: 20 }),
   avatar: text("avatar"),
   isActive: int("is_active").notNull().default(1), // 1=active, 0=inactive/banned
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
-});
+}, (table) => ({
+  fullNameIdx: index("idx_users_full_name").on(table.fullName),
+}));
+
+// Custom validator for roles JSON array
+const rolesValidator = z.string().refine(
+  (val) => {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) && parsed.every(r => ["admin", "tutor", "student"].includes(r));
+    } catch {
+      return false;
+    }
+  },
+  { message: "Role phải là JSON array hợp lệ chứa: admin, tutor, hoặc student" }
+);
 
 export const insertUserSchema = createInsertSchema(users, {
   username: z.string().min(3).max(255),
-  password: z.string().min(6),
+  password: z.string()
+    .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
+    .regex(/[A-Z]/, "Mật khẩu phải chứa ít nhất 1 chữ hoa")
+    .regex(/[a-z]/, "Mật khẩu phải chứa ít nhất 1 chữ thường")
+    .regex(/[0-9]/, "Mật khẩu phải chứa ít nhất 1 số"),
   email: z.string().email().optional(),
-  role: z.enum(["student", "tutor", "admin"]).optional(),
+  fullName: z.string().min(1).max(255).optional(), // ✅ NEW: Full name in users
+  role: rolesValidator.optional(),
   phone: z.string().max(20).optional(),
   avatar: z.string().url().optional(),
   isActive: z.number().int().min(0).max(1).optional(),
@@ -37,46 +89,51 @@ export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-// Tutor availability slots (recurring time slots)
-export const tutorAvailability = mysqlTable("tutor_availability", {
+// Login attempts tracking (for rate limiting and account lockout)
+export const loginAttempts = mysqlTable("login_attempts", {
   id: serial("id").primaryKey(),
-  tutorId: varchar("tutor_id", { length: 100 }).notNull(),
-  dayOfWeek: int("day_of_week").notNull(), // 0=Sunday, 1=Monday, ..., 6=Saturday
-  startTime: varchar("start_time", { length: 10 }).notNull(), // Format: "HH:MM" e.g., "18:00"
-  endTime: varchar("end_time", { length: 10 }).notNull(), // Format: "HH:MM" e.g., "19:30"
-  isActive: int("is_active").notNull().default(1), // 1=active, 0=inactive
+  username: varchar("username", { length: 255 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  attemptedAt: timestamp("attempted_at").notNull().defaultNow(),
+  successful: int("successful").notNull().default(0), // 1=success, 0=failed
+});
+
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+
+// Password reset tokens (for forgot password functionality)
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: int("user_id").notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: int("used").notNull().default(0), // 0=not used, 1=used
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
 });
 
-export const insertTutorAvailabilitySchema = createInsertSchema(tutorAvailability, {
-  tutorId: z.string().min(1),
-  dayOfWeek: z.number().min(0).max(6),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  isActive: z.number().min(0).max(1).optional(),
-}).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
-export const selectTutorAvailabilitySchema = createSelectSchema(tutorAvailability);
-
-export type InsertTutorAvailability = z.infer<typeof insertTutorAvailabilitySchema>;
-export type TutorAvailability = typeof tutorAvailability.$inferSelect;
-
-// Lessons/Bookings
-export const lessons = mysqlTable("lessons", {
+// Trial Bookings (Buổi học thử miễn phí)
+// ✅ RENAMED: bookings → trial_bookings (chỉ dành cho trial lessons)
+// ✅ REMOVED: isTrial field (redundant - bảng này CHỈ cho trial)
+// ✅ CONSTRAINT: 1 student chỉ có 1 trial booking/tutor (enforced by unique index)
+// ✅ CONSTRAINT: Student không thể book chính mình (enforced by trigger)
+// ==================== TRIAL_BOOKINGS TABLE ====================
+// Business Rules:
+// 1. Each trial booking MUST link to a tutor_availability slot (availability_id)
+// 2. Student can have ONLY ONE trial booking per tutor (enforced by UNIQUE index on student_id, tutor_id)
+// 3. Student CANNOT book themselves (validated in application layer)
+// 4. Always FREE - no price field (removed from DB)
+// 5. Max 3 trial bookings per student (enforced in application layer)
+export const trialBookings = mysqlTable("trial_bookings", {
   id: serial("id").primaryKey(),
-  tutorId: varchar("tutor_id", { length: 100 }).notNull(),
-  studentId: varchar("student_id", { length: 100 }).notNull(),
+  tutorId: int("tutor_id").notNull(), // FK → tutors.id
+  studentId: int("student_id").notNull(), // FK → students.id
+  availabilityId: int("availability_id"), // FK → tutor_availability.id (links booking to specific time slot)
   subject: varchar("subject", { length: 100 }).notNull(),
   date: varchar("date", { length: 15 }).notNull(), // Format: "YYYY-MM-DD"
   startTime: varchar("start_time", { length: 10 }).notNull(), // Format: "HH:MM"
   endTime: varchar("end_time", { length: 10 }).notNull(), // Format: "HH:MM"
   status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, confirmed, completed, cancelled
-  price: int("price").notNull(), // Price in VND
   notes: text("notes"),
   tutorConfirmed: int("tutor_confirmed").notNull().default(0), // 0=not confirmed, 1=confirmed
   studentConfirmed: int("student_confirmed").notNull().default(0), // 0=not confirmed, 1=confirmed
@@ -84,27 +141,33 @@ export const lessons = mysqlTable("lessons", {
   cancelledBy: int("cancelled_by"), // user_id who cancelled
   cancellationReason: text("cancellation_reason"),
   meetingLink: varchar("meeting_link", { length: 500 }), // Zoom/Google Meet link
-  isTrial: int("is_trial").notNull().default(0), // 0=regular, 1=trial lesson
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
-});
+}, (table) => ({
+  studentIdx: index("idx_trial_bookings_student").on(table.studentId),
+  tutorIdx: index("idx_trial_bookings_tutor").on(table.tutorId),
+  availabilityIdx: index("idx_trial_bookings_availability").on(table.availabilityId),
+  statusIdx: index("idx_trial_bookings_status").on(table.status),
+  dateIdx: index("idx_trial_bookings_date").on(table.date),
+  // ✅ UNIQUE: One trial booking per student-tutor pair
+  uniqueStudentTutorIdx: index("idx_trial_bookings_student_tutor_unique").on(table.studentId, table.tutorId),
+}));
 
-export const insertLessonSchema = createInsertSchema(lessons, {
-  tutorId: z.string().min(1),
-  studentId: z.string().min(1),
+export const insertTrialBookingSchema = createInsertSchema(trialBookings, {
+  tutorId: z.number().int().positive(),
+  studentId: z.number().int().positive(),
+  availabilityId: z.number().int().positive().optional(),
   subject: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/),
   status: z.enum(["pending", "confirmed", "completed", "cancelled"]).optional(),
-  price: z.number().min(0),
   notes: z.string().optional(),
   tutorConfirmed: z.number().int().min(0).max(1).optional(),
   studentConfirmed: z.number().int().min(0).max(1).optional(),
   cancelledBy: z.number().int().positive().optional(),
   cancellationReason: z.string().optional(),
   meetingLink: z.string().max(500).optional(),
-  isTrial: z.number().int().min(0).max(1).optional(),
 }).omit({
   id: true,
   completedAt: true,
@@ -112,23 +175,40 @@ export const insertLessonSchema = createInsertSchema(lessons, {
   updatedAt: true,
 });
 
-export const selectLessonSchema = createSelectSchema(lessons);
+export const selectTrialBookingSchema = createSelectSchema(trialBookings);
 
-export type InsertLesson = z.infer<typeof insertLessonSchema>;
-export type Lesson = typeof lessons.$inferSelect;
+export type InsertTrialBooking = z.infer<typeof insertTrialBookingSchema>;
+export type TrialBooking = typeof trialBookings.$inferSelect;
+
+// ✅ BACKWARD COMPATIBILITY: Keep old aliases pointing to trial_bookings
+// Regular bookings are now handled by class_enrollments
+export const bookings = trialBookings;
+export const insertBookingSchema = insertTrialBookingSchema;
+export const selectBookingSchema = selectTrialBookingSchema;
+export type InsertBooking = InsertTrialBooking;
+export type Booking = TrialBooking;
+
+// ✅ DEPRECATED: Keep alias for maximum backward compatibility
+export const lessons = trialBookings;
+export const insertLessonSchema = insertTrialBookingSchema;
+export const selectLessonSchema = selectTrialBookingSchema;
+export type InsertLesson = InsertTrialBooking;
+export type Lesson = TrialBooking;
 
 // Tutors table (extended profile for tutors)
+// ✅ REMOVED: full_name, phone (now in users table to avoid duplication)
 export const tutors = mysqlTable("tutors", {
   id: serial("id").primaryKey(),
   userId: int("user_id").notNull().unique(), // References users.id
-  fullName: varchar("full_name", { length: 255 }).notNull(),
-  avatar: text("avatar"), // URL to avatar image
+  // ❌ REMOVED: fullName (get from users.full_name)
+  // ❌ REMOVED: phone (get from users.phone)
+  // ❌ REMOVED: avatar (get from users.avatar)
   bio: text("bio"),
   teachingMethod: text("teaching_method"),
   education: text("education"), // JSON string: [{degree, school, year}]
   certifications: text("certifications"), // JSON string: [string]
   achievements: text("achievements"), // JSON string: [string]
-  subjects: text("subjects").notNull(), // JSON string: [{subject, grades: string[]}]
+  subjects: text("subjects").notNull(), // ✅ JSON: SYNC with tutor_subjects via triggers for performance
   languages: varchar("languages", { length: 255 }).default("Tiếng Việt"), // Comma-separated
   experience: int("experience").notNull().default(0), // Years of experience
   hourlyRate: int("hourly_rate").notNull(), // VND per hour
@@ -136,9 +216,13 @@ export const tutors = mysqlTable("tutors", {
   totalReviews: int("total_reviews").default(0),
   totalStudents: int("total_students").default(0),
   videoIntro: text("video_intro"), // URL to video
-  occupation: varchar("occupation", { length: 255 }),
+  occupationId: int("occupation_id"), // Foreign key to occupations table
   verificationStatus: varchar("verification_status", { length: 50 }).default("pending"), // pending, verified, rejected
-  isActive: int("is_active").notNull().default(1), // 1=active, 0=inactive
+  approvalStatus: varchar("approval_status", { length: 50 }).default("pending"), // pending, approved, rejected
+  approvedBy: int("approved_by"), // Admin user ID who approved/rejected
+  approvedAt: timestamp("approved_at"), // When approved/rejected
+  rejectionReason: text("rejection_reason"), // Reason for rejection
+  isActive: int("is_active").notNull().default(0), // 1=active, 0=inactive (default 0 = chưa live)
   responseTime: int("response_time").default(0), // Average response time in minutes
   responseRate: int("response_rate").default(0), // Response rate 0-100%
   completionRate: int("completion_rate").default(0), // Lesson completion rate 0-100%
@@ -149,8 +233,7 @@ export const tutors = mysqlTable("tutors", {
 
 export const insertTutorSchema = createInsertSchema(tutors, {
   userId: z.number().int().positive(),
-  fullName: z.string().min(1).max(255),
-  avatar: z.string().url().optional(),
+  // ❌ REMOVED: fullName, phone, avatar validations
   bio: z.string().optional(),
   teachingMethod: z.string().optional(),
   education: z.string().optional(),
@@ -164,8 +247,12 @@ export const insertTutorSchema = createInsertSchema(tutors, {
   totalReviews: z.number().int().min(0).optional(),
   totalStudents: z.number().int().min(0).optional(),
   videoIntro: z.string().url().optional(),
-  occupation: z.string().max(255).optional(),
+  occupationId: z.number().int().positive().optional().or(z.undefined()),
   verificationStatus: z.enum(["pending", "verified", "rejected"]).optional(),
+  approvalStatus: z.enum(["pending", "approved", "rejected"]).optional(),
+  approvedBy: z.number().int().positive().optional().or(z.null()),
+  approvedAt: z.date().optional().or(z.null()),
+  rejectionReason: z.string().optional().or(z.null()),
   isActive: z.number().int().min(0).max(1).optional(),
   responseTime: z.number().int().min(0).optional(),
   responseRate: z.number().int().min(0).max(100).optional(),
@@ -210,8 +297,9 @@ export type Subject = typeof subjects.$inferSelect;
 // Grade levels table (cấp lớp chuẩn hóa)
 export const gradeLevels = mysqlTable("grade_levels", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(), // "Lớp 1", "Lớp 2", ..., "Lớp 12", "Luyện thi", "Khác"
+  name: varchar("name", { length: 50 }).notNull(), // "Lớp 1", "Lớp 2", ..., "Lớp 12", "Luyện thi IELTS", etc.
   category: varchar("category", { length: 50 }).notNull(), // "Tiểu học", "THCS", "THPT", "Luyện thi", "Khác"
+  subjectId: int("subject_id"), // NULL = dùng chung cho tất cả môn, số cụ thể = chỉ dành cho môn đó
   sortOrder: int("sort_order").notNull().default(0),
   isActive: int("is_active").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -226,6 +314,26 @@ export const selectGradeLevelSchema = createSelectSchema(gradeLevels);
 
 export type InsertGradeLevel = z.infer<typeof insertGradeLevelSchema>;
 export type GradeLevel = typeof gradeLevels.$inferSelect;
+
+// Teaching Experience Levels table (cấp độ kinh nghiệm)
+// Occupations table (nghề nghiệp)
+export const occupations = mysqlTable("occupations", {
+  id: serial("id").primaryKey(),
+  label: varchar("label", { length: 50 }).notNull(), // "Giáo viên", "Sinh viên", "Gia sư", "Chuyên gia"
+  sortOrder: int("sort_order").notNull().default(0),
+  isActive: int("is_active").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertOccupationSchema = createInsertSchema(occupations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const selectOccupationSchema = createSelectSchema(occupations);
+
+export type InsertOccupation = z.infer<typeof insertOccupationSchema>;
+export type Occupation = typeof occupations.$inferSelect;
 
 // Tutor-Subject relationship (many-to-many) - TỐI ƯU CHO FILTER
 export const tutorSubjects = mysqlTable("tutor_subjects", {
@@ -250,36 +358,68 @@ export const selectTutorSubjectSchema = createSelectSchema(tutorSubjects);
 export type InsertTutorSubject = z.infer<typeof insertTutorSubjectSchema>;
 export type TutorSubject = typeof tutorSubjects.$inferSelect;
 
-// Time slots for tutor availability (lịch trống theo CA DẠY)
-export const timeSlots = mysqlTable("time_slots", {
+// ==================== TIME MANAGEMENT SYSTEM ====================
+
+// Tutor Availability (Thời gian rảnh định kỳ của gia sư)
+export const tutorAvailability = mysqlTable("tutor_availability", {
   id: serial("id").primaryKey(),
   tutorId: int("tutor_id").notNull(),
-  dayOfWeek: int("day_of_week").notNull(), // 0=CN, 1=T2, ..., 6=T7
+  recurringDays: varchar("recurring_days", { length: 100 }), // JSON array string e.g. "[1,3,5]" for Mon/Wed/Fri
   shiftType: varchar("shift_type", { length: 20 }).notNull(), // "morning", "afternoon", "evening"
-  startTime: varchar("start_time", { length: 5 }).notNull(), // "HH:MM"
-  endTime: varchar("end_time", { length: 5 }).notNull(), // "HH:MM"
-  isAvailable: int("is_available").notNull().default(1), // 1=rảnh, 0=đã đặt/không có
+  startTime: varchar("start_time", { length: 10 }).notNull(), // "HH:MM" or TIME
+  endTime: varchar("end_time", { length: 10 }).notNull(), // "HH:MM" or TIME
+  isActive: int("is_active").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
-});
+}, (table) => ({
+  tutorRecurringIdx: index("idx_tutor_recurring").on(table.tutorId, table.recurringDays),
+  activeIdx: index("idx_active").on(table.isActive),
+}));
 
-export const insertTimeSlotSchema = createInsertSchema(timeSlots, {
+export const insertTutorAvailabilitySchema = createInsertSchema(tutorAvailability, {
   tutorId: z.number().int().positive(),
-  dayOfWeek: z.number().int().min(0).max(6),
+  recurringDays: z.string().min(1, "Vui lòng chọn ít nhất 1 ngày"), // JSON array string e.g. "[1,3,5]"
   shiftType: z.enum(["morning", "afternoon", "evening"]),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  isAvailable: z.number().int().min(0).max(1).optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Giờ phải có định dạng HH:MM"),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Giờ phải có định dạng HH:MM"),
+  isActive: z.number().int().min(0).max(1).optional(),
 }).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const selectTimeSlotSchema = createSelectSchema(timeSlots);
+export type InsertTutorAvailability = z.infer<typeof insertTutorAvailabilitySchema>;
+export type TutorAvailability = typeof tutorAvailability.$inferSelect;
 
-export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
-export type TimeSlot = typeof timeSlots.$inferSelect;
+// Availability Exceptions (Ngoại lệ thời gian rảnh)
+export const availabilityExceptions = mysqlTable("availability_exceptions", {
+  id: serial("id").primaryKey(),
+  tutorId: int("tutor_id").notNull(),
+  exceptionDate: varchar("exception_date", { length: 15 }).notNull(), // "YYYY-MM-DD"
+  exceptionType: varchar("exception_type", { length: 20 }).notNull(), // "blocked", "available"
+  startTime: varchar("start_time", { length: 10 }),
+  endTime: varchar("end_time", { length: 10 }),
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  tutorDateIdx: index("idx_tutor_date").on(table.tutorId, table.exceptionDate),
+}));
+
+export const insertAvailabilityExceptionSchema = createInsertSchema(availabilityExceptions, {
+  tutorId: z.number().int().positive(),
+  exceptionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  exceptionType: z.enum(["blocked", "available"]),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  reason: z.string().max(255).optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAvailabilityException = z.infer<typeof insertAvailabilityExceptionSchema>;
+export type AvailabilityException = typeof availabilityExceptions.$inferSelect;
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -306,9 +446,9 @@ export function calculateFee(startTime: string, endTime: string, hourlyRate: num
 export const students = mysqlTable("students", {
   id: serial("id").primaryKey(),
   userId: int("user_id").notNull().unique(), // References users.id
-  fullName: varchar("full_name", { length: 255 }).notNull(),
-  avatar: text("avatar"),
-  phone: varchar("phone", { length: 20 }),
+  // ❌ REMOVED: fullName (get from users.full_name)
+  // ❌ REMOVED: avatar (get from users.avatar)
+  // ❌ REMOVED: phone (get from users.phone)
   dateOfBirth: varchar("date_of_birth", { length: 15 }), // YYYY-MM-DD
   gradeLevelId: int("grade_level_id"), // FK → grade_levels.id
   parentName: varchar("parent_name", { length: 255 }),
@@ -320,9 +460,7 @@ export const students = mysqlTable("students", {
 
 export const insertStudentSchema = createInsertSchema(students, {
   userId: z.number().int().positive(),
-  fullName: z.string().min(1).max(255),
-  avatar: z.string().url().optional(),
-  phone: z.string().max(20).optional(),
+  // ❌ REMOVED: fullName, phone, avatar validations
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   gradeLevelId: z.number().int().positive().optional(),
   parentName: z.string().max(255).optional(),
@@ -855,8 +993,8 @@ export const videoCallSessions = mysqlTable("video_call_sessions", {
   studentId: int("student_id").notNull(), // FK → users.id
   roomName: varchar("room_name", { length: 100 }).notNull().unique(), // Unique Jitsi room name
   accessToken: varchar("access_token", { length: 500 }).notNull().unique(), // Unique access token for this session
-  tutorToken: varchar("tutor_token", { length: 500 }).notNull(), // JWT token for tutor (moderator)
-  studentToken: varchar("student_token", { length: 500 }).notNull(), // JWT token for student (participant)
+  tutorToken: text("tutor_token").notNull(), // JWT token for tutor (moderator) - TEXT to support long JWTs (500+ chars)
+  studentToken: text("student_token").notNull(), // JWT token for student (participant) - TEXT to support long JWTs (500+ chars)
   scheduledStartTime: timestamp("scheduled_start_time").notNull(), // When class is scheduled to start
   scheduledEndTime: timestamp("scheduled_end_time").notNull(), // When class is scheduled to end
   tutorJoinedAt: timestamp("tutor_joined_at"), // When tutor actually joined
@@ -873,6 +1011,7 @@ export const videoCallSessions = mysqlTable("video_call_sessions", {
   ipAddresses: text("ip_addresses"), // JSON array of IP addresses that accessed this session
   recordingUrl: varchar("recording_url", { length: 500 }), // Optional: recording URL if enabled
   notes: text("notes"), // Admin or system notes
+  provider: varchar("provider", { length: 20 }).notNull().default("jitsi"), // videolify, jitsi (for group or fallback)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
 });
@@ -885,8 +1024,8 @@ export const insertVideoCallSessionSchema = createInsertSchema(videoCallSessions
   studentId: z.number().int().positive(),
   roomName: z.string().min(10).max(100),
   accessToken: z.string().min(20).max(500),
-  tutorToken: z.string().min(20).max(500),
-  studentToken: z.string().min(20).max(500),
+  tutorToken: z.string().min(20).max(1000), // Jitsi JWTs can be 500+ characters
+  studentToken: z.string().min(20).max(1000), // Jitsi JWTs can be 500+ characters
   scheduledStartTime: z.date().or(z.string()),
   scheduledEndTime: z.date().or(z.string()),
   status: z.enum(['pending', 'active', 'completed', 'expired', 'cancelled']).optional(),
@@ -895,21 +1034,5 @@ export const insertVideoCallSessionSchema = createInsertSchema(videoCallSessions
   canTutorJoin: z.number().int().min(0).max(1).optional(),
   expiresAt: z.date().or(z.string()),
   notes: z.string().optional(),
-}).omit({
-  id: true,
-  tutorJoinedAt: true,
-  studentJoinedAt: true,
-  tutorLeftAt: true,
-  studentLeftAt: true,
-  sessionEndedAt: true,
-  usedCount: true,
-  ipAddresses: true,
-  recordingUrl: true,
-  createdAt: true,
-  updatedAt: true,
+  provider: z.enum(['videolify', 'jitsi']).optional(),
 });
-
-export const selectVideoCallSessionSchema = createSelectSchema(videoCallSessions);
-
-export type InsertVideoCallSession = z.infer<typeof insertVideoCallSessionSchema>;
-export type VideoCallSession = typeof videoCallSessions.$inferSelect;

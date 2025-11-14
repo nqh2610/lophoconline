@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
     // Return simplified tutor data for autocomplete
     const suggestions = tutors.map(tutor => ({
       id: tutor.id,
-      name: tutor.fullName,
-      avatar: tutor.avatar,
+      name: (tutor as any).fullName || 'Gia sư', // ✅ From users table
+      avatar: (tutor as any).avatar, // ✅ From users table
       rating: tutor.rating,
       hourlyRate: tutor.hourlyRate,
-      occupation: tutor.occupation,
+      occupation: (tutor as any).occupation, // Occupation object {id, label}
       verified: tutor.verificationStatus === 'verified',
       // Include a preview of subjects (will be in tutorSubjects)
       subjects: [] as string[],

@@ -152,13 +152,13 @@ Sau khi chạy `npm run seed`, hệ thống tạo 3 tài khoản test với 3 va
 
 ### 🎯 3 Tài khoản Test Chính
 
-**Password cho tất cả:** `123456`
+**Password cho tất cả:** `Test1234`
 
 #### 1️⃣ Admin (Quản trị viên)
 ```
 Username: admin
 Email: admin@test.com
-Password: 123456
+Password: Test1234
 Dashboard: /admin
 ```
 
@@ -173,7 +173,7 @@ Dashboard: /admin
 ```
 Username: student
 Email: student@test.com
-Password: 123456
+Password: Test1234
 Dashboard: /student/dashboard
 ```
 
@@ -184,15 +184,20 @@ Dashboard: /student/dashboard
 - Đánh giá gia sư
 - Quản lý hồ sơ cá nhân
 
-#### 3️⃣ Tutor (Gia sư)
+#### 3️⃣ Tutor (Gia sư - TÀI KHOẢN TEST ĐĂNG KÝ)
 ```
 Username: tutor
 Email: tutor@test.com
-Password: 123456
-Dashboard: /tutor/dashboard
+Password: Test1234
+Registration: /tutor-registration
 ```
 
-**Chức năng:**
+**⚠️ Lưu ý quan trọng:**
+- Tài khoản này **CHƯA CÓ hồ sơ gia sư**
+- Dùng để **test luồng đăng ký gia sư** (tutor registration flow)
+- Sau khi đăng ký xong sẽ có dashboard: `/tutor/dashboard`
+
+**Chức năng (sau khi đăng ký):**
 - Xác nhận/từ chối yêu cầu đặt lịch
 - Quản lý lịch dạy và lịch rảnh
 - Xem danh sách học viên

@@ -1,0 +1,331 @@
+/**
+ * Videolify Signaling Server
+ * Socket.IO server for WebRTC P2P signaling
+ * Embedded version optimized for LopHocTrucTuyen
+ */
+
+import { Server as SocketIOServer } from 'socket.io';
+import { Server as HTTPServer } from 'http';
+import { db } from './db';
+import { videoCallSessions } from './schema';
+import { eq } from 'drizzle-orm';
+
+// Track active rooms and peers
+const rooms: Map<string, Set<string>> = new Map();
+const peers: Map<string, {
+  socketId: string;
+  peerId: string;
+  peerName: string;
+  role: 'tutor' | 'student';
+  roomId: string;
+}> = new Map();
+
+let io: SocketIOServer | null = null;
+
+/**
+ * Initialize Videolify Socket.IO server
+ */
+export function initVideolifyServer(httpServer: HTTPServer) {
+  if (io) {
+    console.log('[Videolify] Server already initialized');
+    return io;
+  }
+
+  io = new SocketIOServer(httpServer, {
+    path: '/videolify-socket',
+    cors: {
+      origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
+    transports: ['websocket', 'polling'],
+    maxHttpBufferSize: 1e7, // 10MB for file sharing
+  });
+
+  console.log('[Videolify] Socket.IO server initialized');
+
+  // Connection handler
+  io.on('connection', (socket) => {
+    console.log(`[Videolify] Client connected: ${socket.id}`);
+
+    // Join room
+    socket.on('join', async (config: {
+      room_id: string;
+      peer_name: string;
+      access_token: string;
+      peer_video: boolean;
+      peer_audio: boolean;
+    }) => {
+      try {
+        const { room_id, peer_name, access_token, peer_video, peer_audio } = config;
+
+        // Verify session exists and is valid
+        const [session] = await db
+          .select()
+          .from(videoCallSessions)
+          .where(eq(videoCallSessions.accessToken, access_token))
+          .limit(1);
+
+        if (!session) {
+          socket.emit('error', { message: 'Invalid access token' });
+          return;
+        }
+
+        if (session.status === 'expired' || session.status === 'cancelled') {
+          socket.emit('error', { message: 'Session has expired or been cancelled' });
+          return;
+        }
+
+        // Check expiration
+        const now = new Date();
+        const expiresAt = new Date(session.expiresAt);
+        if (now > expiresAt) {
+          await db
+            .update(videoCallSessions)
+            .set({ status: 'expired' })
+            .where(eq(videoCallSessions.id, session.id));
+          
+          socket.emit('error', { message: 'Session has expired' });
+          return;
+        }
+
+        // Determine role based on user ID
+        // This would need to be passed in config or derived from access_token
+        const role = session.tutorId.toString() === peer_name ? 'tutor' : 'student';
+
+        // Store peer info
+        peers.set(socket.id, {
+          socketId: socket.id,
+          peerId: socket.id,
+          peerName: peer_name,
+          role,
+          roomId: room_id,
+        });
+
+        // Join Socket.IO room
+        socket.join(room_id);
+
+        // Add to room tracking
+        if (!rooms.has(room_id)) {
+          rooms.set(room_id, new Set());
+        }
+        rooms.get(room_id)!.add(socket.id);
+
+        // Get existing peers in room
+        const existingPeers = Array.from(rooms.get(room_id)!)
+          .filter(id => id !== socket.id)
+          .map(id => peers.get(id))
+          .filter(Boolean);
+
+        // Notify existing peers about new peer
+        socket.to(room_id).emit('addPeer', {
+          peer_id: socket.id,
+          peer_name,
+          peer_video,
+          peer_audio,
+          should_create_offer: true,
+        });
+
+        // Send existing peers to new peer
+        existingPeers.forEach(peer => {
+          socket.emit('addPeer', {
+            peer_id: peer!.socketId,
+            peer_name: peer!.peerName,
+            peer_video: true,
+            peer_audio: true,
+            should_create_offer: false,
+          });
+        });
+
+        // Update session status
+        if (role === 'tutor') {
+          await db
+            .update(videoCallSessions)
+            .set({
+              tutorJoinedAt: new Date(),
+              status: 'active',
+            })
+            .where(eq(videoCallSessions.id, session.id));
+        } else {
+          await db
+            .update(videoCallSessions)
+            .set({
+              studentJoinedAt: new Date(),
+              status: 'active',
+            })
+            .where(eq(videoCallSessions.id, session.id));
+        }
+
+        console.log(`[Videolify] ${peer_name} (${role}) joined room ${room_id}`);
+      } catch (error) {
+        console.error('[Videolify] Join error:', error);
+        socket.emit('error', { message: 'Failed to join room' });
+      }
+    });
+
+    // Relay SDP (offer/answer)
+    socket.on('relaySDP', (config: {
+      peer_id: string;
+      session_description: RTCSessionDescriptionInit;
+    }) => {
+      const { peer_id, session_description } = config;
+      socket.to(peer_id).emit('sessionDescription', {
+        peer_id: socket.id,
+        session_description,
+      });
+    });
+
+    // Relay ICE candidates
+    socket.on('relayICE', (config: {
+      peer_id: string;
+      ice_candidate: RTCIceCandidateInit;
+    }) => {
+      const { peer_id, ice_candidate } = config;
+      socket.to(peer_id).emit('iceCandidate', {
+        peer_id: socket.id,
+        ice_candidate,
+      });
+    });
+
+    // Peer status updates (video/audio on/off)
+    socket.on('peerStatus', (config: {
+      room_id: string;
+      element: string; // 'video' | 'audio' | 'screen' | 'hand'
+      status: boolean;
+    }) => {
+      const peer = peers.get(socket.id);
+      if (peer) {
+        socket.to(config.room_id).emit('peerStatus', {
+          peer_id: socket.id,
+          peer_name: peer.peerName,
+          element: config.element,
+          status: config.status,
+        });
+      }
+    });
+
+    // Whiteboard updates
+    socket.on('wbCanvasToJson', (config: {
+      room_id: string;
+      wbCanvasJson: string;
+    }) => {
+      socket.to(config.room_id).emit('wbCanvasToJson', {
+        peer_name: peers.get(socket.id)?.peerName,
+        wbCanvasJson: config.wbCanvasJson,
+      });
+    });
+
+    // Chat messages
+    socket.on('message', (config: {
+      room_id: string;
+      peer_name: string;
+      message: string;
+      to_peer_id?: string; // For private messages
+    }) => {
+      if (config.to_peer_id) {
+        // Private message
+        socket.to(config.to_peer_id).emit('message', config);
+      } else {
+        // Broadcast to room
+        socket.to(config.room_id).emit('message', config);
+      }
+    });
+
+    // File sharing
+    socket.on('fileInfo', (config: {
+      room_id: string;
+      peer_name: string;
+      file: {
+        fileName: string;
+        fileSize: number;
+        fileType: string;
+      };
+      to_peer_id?: string;
+    }) => {
+      if (config.to_peer_id) {
+        socket.to(config.to_peer_id).emit('fileInfo', config);
+      } else {
+        socket.to(config.room_id).emit('fileInfo', config);
+      }
+    });
+
+    // Disconnect handler
+    socket.on('disconnect', async () => {
+      const peer = peers.get(socket.id);
+      if (peer) {
+        const { roomId, role } = peer;
+
+        // Remove from room
+        const room = rooms.get(roomId);
+        if (room) {
+          room.delete(socket.id);
+          if (room.size === 0) {
+            rooms.delete(roomId);
+          }
+        }
+
+        // Notify others
+        socket.to(roomId).emit('removePeer', {
+          peer_id: socket.id,
+        });
+
+        // Update session
+        try {
+          const [session] = await db
+            .select()
+            .from(videoCallSessions)
+            .where(eq(videoCallSessions.roomName, roomId))
+            .limit(1);
+
+          if (session) {
+            const updates: any = {};
+            
+            if (role === 'tutor') {
+              updates.tutorLeftAt = new Date();
+            } else {
+              updates.studentLeftAt = new Date();
+            }
+
+            // If both left, mark as completed
+            if (session.tutorLeftAt || session.studentLeftAt) {
+              updates.status = 'completed';
+              updates.sessionEndedAt = new Date();
+            }
+
+            await db
+              .update(videoCallSessions)
+              .set(updates)
+              .where(eq(videoCallSessions.id, session.id));
+          }
+        } catch (error) {
+          console.error('[Videolify] Error updating session on disconnect:', error);
+        }
+
+        peers.delete(socket.id);
+        console.log(`[Videolify] ${peer.peerName} (${role}) left room ${roomId}`);
+      }
+    });
+  });
+
+  return io;
+}
+
+/**
+ * Get Socket.IO server instance
+ */
+export function getVideolifyServer(): SocketIOServer | null {
+  return io;
+}
+
+/**
+ * Shutdown Videolify server
+ */
+export function shutdownVideolifyServer() {
+  if (io) {
+    io.close();
+    io = null;
+    rooms.clear();
+    peers.clear();
+    console.log('[Videolify] Server shutdown');
+  }
+}

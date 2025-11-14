@@ -65,6 +65,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Lấy danh sách enrollments
+    // ✅ FIXED: Join với users table để lấy fullName, avatar, phone
+    // Note: Drizzle doesn't support table aliases well, so we'll query base data first
+    // then enrich with user info in a second step
+    
     const enrollments = await db
       .select({
         enrollmentId: classEnrollments.id,
@@ -80,14 +84,8 @@ export async function GET(request: NextRequest) {
         startDate: classEnrollments.startDate,
         endDate: classEnrollments.endDate,
         createdAt: classEnrollments.createdAt,
-        // Student info
-        studentName: students.fullName,
-        studentAvatar: students.avatar,
-        studentPhone: students.phone,
+        // IDs to lookup user info
         studentUserId: students.userId,
-        // Tutor info
-        tutorName: tutors.fullName,
-        tutorAvatar: tutors.avatar,
         tutorUserId: tutors.userId,
         // Subject & Grade
         subjectName: subjects.name,
@@ -103,9 +101,36 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
+    // Get all unique user IDs to fetch in one query
+    const userIds = new Set<number>();
+    enrollments.forEach(e => {
+      if (e.studentUserId) userIds.add(e.studentUserId);
+      if (e.tutorUserId) userIds.add(e.tutorUserId);
+    });
+
+    // Fetch all user data at once
+    const userDataMap = new Map<number, any>();
+    if (userIds.size > 0) {
+      const userData = await db
+        .select({
+          id: users.id,
+          fullName: users.fullName,
+          avatar: users.avatar,
+          phone: users.phone,
+        })
+        .from(users)
+        .where(sql`${users.id} IN (${Array.from(userIds).join(',')})`);
+      
+      userData.forEach(u => userDataMap.set(u.id, u));
+    }
+
     // 5. Lấy thông tin chi tiết cho từng enrollment
     const enrollmentDetails = await Promise.all(
       enrollments.map(async (enrollment) => {
+        // Get user info from map
+        const studentUser = enrollment.studentUserId ? userDataMap.get(enrollment.studentUserId) : null;
+        const tutorUser = enrollment.tutorUserId ? userDataMap.get(enrollment.tutorUserId) : null;
+
         // 5.1. Payment info
         const payment = await db
           .select()
@@ -182,15 +207,15 @@ export async function GET(request: NextRequest) {
           student: {
             id: enrollment.studentId,
             userId: enrollment.studentUserId,
-            name: enrollment.studentName || 'N/A',
-            avatar: enrollment.studentAvatar,
-            phone: enrollment.studentPhone,
+            name: studentUser?.fullName || 'N/A',
+            avatar: studentUser?.avatar,
+            phone: studentUser?.phone,
           },
           tutor: {
             id: enrollment.tutorId,
             userId: enrollment.tutorUserId,
-            name: enrollment.tutorName || 'N/A',
-            avatar: enrollment.tutorAvatar,
+            name: tutorUser?.fullName || 'N/A',
+            avatar: tutorUser?.avatar,
           },
           subject: enrollment.subjectName || 'N/A',
           gradeLevel: enrollment.gradeLevelName || 'N/A',
@@ -253,14 +278,32 @@ export async function GET(request: NextRequest) {
         status: payoutRequests.status,
         requestNote: payoutRequests.requestNote,
         createdAt: payoutRequests.createdAt,
-        tutorName: tutors.fullName,
-        tutorAvatar: tutors.avatar,
+        tutorUserId: tutors.userId,
       })
       .from(payoutRequests)
       .leftJoin(tutors, eq(payoutRequests.tutorId, tutors.id))
       .where(eq(payoutRequests.status, 'pending'))
       .orderBy(desc(payoutRequests.createdAt))
       .limit(20);
+
+    // Get tutor user info for payouts
+    const payoutTutorUserIds = pendingPayouts
+      .map(p => p.tutorUserId)
+      .filter((id): id is number => id !== null);
+    
+    const payoutTutorUsers = new Map<number, any>();
+    if (payoutTutorUserIds.length > 0) {
+      const tutorUserData = await db
+        .select({
+          id: users.id,
+          fullName: users.fullName,
+          avatar: users.avatar,
+        })
+        .from(users)
+        .where(sql`${users.id} IN (${payoutTutorUserIds.join(',')})`);
+      
+      tutorUserData.forEach(u => payoutTutorUsers.set(u.id, u));
+    }
 
     // 7. Tính toán tổng quan hệ thống
     const totalRevenue = enrollmentDetails.reduce(
@@ -326,21 +369,24 @@ export async function GET(request: NextRequest) {
         enrollments: enrollmentDetails,
 
         // Payout requests đang chờ
-        pendingPayouts: pendingPayouts.map((p) => ({
-          id: p.payoutId,
-          tutor: {
-            id: p.tutorId,
-            name: p.tutorName || 'N/A',
-            avatar: p.tutorAvatar,
-          },
-          amount: p.amount,
-          bankName: p.bankName,
-          bankAccount: p.bankAccount,
-          bankAccountName: p.bankAccountName,
-          status: p.status,
-          requestNote: p.requestNote,
-          createdAt: p.createdAt,
-        })),
+        pendingPayouts: pendingPayouts.map((p) => {
+          const tutorUser = p.tutorUserId ? payoutTutorUsers.get(p.tutorUserId) : null;
+          return {
+            id: p.payoutId,
+            tutor: {
+              id: p.tutorId,
+              name: tutorUser?.fullName || 'N/A',
+              avatar: tutorUser?.avatar,
+            },
+            amount: p.amount,
+            bankName: p.bankName,
+            bankAccount: p.bankAccount,
+            bankAccountName: p.bankAccountName,
+            status: p.status,
+            requestNote: p.requestNote,
+            createdAt: p.createdAt,
+          };
+        }),
 
         // Pagination info
         pagination: {

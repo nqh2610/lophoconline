@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +9,13 @@ import Link from "next/link";
 import type { Lesson } from "@/lib/schema";
 import { format, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useSession } from "next-auth/react";
 
 export default function StudentTimetable() {
-  // Get current user (mock - in real app would come from auth context)
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const studentId = currentUser.id || 'student-1';
+  const { data: session } = useSession();
+
+  // Get student ID from session (protected by middleware)
+  const studentId = session?.user?.id;
 
   // Fetch lessons
   const { data: lessons = [], isLoading } = useQuery<Lesson[]>({
@@ -206,8 +210,8 @@ export default function StudentTimetable() {
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             {getStatusBadge(lesson.status)}
-                            <p className="text-sm font-medium">
-                              {lesson.price.toLocaleString('vi-VN')}đ
+                            <p className="text-sm font-medium text-green-600">
+                              Miễn phí
                             </p>
                           </div>
                         </div>

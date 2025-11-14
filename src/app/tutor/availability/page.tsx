@@ -12,6 +12,7 @@ import { Calendar, Clock, Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { queryClient } from "@/lib/queryClient";
 import type { TutorAvailability } from "@/lib/schema";
+import { useSession } from "next-auth/react";
 import {
   Select,
   SelectContent,
@@ -48,16 +49,16 @@ const PRESETS = [
 
 export default function TutorAvailabilityManagement() {
   const { toast } = useToast();
+  const { data: session } = useSession();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+
   // Form state
   const [selectedDays, setSelectedDays] = useState<number[]>([1]);
   const [startTime, setStartTime] = useState("18:00");
   const [endTime, setEndTime] = useState("19:30");
 
-  // Get current user (mock - in real app would come from auth context)
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const tutorId = currentUser.id || 'tutor-1';
+  // Get tutor ID from session (protected by middleware)
+  const tutorId = session?.user?.id;
 
   // Fetch availability
   const { data: availability = [], isLoading } = useQuery<TutorAvailability[]>({

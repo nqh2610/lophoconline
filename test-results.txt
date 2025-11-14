@@ -1,0 +1,750 @@
+﻿
+đŸ€ Setting up test environment...
+
+Clearing all rooms from previous runs...
+âœ… Rooms cleared: All rooms cleared
+âœ… Test environment ready
+
+
+================================================================================
+đŸ§ª TEST 1: Basic Connection Establishment
+đŸ“ Verify both peers can connect and establish P2P connection
+================================================================================
+
+[A] Navigating to: http://localhost:3000/video-call/6a153ff371da509cabc2109e759a2afcd1bbe56f3ced55aaf77ef0cb88f1f5ae
+[Peer A] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[Peer A] Failed to load resource: the server responded with a status of 404 (Not Found)
+[Peer A] đŸ” [VideoCallPage] Joining with accessToken: 6a153ff371da509cabc2109e759a2afcd1bbe56f3ced55aaf77ef0cb88f1f5ae
+[Peer A] đŸ” [VideoCallPage] Joining with accessToken: 6a153ff371da509cabc2109e759a2afcd1bbe56f3ced55aaf77ef0cb88f1f5ae
+[Peer A] đŸ“¥ [VideoCallPage] API Response: JSHandle@object
+[Peer A] Warning: %s is deprecated in StrictMode. %s was passed an instance of %s which is inside StrictMode. Instead, add a ref directly to the element you want to reference. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-find-node%s findDOMNode findDOMNode DraggableCore 
+    at div
+    at DraggableCore (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/DraggableCore.js:75:5)
+    at Draggable (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/Draggable.js:84:5)
+    at div
+    at div
+    at div
+    at VideolifyFull (webpack-internal:///(app-pages-browser)/./src/components/VideolifyFull.tsx:80:11)
+    at VideoCallPage (webpack-internal:///(app-pages-browser)/./src/app/video-call/[accessToken]/page.tsx:24:78)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at div
+    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:34:15)
+    at TooltipProvider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:58:13)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/ThemeProvider.tsx:14:11)
+    at QueryClientProvider (webpack-internal:///(app-pages-browser)/./node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:27:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react/index.js:365:24)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:28:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+[Peer A] Warning: %s is deprecated in StrictMode. %s was passed an instance of %s which is inside StrictMode. Instead, add a ref directly to the element you want to reference. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-find-node%s findDOMNode findDOMNode Draggable 
+    at div
+    at DraggableCore (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/DraggableCore.js:75:5)
+    at Draggable (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/Draggable.js:84:5)
+    at div
+    at div
+    at div
+    at VideolifyFull (webpack-internal:///(app-pages-browser)/./src/components/VideolifyFull.tsx:80:11)
+    at VideoCallPage (webpack-internal:///(app-pages-browser)/./src/app/video-call/[accessToken]/page.tsx:24:78)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at div
+    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:34:15)
+    at TooltipProvider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:58:13)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/ThemeProvider.tsx:14:11)
+    at QueryClientProvider (webpack-internal:///(app-pages-browser)/./node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:27:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react/index.js:365:24)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:28:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+[Peer A] đŸ“¥ [VideoCallPage] API Response: JSHandle@object
+[A] Page loaded
+[Peer A] [Videolify] Local media initialized
+[Peer A] [Videolify] Joining room: trial-68-b0414fbe50dc as peer: peer-1762442330376-4e3no6n23
+[Peer A] [Videolify] Local media initialized
+[Peer A] [Videolify] Already joined room, skipping duplicate join
+[Peer A] đŸ’¾ [Videolify] Session state saved
+[Peer A] [Videolify] Joined room: JSHandle@object
+[Peer A] [Videolify] No existing peers, waiting for someone to join
+[Peer A] đŸ’¾ [Videolify] Session state saved
+[Peer A] Failed to load resource: the server responded with a status of 404 (Not Found)
+[Peer A] âœ… [Videolify] SSE connection opened
+[Peer A] âœ… [Videolify] SSE connection opened
+[B] Navigating to: http://localhost:3000/video-call/6a153ff371da509cabc2109e759a2afcd1bbe56f3ced55aaf77ef0cb88f1f5ae
+[Peer B] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[Peer B] Failed to load resource: the server responded with a status of 404 (Not Found)
+[Peer B] đŸ” [VideoCallPage] Joining with accessToken: 6a153ff371da509cabc2109e759a2afcd1bbe56f3ced55aaf77ef0cb88f1f5ae
+[Peer B] đŸ” [VideoCallPage] Joining with accessToken: 6a153ff371da509cabc2109e759a2afcd1bbe56f3ced55aaf77ef0cb88f1f5ae
+[B] Page loaded
+[Peer B] đŸ“¥ [VideoCallPage] API Response: JSHandle@object
+[Peer B] Warning: %s is deprecated in StrictMode. %s was passed an instance of %s which is inside StrictMode. Instead, add a ref directly to the element you want to reference. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-find-node%s findDOMNode findDOMNode DraggableCore 
+    at div
+    at DraggableCore (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/DraggableCore.js:75:5)
+    at Draggable (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/Draggable.js:84:5)
+    at div
+    at div
+    at div
+    at VideolifyFull (webpack-internal:///(app-pages-browser)/./src/components/VideolifyFull.tsx:80:11)
+    at VideoCallPage (webpack-internal:///(app-pages-browser)/./src/app/video-call/[accessToken]/page.tsx:24:78)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at div
+    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:34:15)
+    at TooltipProvider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:58:13)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/ThemeProvider.tsx:14:11)
+    at QueryClientProvider (webpack-internal:///(app-pages-browser)/./node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:27:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react/index.js:365:24)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:28:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+[Peer B] Warning: %s is deprecated in StrictMode. %s was passed an instance of %s which is inside StrictMode. Instead, add a ref directly to the element you want to reference. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-find-node%s findDOMNode findDOMNode Draggable 
+    at div
+    at DraggableCore (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/DraggableCore.js:75:5)
+    at Draggable (webpack-internal:///(app-pages-browser)/./node_modules/react-draggable/build/cjs/Draggable.js:84:5)
+    at div
+    at div
+    at div
+    at VideolifyFull (webpack-internal:///(app-pages-browser)/./src/components/VideolifyFull.tsx:80:11)
+    at VideoCallPage (webpack-internal:///(app-pages-browser)/./src/app/video-call/[accessToken]/page.tsx:24:78)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at div
+    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:34:15)
+    at TooltipProvider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:58:13)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/ThemeProvider.tsx:14:11)
+    at QueryClientProvider (webpack-internal:///(app-pages-browser)/./node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:27:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react/index.js:365:24)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:28:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+[Peer B] đŸ“¥ [VideoCallPage] API Response: JSHandle@object
+Checking connection states...
+State A: {
+  "channelStates": {
+    "whiteboard": "closed",
+    "chat": "closed",
+    "control": "closed",
+    "file": "closed"
+  },
+  "isConnecting": false,
+  "connectionStats": {
+    "iceState": "new",
+    "connected": false
+  },
+  "remotePeerId": null,
+  "hasRemoteVideo": false,
+  "hasLocalVideo": true
+}
+State B: {
+  "channelStates": {
+    "whiteboard": "closed",
+    "chat": "closed",
+    "control": "closed",
+    "file": "closed"
+  },
+  "isConnecting": true,
+  "connectionStats": {
+    "iceState": "new",
+    "connected": false
+  },
+  "remotePeerId": null,
+  "hasRemoteVideo": false,
+  "hasLocalVideo": false
+}
+Waiting for ICE negotiation (up to 60s)...
+[Peer B] [Videolify] Local media initialized
+[Peer B] [Videolify] Joining room: trial-68-b0414fbe50dc as peer: peer-1762442337345-q6v5jv91w
+[Peer B] [Videolify] Local media initialized
+[Peer B] [Videolify] Already joined room, skipping duplicate join
+[Peer B] đŸ’¾ [Videolify] Session state saved
+[Peer A] [Videolify] Peer joined event: JSHandle@object
+[Peer A] [Videolify] Remote peer ID saved: peer-1762442337345-q6v5jv91w
+[Peer A] [Videolify] Existing peer creating offer to new peer: peer-1762442337345-q6v5jv91w
+[Peer B] [Videolify] Joined room: JSHandle@object
+[Peer B] [Videolify] Found existing peer: peer-1762442330376-4e3no6n23
+[Peer B] [Videolify] Creating offer to existing peer (media will follow): peer-1762442330376-4e3no6n23
+[Peer A] [Videolify] Creating peer connection, createOffer: true
+[Peer B] [Videolify] Creating peer connection, createOffer: true
+[Peer A] [Videolify] Adding 2 local tracks to peer connection
+[Peer A] [Videolify] Adding track: audio
+[Peer A] [Videolify] Adding track: video
+[Peer A] đŸ¨ [Videolify] Setting up whiteboard channel, current state: connecting
+[Peer A] đŸ’¬ [Videolify] Setting up chat channel, current state: connecting
+[Peer A] đŸ›ï¸ [Videolify] Setting up control channel, current state: connecting
+[Peer A] đŸ“ [Videolify] Setting up file channel, current state: connecting
+[Peer A] [Videolify] Creating and sending offer to remotePeer: peer-1762442337345-q6v5jv91w
+[Peer A] [Videolify] Peer joined event: JSHandle@object
+[Peer A] [Videolify] Connection already exists, ignoring peer-joined
+[Peer A] [Videolify] Local description set (offer)
+[Peer A] [Videolify] ICE gathering state: gathering
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Offer sent to: peer-1762442337345-q6v5jv91w with messageId: offer-peer-1762442330376-4e3no6n23-1762442340892
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer B] [Videolify] Adding 2 local tracks to peer connection
+[Peer B] [Videolify] Adding track: audio
+[Peer B] [Videolify] Adding track: video
+[Peer B] đŸ¨ [Videolify] Setting up whiteboard channel, current state: connecting
+[Peer B] đŸ’¬ [Videolify] Setting up chat channel, current state: connecting
+[Peer B] đŸ›ï¸ [Videolify] Setting up control channel, current state: connecting
+[Peer B] đŸ“ [Videolify] Setting up file channel, current state: connecting
+[Peer B] [Videolify] Creating and sending offer to remotePeer: peer-1762442330376-4e3no6n23
+[Peer B] âœ… [Videolify] SSE connection opened
+[Peer B] [Videolify] Received offer from peer peer-1762442330376-4e3no6n23
+[Peer B] đŸ¤ [Videolify] Peer role assigned: IMPOLITE (local: peer-1762442337345-q6v5jv91w, remote: peer-1762442330376-4e3no6n23)
+[Peer B] â ï¸ [Videolify] IMPOLITE peer ignoring colliding offer
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] âœ… [Videolify] SSE connection opened
+[Peer B] [Videolify] Received offer from peer peer-1762442330376-4e3no6n23
+[Peer B] đŸ¤ [Videolify] Peer role assigned: IMPOLITE (local: peer-1762442337345-q6v5jv91w, remote: peer-1762442330376-4e3no6n23)
+[Peer B] â ï¸ [Videolify] IMPOLITE peer ignoring colliding offer
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Queuing ICE candidate - remote description not ready
+[Peer B] [Videolify] Local description set (offer)
+[Peer B] [Videolify] ICE gathering state: gathering
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] Failed to load resource: the server responded with a status of 404 (Not Found)
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Received offer from peer peer-1762442337345-q6v5jv91w
+[Peer A] đŸ¤ [Videolify] Peer role assigned: POLITE (local: peer-1762442330376-4e3no6n23, remote: peer-1762442337345-q6v5jv91w)
+[Peer A] đŸ”„ [Videolify] POLITE peer rolling back for incoming offer
+[Peer A] [Videolify] Received offer from peer peer-1762442337345-q6v5jv91w
+[Peer B] [Videolify] Offer sent to: peer-1762442330376-4e3no6n23 with messageId: offer-peer-1762442337345-q6v5jv91w-1762442343065
+[Peer A] đŸ¤ [Videolify] Peer role assigned: POLITE (local: peer-1762442330376-4e3no6n23, remote: peer-1762442337345-q6v5jv91w)
+[Peer B] đŸ’¾ [Videolify] Session state saved
+[Peer A] đŸ”„ [Videolify] POLITE peer rolling back for incoming offer
+[Peer A] [Videolify] Setting remote description (offer)
+[Peer A] âŒ [Videolify] Rollback failed: JSHandle@error
+[Peer A] [Videolify] Setting remote description (offer)
+[Peer A] [Videolify] ICE gathering state: new
+[Peer A] [Videolify] ontrack event fired!
+[Peer A] [Videolify] Track kind: audio
+[Peer A] [Videolify] Streams: JSHandle@array
+[Peer A] [Videolify] remoteVideoRef.current: JSHandle@node
+[Peer A] âœ… [Videolify] Remote video stream attached
+[Peer A] [Videolify] ontrack event fired!
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Track kind: video
+[Peer A] [Videolify] Streams: JSHandle@array
+[Peer A] [Videolify] remoteVideoRef.current: JSHandle@node
+[Peer A] âœ… [Videolify] Remote video stream attached
+[Peer A] [Videolify] signalingState after setRemoteDescription: have-remote-offer
+[Peer A] [Videolify] Creating answer...
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] signalingState after setRemoteDescription: have-remote-offer
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Creating answer...
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] Sending ICE candidate to signaling server
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Local description set (answer)
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Error handling offer: JSHandle@error
+[Peer A] [Videolify] Offer error stack: InvalidStateError: Failed to execute 'setLocalDescription' on 'RTCPeerConnection': Failed to set local answer sdp: Called in wrong state: stable
+[Peer A] [Videolify] ICE gathering state: gathering
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE connection state: checking
+[Peer A] [Videolify] Connection state: connecting
+[Peer A] đŸ”„ [Videolify] Connection establishing...
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] Sending ICE candidate to signaling server
+[Peer A] [Videolify] ICE connection state: connected
+[Peer A] âœ… [Videolify] ICE Connection established/restored
+[Peer A] [Videolify] ICE gathering state: complete
+[Peer A] âœ… [Videolify] ICE gathering completed successfully
+[Peer A] [Videolify] ICE gathering complete (null candidate)
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE connection state: checking
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] Connection state: connecting
+[Peer B] đŸ”„ [Videolify] Connection establishing...
+[Peer A] [Videolify] Answer sent to signaling server (targeted to: peer-1762442337345-q6v5jv91w )
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Received answer from peer peer-1762442330376-4e3no6n23
+[Peer B] [Videolify] Setting remote description (answer)
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Received answer from peer peer-1762442330376-4e3no6n23
+[Peer B] [Videolify] Setting remote description (answer)
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ontrack event fired!
+[Peer B] [Videolify] Track kind: audio
+[Peer B] [Videolify] Streams: JSHandle@array
+[Peer B] [Videolify] remoteVideoRef.current: JSHandle@node
+[Peer B] âœ… [Videolify] Remote video stream attached
+[Peer B] [Videolify] ontrack event fired!
+[Peer B] [Videolify] Track kind: video
+[Peer B] [Videolify] Streams: JSHandle@array
+[Peer B] [Videolify] remoteVideoRef.current: JSHandle@node
+[Peer B] âœ… [Videolify] Remote video stream attached
+[Peer B] [Videolify] Draining queued ICE candidates (answer): 54
+[Peer B] [Videolify] Error handling answer: JSHandle@error
+[Peer B] [Videolify] Answer error stack: InvalidStateError: Failed to execute 'setRemoteDescription' on 'RTCPeerConnection': Failed to set remote answer sdp: Called in wrong state: stable
+[Peer A] [Videolify] Connection state: connected
+[Peer A] âœ… [Videolify] P2P Connection Established - Server load now 0%
+[Peer A] âœ… [Videolify] Whiteboard DataChannel OPEN - Ready for P2P drawing
+[Peer A] âœ… [Videolify] Chat DataChannel OPEN - Ready for P2P messaging
+[Peer B] [Videolify] ICE connection state: connected
+[Peer B] âœ… [Videolify] ICE Connection established/restored
+[Peer A] âœ… [Videolify] Control DataChannel OPEN
+[Peer A] âœ… [Videolify] File DataChannel OPEN - Ready for P2P file transfer
+[Peer B] âœ… [Videolify] Whiteboard DataChannel OPEN - Ready for P2P drawing
+[Peer B] âœ… [Videolify] Chat DataChannel OPEN - Ready for P2P messaging
+[Peer B] âœ… [Videolify] Control DataChannel OPEN
+[Peer B] âœ… [Videolify] File DataChannel OPEN - Ready for P2P file transfer
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate sent
+[Peer B] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE gathering state: complete
+[Peer B] âœ… [Videolify] ICE gathering completed successfully
+[Peer B] [Videolify] ICE gathering complete (null candidate)
+[Peer B] [Videolify] Connection state: connected
+[Peer B] âœ… [Videolify] P2P Connection Established - Server load now 0%
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer B] [Videolify] Remote description set successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer B] [Videolify] ICE candidate sent
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] Adding ICE candidate
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully
+[Peer A] [Videolify] ICE candidate added successfully

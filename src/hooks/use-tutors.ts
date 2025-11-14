@@ -1,10 +1,14 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
-import type { Tutor, Subject, GradeLevel, TutorSubject, TimeSlot } from '@/lib/schema';
+import type { Tutor, Subject, GradeLevel, TutorSubject, TutorAvailability, Occupation } from '@/lib/schema';
 
 // Extended tutor type with related data
 export interface EnrichedTutor extends Tutor {
+  occupation?: Occupation;
   tutorSubjects?: Array<TutorSubject & { subject: Subject; gradeLevel: GradeLevel }>;
-  timeSlots?: TimeSlot[];
+  timeSlots?: TutorAvailability[];
+  avatar?: string | null; // ✅ From users table JOIN
+  fullName?: string | null; // ✅ From users table JOIN
+  phone?: string | null; // ✅ From users table JOIN
 }
 
 interface TutorFilters {
@@ -49,32 +53,40 @@ async function fetchTutors(filters?: TutorFilters): Promise<EnrichedTutor[]> {
 
   // Transform tutorSubjects to subjects format for easier consumption
   return data.map((tutor: any) => {
-    const tutorSubjectData = tutor.tutorSubjects || [];
+    // If backend returned joined tutorSubjects, prefer that
+    const tutorSubjectData = Array.isArray(tutor.tutorSubjects) ? tutor.tutorSubjects : [];
 
-    // Group by subject name and collect unique categories or grade levels
-    const subjectGroups = tutorSubjectData.reduce((acc: any, ts: any) => {
-      const subjectName = ts.subject?.name || ts.subjectName;
-      const category = ts.gradeLevel?.category || ts.category;
-      const gradeLevelName = ts.gradeLevel?.name || ts.gradeLevelName;
+    let subjects: Array<{ name: string; grades?: string }> = [];
 
-      if (!subjectName) return acc;
+    if (tutorSubjectData.length > 0) {
+      // Map joined rows to simple subjects list (dedupe by subject + join grade names)
+      const groups: Record<string, Set<string>> = {};
+      tutorSubjectData.forEach((ts: any) => {
+        const subjectName = ts?.subject?.name || ts.subjectName;
+        const gradeName = ts?.gradeLevel?.name || ts.gradeLevelName || '';
+        if (!subjectName) return;
+        groups[subjectName] = groups[subjectName] || new Set<string>();
+        if (gradeName) groups[subjectName].add(gradeName);
+      });
 
-      if (!acc[subjectName]) {
-        acc[subjectName] = new Set<string>();
+      subjects = Object.entries(groups).map(([name, gradesSet]) => ({
+        name,
+        grades: Array.from(gradesSet).join(', ')
+      }));
+    }
+
+    // Fallback: some tutors may still have legacy `subjects` JSON stored on tutors.subjects
+    // which has shape [{ subject, grades: string[] }]
+    if (subjects.length === 0 && tutor.subjects) {
+      try {
+        const parsed = typeof tutor.subjects === 'string' ? JSON.parse(tutor.subjects) : tutor.subjects;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          subjects = parsed.map((s: any) => ({ name: s.subject || s.name || '', grades: Array.isArray(s.grades) ? s.grades.join(', ') : s.grades || '' }));
+        }
+      } catch (e) {
+        // ignore parse errors and keep subjects empty
       }
-      // For category "Khác", show specific grade level instead
-      if (category === 'Khác') {
-        acc[subjectName].add(gradeLevelName);
-      } else {
-        acc[subjectName].add(category);
-      }
-      return acc;
-    }, {});
-
-    const subjects = Object.entries(subjectGroups).map(([name, items]: [string, any]) => ({
-      name,
-      grades: Array.from(items).join(', ')
-    }));
+    }
 
     return {
       ...tutor,
@@ -102,8 +114,8 @@ export function useTutors(
   return useQuery<EnrichedTutor[], Error>({
     queryKey: ['tutors', filters],
     queryFn: () => fetchTutors(filters),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60, // OPTIMIZED: 60 seconds (tutor list doesn't change often)
+    gcTime: 1000 * 60 * 5, // OPTIMIZED: 5 minutes (keep longer in memory)
     ...options,
   });
 }
@@ -117,8 +129,8 @@ export function useTutor(
     queryKey: ['tutor', id],
     queryFn: () => fetchTutorById(id!),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes - tutor info doesn't change often
+    gcTime: 1000 * 60 * 30, // 30 minutes
     ...options,
   });
 }
@@ -137,16 +149,33 @@ export function useSubjects() {
   });
 }
 
-// Hook to fetch grade levels
-export function useGradeLevels() {
+// Hook to fetch grade levels (optionally filtered by subjectId)
+export function useGradeLevels(subjectId?: number | null) {
   return useQuery<GradeLevel[], Error>({
-    queryKey: ['gradeLevels'],
+    queryKey: ['gradeLevels', subjectId],
     queryFn: async () => {
-      const response = await fetch('/api/grade-levels');
+      const url = subjectId
+        ? `/api/grade-levels?subjectId=${subjectId}`
+        : '/api/grade-levels';
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch grade levels');
       return response.json();
     },
     staleTime: 1000 * 60 * 60, // 1 hour (grade levels don't change often)
+    gcTime: 1000 * 60 * 120, // 2 hours
+  });
+}
+
+// Hook to fetch occupations
+export function useOccupations() {
+  return useQuery<Occupation[], Error>({
+    queryKey: ['occupations'],
+    queryFn: async () => {
+      const response = await fetch('/api/occupations');
+      if (!response.ok) throw new Error('Failed to fetch occupations');
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
     gcTime: 1000 * 60 * 120, // 2 hours
   });
 }

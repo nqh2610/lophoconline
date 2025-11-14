@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Get all lessons for this tutor
-    const allLessons = await storage.getLessonsByTutor(tutorId.toString());
+    const allLessons = await storage.getLessonsByTutor(tutorId);
 
     // Filter for pending lessons only
     const pendingLessons = allLessons.filter(lesson => lesson.status === 'pending');
@@ -47,7 +47,7 @@ export async function GET(
     }
 
     // Get student details for each pending lesson (using batch query to avoid N+1)
-    const studentIds = [...new Set(pendingLessons.map(l => parseInt(l.studentId)))];
+    const studentIds = [...new Set(pendingLessons.map(l => l.studentId))];
     const lessonIds = pendingLessons.map(l => l.id);
 
     const [students, transactions] = await Promise.all([
@@ -61,7 +61,7 @@ export async function GET(
 
     // Enrich pending lessons with student and transaction data
     const enrichedPendingLessons = pendingLessons.map(lesson => {
-      const student = studentsMap.get(parseInt(lesson.studentId));
+      const student = studentsMap.get(lesson.studentId);
       const transaction = transactionsMap.get(lesson.id);
 
       // Calculate how long the request has been pending
