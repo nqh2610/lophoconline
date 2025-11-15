@@ -14,17 +14,42 @@ const connections = new Map<string, {
 
 // Broadcast message to room
 export function broadcastToRoom(roomId: string, excludePeerId: string, event: string, data: any) {
+  let broadcastCount = 0;
   for (const [connectionId, conn] of connections.entries()) {
     if (conn.roomId === roomId && conn.peerId !== excludePeerId) {
       try {
         const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
         conn.controller.enqueue(new TextEncoder().encode(message));
+        broadcastCount++;
       } catch (err) {
         console.error('[SSE] Error broadcasting:', err);
         connections.delete(connectionId);
       }
     }
   }
+}
+
+// Send message to specific peer (unicast)
+export function sendToSpecificPeer(roomId: string, toPeerId: string, event: string, data: any) {
+  let sent = false;
+  for (const [connectionId, conn] of connections.entries()) {
+    if (conn.roomId === roomId && conn.peerId === toPeerId) {
+      try {
+        const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        conn.controller.enqueue(new TextEncoder().encode(message));
+        sent = true;
+        console.log(`[SSE] Unicast ${event} to peer ${toPeerId}`);
+        break; // Only send to first matching connection
+      } catch (err) {
+        console.error('[SSE] Error sending to peer:', err);
+        connections.delete(connectionId);
+      }
+    }
+  }
+  if (!sent) {
+    console.warn(`[SSE] Peer ${toPeerId} not found in room ${roomId}`);
+  }
+  return sent;
 }
 
 /**
@@ -45,10 +70,10 @@ export async function GET(request: NextRequest) {
   const stream = new ReadableStream({
     start(controller) {
       const connectionId = `${roomId}-${peerId}-${Date.now()}`;
-      
+
       // Store connection
       connections.set(connectionId, { controller, roomId, peerId });
-      
+
       // Send initial connection message
       const welcome = `event: connected\ndata: ${JSON.stringify({ peerId })}\n\n`;
       controller.enqueue(new TextEncoder().encode(welcome));

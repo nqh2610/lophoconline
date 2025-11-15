@@ -8,8 +8,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  
+  // Routes that should NOT have Navbar/Footer (fullscreen video calls)
+  const isFullscreenRoute = pathname?.startsWith('/video-call/') || pathname?.startsWith('/test-videolify');
+  
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -27,14 +33,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <TooltipProvider>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main className="flex-1">
+            {isFullscreenRoute ? (
+              // Fullscreen layout for video calls - no Navbar/Footer
+              <>
                 {children}
-              </main>
-              <Footer />
-            </div>
-            <Toaster />
+                <Toaster />
+              </>
+            ) : (
+              // Regular layout with Navbar/Footer
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster />
+              </div>
+            )}
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

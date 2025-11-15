@@ -104,6 +104,7 @@ export function VideolifyFull({
   const remoteVbgProcessorRef = useRef<VirtualBackgroundProcessor | null>(null); // For REMOTE peer video
   const originalStreamRef = useRef<MediaStream | null>(null); // Original local stream
   const remoteOriginalStreamRef = useRef<MediaStream | null>(null); // Original remote stream (before VBG)
+  const pendingRemoteVbgSettingsRef = useRef<any | null>(null); // Store VBG settings received before remote stream ready
   
   // Peer ID initialization - MUST be stable across StrictMode double-render
   const peerIdRef = useRef<string>('');
@@ -682,19 +683,23 @@ export function VideolifyFull({
         }
 
         // Connect SSE and join room regardless of media access
-        console.log('[Videolify] 📡 Connecting SSE...');
-        connectSSE();
+        console.log('[Videolify] 📡 Connecting SSE and waiting for ready...');
 
-        // Prevent duplicate joins from React StrictMode double-execution
-        console.log('[Videolify] 🔐 Checking hasJoinedRef:', hasJoinedRef.current);
-        if (!hasJoinedRef.current) {
-          hasJoinedRef.current = true; // Set BEFORE await to block StrictMode 2nd call
-          console.log('[Videolify] 🚪 Joining room...');
-          await joinRoom();
-          console.log('[Videolify] ✅ Join room completed');
-        } else {
-          console.log('[Videolify] ⏭️ Already joined, skipping duplicate join from StrictMode');
-        }
+        // ✅ Always connect SSE with callback - join room ONLY when SSE is ready
+        connectSSE(async () => {
+          console.log('[Videolify] ✅ SSE ready, now checking if we should join...');
+
+          // Prevent duplicate joins from React StrictMode double-execution
+          // Check INSIDE callback to ensure it runs after SSE is ready
+          if (!hasJoinedRef.current) {
+            hasJoinedRef.current = true; // Set to block duplicate calls
+            console.log('[Videolify] 🚪 Joining room...');
+            await joinRoom();
+            console.log('[Videolify] ✅ Join room completed');
+          } else {
+            console.log('[Videolify] ⏭️ Already joined, skipping duplicate join from StrictMode');
+          }
+        });
         
         // Save session state after successful join
         saveConnectionState();
@@ -1159,16 +1164,42 @@ export function VideolifyFull({
    * 2. SSE Connection - MINIMAL SERVER
    * Server CHỈ relay signaling messages
    */
-  function connectSSE() {
-    // CRITICAL: Skip if SSE already connected (React StrictMode double-render)
-    if (eventSourceRef.current && eventSourceRef.current.readyState === EventSource.OPEN) {
-      console.log('[Videolify] ✅ SSE already connected - skipping duplicate connection');
-      return;
-    }
-
-    // Close existing SSE connection if it's in error state
+  function connectSSE(onReady?: () => void) {
+    // CRITICAL: Skip if SSE already connected OR connecting (React StrictMode double-render)
     if (eventSourceRef.current) {
-      console.log('[Videolify] Closing existing SSE connection before creating new one');
+      const state = eventSourceRef.current.readyState;
+
+      if (state === EventSource.OPEN) {
+        console.log('[Videolify] ✅ SSE already connected - skipping duplicate connection');
+        // Call onReady immediately if already connected
+        if (onReady) {
+          console.log('[Videolify] SSE already open, calling onReady callback immediately');
+          onReady();
+        }
+        return;
+      }
+
+      if (state === EventSource.CONNECTING) {
+        console.log('[Videolify] ✅ SSE already connecting - skipping duplicate connection (React StrictMode)');
+        // Store onReady callback to call when connection opens
+        // Note: We don't have a callback queue, so just attach to existing eventSource
+        const existingEventSource = eventSourceRef.current;
+        if (onReady) {
+          // Add new onReady to existing onopen handler
+          const originalOnOpen = existingEventSource.onopen;
+          existingEventSource.onopen = (event) => {
+            if (originalOnOpen) {
+              originalOnOpen.call(existingEventSource, event);
+            }
+            console.log('[Videolify] SSE ready (from queued callback), calling onReady');
+            onReady();
+          };
+        }
+        return;
+      }
+
+      // Only close if in CLOSED state (error/closed)
+      console.log('[Videolify] Closing existing SSE connection (state: CLOSED)');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
@@ -1183,6 +1214,12 @@ export function VideolifyFull({
     eventSource.onopen = () => {
       console.log('✅ [Videolify] SSE connection opened');
       sseReconnectAttemptsRef.current = 0;
+
+      // ✅ Call onReady callback when connection is OPEN
+      if (onReady) {
+        console.log('[Videolify] SSE ready, calling onReady callback');
+        onReady();
+      }
     };
 
     // Peer joined - BOTH peers create offers (Perfect Negotiation handles collision)
@@ -1209,48 +1246,22 @@ export function VideolifyFull({
           peerLeftTimeRef.current = null;
         }
 
-        // Always save remote peer ID if we don't have one yet
-        if (!remotePeerIdRef.current) {
-          remotePeerIdRef.current = data.peerId;
-          console.log('[Videolify] Remote peer ID saved:', data.peerId);
-          
-          // 📡 CRITICAL FIX: Send current VBG settings to newly joined peer
-          if (virtualBgEnabled && backgroundMode !== 'none') {
-            console.log('📡 [VBG] New peer joined, sending current VBG settings...');
-            try {
-              const vbgData: any = {
-                enabled: true,
-                mode: backgroundMode,
-                toPeerId: data.peerId,
-              };
-              
-              if (backgroundMode === 'blur') {
-                vbgData.blurAmount = blurAmount;
-              } else if (backgroundMode === 'image') {
-                // Send background image URL from localStorage
-                const bgImage = localStorage.getItem('vbg-background-image');
-                if (bgImage) {
-                  vbgData.backgroundImage = bgImage;
-                  console.log('📡 [VBG] Including background image:', bgImage);
-                }
-              }
-              
-              await fetch('/api/videolify/signal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'vbg-settings',
-                  roomId,
-                  peerId: peerIdRef.current,
-                  data: vbgData,
-                }),
-              });
-              console.log('✅ [VBG] Current VBG settings sent to new peer');
-            } catch (err) {
-              console.error('❌ [VBG] Failed to send VBG settings to new peer:', err);
-            }
-          }
-        }
+        const isRejoin = remotePeerIdRef.current === data.peerId;
+        const isPeerF5 = remotePeerIdRef.current && remotePeerIdRef.current !== data.peerId;
+        
+        console.log('[Videolify] 🔍 peer-joined event:', {
+          newPeerId: data.peerId,
+          currentRemotePeerId: remotePeerIdRef.current,
+          isRejoin,
+          isPeerF5,
+          shouldInitiate: data.shouldInitiate,
+          hasConnection: !!peerConnectionRef.current,
+          virtualBgEnabled,
+          backgroundMode,
+        });
+        
+        // ✅ VBG will be sent when ICE connection becomes stable (see iceconnectionstatechange handler)
+        // No need to send here - peer might not be ready to receive yet
         
         // Check if connection exists
         const existingConnection = peerConnectionRef.current;
@@ -1287,46 +1298,37 @@ export function VideolifyFull({
           return;
         }
 
-        // If we don't have a connection yet AND server says initiate, create offer
-        // This handles the case where WE are the EXISTING peer
-        if (!peerConnectionRef.current && data.shouldInitiate) {
-          console.log('[Videolify] Existing peer creating offer to new peer:', data.peerId);
-          await createPeerConnection(true);
-        } else if (peerConnectionRef.current) {
-          // đŸ"„ F5 DETECTION: If we have a connection but to a DIFFERENT peer ID, close old and create new
-          console.log('[Videolify] DEBUG - Checking F5 scenario:', {
-            hasConnection: !!peerConnectionRef.current,
-            currentRemotePeerId: remotePeerIdRef.current,
-            newPeerId: data.peerId,
-            isDifferent: remotePeerIdRef.current !== data.peerId,
-          });
-          
+        // ✅ UNIFIED LOGIC: Treat initial join same as F5 rejoin
+        if (peerConnectionRef.current) {
+          // Has connection - check if F5 (different peer ID)
           if (remotePeerIdRef.current && remotePeerIdRef.current !== data.peerId) {
-            console.log('[Videolify] 🔥 F5 detected - different peer ID joined, closing old connection', {
+            console.log('[Videolify] 🔥 F5 detected - closing old connection', {
               oldPeerId: remotePeerIdRef.current,
               newPeerId: data.peerId,
             });
-            
-            // Close old connection
             peerConnectionRef.current.close();
             peerConnectionRef.current = null;
-            
-            // IMPORTANT: Clear remotePeerIdRef so we can accept offers from the new peer ID
-            // The new remotePeerIdRef will be set when we receive their offer
-            remotePeerIdRef.current = null;
-            
-            // Clear negotiation state
+            remotePeerIdRef.current = data.peerId;
             makingOfferRef.current = false;
             ignoreOfferRef.current = false;
-            
-            // Don't create offer yet - wait for the refreshed peer to send their offer
-            // This avoids targeting the wrong peer ID
-            console.log('[Videolify] Waiting for offer from refreshed peer with new ID:', data.peerId);
           } else {
-            console.log('[Videolify] Connection already exists, ignoring peer-joined');
+            console.log('[Videolify] Connection exists to same peer');
+            return;
           }
+        }
+        
+        // Now: No connection (initial join or F5 cleaned)
+        // ✅ CRITICAL: Set remote peer ID if not already set
+        if (!remotePeerIdRef.current) {
+          remotePeerIdRef.current = data.peerId;
+          console.log('[Videolify] Set remote peer ID:', data.peerId);
+        }
+        
+        if (data.shouldInitiate) {
+          console.log('[Videolify] Creating connection (we initiate):', data.peerId);
+          await createPeerConnection(true);
         } else {
-          console.log('[Videolify] No initiate flag, waiting for their offer');
+          console.log('[Videolify] Waiting for offer from peer:', data.peerId);
         }
       } catch (err) {
         console.error('[Videolify] Error handling peer-joined:', err);
@@ -1581,7 +1583,9 @@ export function VideolifyFull({
         console.log('📥 [VBG-DEBUG] Received VBG settings from peer:', data);
 
         if (!remoteOriginalStreamRef.current) {
-          console.warn('⚠️ [VBG-DEBUG] No remote stream available yet');
+          console.warn('⚠️ [VBG-DEBUG] No remote stream available yet - storing pending settings');
+          // ✅ CRITICAL FIX: Store pending settings to apply when remote stream becomes available
+          pendingRemoteVbgSettingsRef.current = data;
           return;
         }
 
@@ -1592,95 +1596,8 @@ export function VideolifyFull({
           return;
         }
 
-        if (data.enabled) {
-          console.log('✅ [VBG-DEBUG] Applying VBG to remote video...', { mode: data.mode, peerId });
-          // Apply VBG silently without loading state
-          
-          // Save peer's VBG config to localStorage
-          try {
-            localStorage.setItem(`peer-${peerId}-vbg-mode`, data.mode || 'blur');
-            localStorage.setItem(`peer-${peerId}-vbg-blur`, (data.blurAmount || 10).toString());
-            if (data.backgroundImage) {
-              localStorage.setItem(`peer-${peerId}-vbg-background`, data.backgroundImage);
-            }
-          } catch (err) {
-            // Silent fail
-          }
-
-          // Initialize remote VBG processor
-          if (!remoteVbgProcessorRef.current) {
-            console.log('🔧 [VBG-DEBUG] Creating remote VBG processor...');
-            remoteVbgProcessorRef.current = new VirtualBackgroundProcessor();
-            await remoteVbgProcessorRef.current.initialize();
-            console.log('✅ [VBG-DEBUG] Remote VBG processor initialized');
-          }
-
-          // Stop previous processing
-          if (remoteVbgProcessorRef.current) {
-            remoteVbgProcessorRef.current.stopProcessing();
-          }
-
-          // Load background image if provided
-          let backgroundImageElement: HTMLImageElement | undefined;
-          if (data.backgroundImage && data.mode === 'image') {
-            console.log('🖼️ [VBG-DEBUG] Loading background image...', data.backgroundImage.substring(0, 50));
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            try {
-              await new Promise<void>((resolve, reject) => {
-                img.onload = () => resolve();
-                img.onerror = () => reject(new Error('Failed to load background image'));
-                img.src = data.backgroundImage;
-              });
-              backgroundImageElement = img;
-              console.log('✅ [VBG-DEBUG] Background image loaded');
-            } catch (err) {
-              console.error('❌ [VBG-DEBUG] Failed to load background image:', err);
-            }
-          }
-
-          // Apply VBG to remote video
-          console.log('🎬 [VBG-DEBUG] Starting VBG processing on remote stream...');
-          const processedRemoteStream = await remoteVbgProcessorRef.current.startProcessing(
-            remoteOriginalStreamRef.current,
-            {
-              mode: data.mode || 'blur',
-              blurAmount: data.blurAmount || 10,
-              modelSelection: 1,
-              smoothing: 0.7,
-              backgroundImage: backgroundImageElement
-            }
-          );
-          console.log('✅ [VBG-DEBUG] VBG processing started');
-
-          // Update remote video with processed stream
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = processedRemoteStream;
-            console.log('✅ [VBG-DEBUG] Remote video srcObject updated to processed stream');
-          } else {
-            console.error('❌ [VBG-DEBUG] remoteVideoRef.current is null!');
-          }
-        } else {
-          // Remove peer's VBG config from localStorage
-          try {
-            localStorage.removeItem(`peer-${peerId}-vbg-mode`);
-            localStorage.removeItem(`peer-${peerId}-vbg-blur`);
-            localStorage.removeItem(`peer-${peerId}-vbg-background`);
-          } catch (err) {
-            // Silent fail
-          }
-
-          // Stop remote VBG processor
-          if (remoteVbgProcessorRef.current) {
-            remoteVbgProcessorRef.current.stopProcessing();
-            remoteVbgProcessorRef.current = null;
-          }
-
-          // Restore remote video srcObject to original stream
-          if (remoteVideoRef.current && remoteOriginalStreamRef.current) {
-            remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
-          }
-        }
+        // ✅ Call helper function to apply/disable VBG
+        await applyRemoteVbgSettings(data, peerId);
       } catch (err) {
         // Silent fail
       }
@@ -2061,7 +1978,24 @@ export function VideolifyFull({
           // ✅ STEP 5 (ontrack): Store original remote stream
           remoteOriginalStreamRef.current = event.streams[0];
           console.log('💾 [VBG] Remote original stream stored');
-          
+
+          // ✅ CRITICAL FIX: Apply pending VBG settings if received before stream ready
+          if (pendingRemoteVbgSettingsRef.current) {
+            console.log('📦 [VBG] Applying pending VBG settings received earlier:', pendingRemoteVbgSettingsRef.current);
+            const pendingData = pendingRemoteVbgSettingsRef.current;
+            const peerId = remotePeerIdRef.current;
+
+            if (peerId) {
+              // Apply pending settings
+              applyRemoteVbgSettings(pendingData, peerId).catch(err => {
+                console.error('❌ [VBG] Failed to apply pending VBG settings:', err);
+              });
+            }
+
+            // Clear pending settings
+            pendingRemoteVbgSettingsRef.current = null;
+          }
+
           // Monitor stream state
           const stream = event.streams[0];
           const checkStreamHealth = () => {
@@ -2316,6 +2250,50 @@ export function VideolifyFull({
             clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
           }
+          
+          // 📡 CRITICAL FIX: Send VBG settings when ICE connection is stable
+          // This ensures peer is ready to receive (SSE listener active)
+          // ✅ Read from localStorage directly to avoid state sync issues
+          const vbgEnabledLS = localStorage.getItem('vbg-enabled') === 'true';
+          const bgModeLS = localStorage.getItem('vbg-last-mode') || backgroundMode;
+          const bgImageLS = localStorage.getItem('vbg-background-image');
+          const blurAmountLS = parseInt(localStorage.getItem('vbg-blur-amount') || '10');
+          
+          if (vbgEnabledLS && bgModeLS !== 'none' && remotePeerIdRef.current) {
+            console.log('📡 [VBG] ICE stable - sending VBG settings to peer', {
+              mode: bgModeLS,
+              remotePeerId: remotePeerIdRef.current,
+              blurAmount: blurAmountLS,
+              hasBackgroundImage: !!bgImageLS,
+            });
+            
+            fetch('/api/videolify/signal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'vbg-settings',
+                roomId,
+                peerId: peerIdRef.current,
+                data: {
+                  enabled: true,
+                  mode: bgModeLS,
+                  blurAmount: bgModeLS === 'blur' ? blurAmountLS : undefined,
+                  backgroundImage: bgModeLS === 'image' ? bgImageLS : undefined,
+                  toPeerId: remotePeerIdRef.current,
+                },
+              }),
+            }).then(() => {
+              console.log('✅ [VBG] VBG settings sent after ICE stable');
+            }).catch(err => {
+              console.error('❌ [VBG] Failed to send VBG after ICE stable:', err);
+            });
+          } else {
+            console.log('⏭️ [VBG] Skipping VBG send:', {
+              vbgEnabledLS,
+              bgModeLS,
+              remotePeerId: remotePeerIdRef.current,
+            });
+          }
         }
       };
 
@@ -2356,34 +2334,8 @@ export function VideolifyFull({
         });
         console.log('[Videolify] Offer sent to:', remotePeerIdRef.current, 'with messageId:', messageId);
         
-        // 📡 CRITICAL FIX: Send current VBG settings to new peer
-        if (virtualBgEnabled && remotePeerIdRef.current) {
-          console.log('📡 [VBG] Sending current VBG settings to new peer');
-          try {
-            // Get current background image URL from localStorage if exists
-            const savedBackgroundImage = localStorage.getItem('vbg-background-image');
-            
-            await fetch('/api/videolify/signal', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'vbg-settings',
-                roomId,
-                peerId: peerIdRef.current,
-                data: {
-                  enabled: true,
-                  mode: backgroundMode,
-                  blurAmount: blurAmount,
-                  backgroundImage: savedBackgroundImage || undefined,
-                  toPeerId: remotePeerIdRef.current,
-                },
-              }),
-            });
-            console.log('✅ [VBG] Current VBG settings sent to new peer');
-          } catch (err) {
-            console.error('❌ [VBG] Failed to send VBG settings to new peer:', err);
-          }
-        }
+        // ✅ VBG will be sent when ICE connection becomes stable (see iceconnectionstatechange handler)
+        // This ensures peer is ready to receive the settings
       } else {
         console.log('[Videolify] Waiting to receive offer (answerer mode)');
       }
@@ -4827,6 +4779,105 @@ export function VideolifyFull({
   }
 
   /**
+   * Apply remote VBG settings received from peer via SSE
+   */
+  async function applyRemoteVbgSettings(data: any, peerId: string) {
+    if (!remoteOriginalStreamRef.current) {
+      console.warn('⚠️ [VBG-DEBUG] No remote stream available - cannot apply VBG');
+      return;
+    }
+
+    if (data.enabled) {
+      console.log('✅ [VBG-DEBUG] Applying VBG to remote video...', { mode: data.mode, peerId });
+
+      // Save peer's VBG config to localStorage
+      try {
+        localStorage.setItem(`peer-${peerId}-vbg-mode`, data.mode || 'blur');
+        localStorage.setItem(`peer-${peerId}-vbg-blur`, (data.blurAmount || 10).toString());
+        if (data.backgroundImage) {
+          localStorage.setItem(`peer-${peerId}-vbg-background`, data.backgroundImage);
+        }
+      } catch (err) {
+        // Silent fail
+      }
+
+      // Initialize remote VBG processor
+      if (!remoteVbgProcessorRef.current) {
+        console.log('🔧 [VBG-DEBUG] Creating remote VBG processor...');
+        remoteVbgProcessorRef.current = new VirtualBackgroundProcessor();
+        await remoteVbgProcessorRef.current.initialize();
+        console.log('✅ [VBG-DEBUG] Remote VBG processor initialized');
+      }
+
+      // Stop previous processing
+      if (remoteVbgProcessorRef.current) {
+        remoteVbgProcessorRef.current.stopProcessing();
+      }
+
+      // Load background image if provided
+      let backgroundImageElement: HTMLImageElement | undefined;
+      if (data.backgroundImage && data.mode === 'image') {
+        console.log('🖼️ [VBG-DEBUG] Loading background image...', data.backgroundImage.substring(0, 50));
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        try {
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('Failed to load background image'));
+            img.src = data.backgroundImage;
+          });
+          backgroundImageElement = img;
+          console.log('✅ [VBG-DEBUG] Background image loaded');
+        } catch (err) {
+          console.error('❌ [VBG-DEBUG] Failed to load background image:', err);
+        }
+      }
+
+      // Apply VBG to remote video
+      console.log('🎬 [VBG-DEBUG] Starting VBG processing on remote stream...');
+      const processedRemoteStream = await remoteVbgProcessorRef.current.startProcessing(
+        remoteOriginalStreamRef.current,
+        {
+          mode: data.mode || 'blur',
+          blurAmount: data.blurAmount || 10,
+          modelSelection: 1,
+          smoothing: 0.7,
+          backgroundImage: backgroundImageElement
+        }
+      );
+      console.log('✅ [VBG-DEBUG] VBG processing started');
+
+      // Update remote video with processed stream
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = processedRemoteStream;
+        console.log('✅ [VBG-DEBUG] Remote video srcObject updated to processed stream');
+      } else {
+        console.error('❌ [VBG-DEBUG] remoteVideoRef.current is null!');
+      }
+    } else {
+      // Disable VBG - remove peer's VBG config from localStorage
+      try {
+        localStorage.removeItem(`peer-${peerId}-vbg-mode`);
+        localStorage.removeItem(`peer-${peerId}-vbg-blur`);
+        localStorage.removeItem(`peer-${peerId}-vbg-background`);
+      } catch (err) {
+        // Silent fail
+      }
+
+      // Stop remote VBG processor
+      if (remoteVbgProcessorRef.current) {
+        remoteVbgProcessorRef.current.stopProcessing();
+        remoteVbgProcessorRef.current = null;
+      }
+
+      // Restore remote video srcObject to original stream
+      if (remoteVideoRef.current && remoteOriginalStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
+      }
+    }
+  }
+
+  /**
    * Apply VBG to remote peer video
    * Each peer processes their own received video independently
    */
@@ -5310,7 +5361,6 @@ export function VideolifyFull({
               <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-white text-sm font-medium">Đang áp dụng nền ảo...</p>
                 </div>
               </div>
             )}

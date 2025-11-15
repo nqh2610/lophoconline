@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { broadcastToRoom } from '../stream/route';
+import { broadcastToRoom, sendToSpecificPeer } from '../stream/route';
 
 // In-memory storage - CHỈ cho signaling, KHÔNG lưu chat/whiteboard
 const rooms = new Map<string, {
@@ -76,11 +76,11 @@ export async function POST(request: NextRequest) {
         // We identify stale peers by:
         // 1. Same userId (if not 0/anonymous)  
         // 2. Same userName in same room (for anonymous)
-        // 3. lastSeen > 10 seconds ago (stale connection)
+        // 3. lastSeen > 2 seconds ago (stale connection)
         // This prevents issues while allowing multiple users with same name
         
         const now = Date.now();
-        const STALE_THRESHOLD = 10000; // 10 seconds
+        const STALE_THRESHOLD = 2000; // 2 seconds (reduced from 10s for faster F5 reconnect)
         
         if (userId !== 0) {
           // Authenticated user: remove STALE peers with same userId
@@ -128,19 +128,37 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Videolify Signal] peer ${peerId} joined room ${roomId} @ ${new Date().toISOString()}`);
 
-        // ALWAYS broadcast to existing peers that new peer joined
-        // Tell them to create offer (both sides will create → Perfect Negotiation handles collision)
+        // CRITICAL FIX: Deterministically decide who should initiate offer
+        // Use peer ID comparison (same as Perfect Negotiation polite/impolite)
+        // Lower peer ID = initiates (same logic for both initial join and F5)
         if (existingPeers.length > 0) {
-          console.log(`[Videolify Signal] Broadcasting peer-joined to ${existingPeers.length} existing peers`);
+          const firstExistingPeer = existingPeers[0];
+
+          // Compare peer IDs lexicographically (same as Perfect Negotiation)
+          const newPeerShouldInitiate = peerId < firstExistingPeer.peerId;
+
+          console.log(`[Videolify Signal] Peer comparison: new=${peerId}, existing=${firstExistingPeer.peerId}`);
+          console.log(`[Videolify Signal] → ${newPeerShouldInitiate ? 'NEW' : 'EXISTING'} peer should initiate`);
+
+          // ✅ NO DELAY NEEDED: Client now waits for SSE onopen before joining
+          // This guarantees event listeners are ready when we broadcast
+          console.log(`[Videolify Signal] Broadcasting peer-joined to existing peers (immediately)`);
           broadcastToRoom(roomId, peerId, 'peer-joined', {
             peerId,
             userName,
             role: data.role || 'participant',
-            shouldInitiate: true, // Tell existing peer to create offer
+            shouldInitiate: !newPeerShouldInitiate, // Existing initiates if new peer ID is GREATER
+          });
+
+          // Return to new peer (tell them whether to initiate)
+          return NextResponse.json({
+            success: true,
+            peers: existingPeers,
+            shouldInitiate: newPeerShouldInitiate, // New peer initiates if its ID is SMALLER
           });
         }
 
-        // Return list of peers that were present BEFORE this join
+        // No existing peers - return empty list
         return NextResponse.json({
           success: true,
           peers: existingPeers,
@@ -154,13 +172,12 @@ export async function POST(request: NextRequest) {
           peer.lastSeen = Date.now();
           console.log(`[Videolify Signal] offer from ${peerId} to ${data.toPeerId || 'ALL'} in room ${roomId} @ ${new Date().toISOString()}`);
           
-          // Targeted broadcast: only send to specific peer if toPeerId provided
+          // Targeted unicast: send to specific peer if toPeerId provided
           if (data.toPeerId) {
-            // Unicast to target peer only
-            broadcastToRoom(roomId, peerId, 'offer', {
+            // ✅ UNICAST: Send only to target peer
+            sendToSpecificPeer(roomId, data.toPeerId, 'offer', {
               fromPeerId: peerId,
               offer: data.offer,
-              toPeerId: data.toPeerId,
             });
           } else {
             // Fallback: broadcast to all (legacy)
@@ -180,12 +197,12 @@ export async function POST(request: NextRequest) {
           answerPeer.lastSeen = Date.now();
           console.log(`[Videolify Signal] answer from ${peerId} to ${data.toPeerId || 'ALL'} in room ${roomId} @ ${new Date().toISOString()}`);
 
-          // Targeted broadcast: only send to specific peer if toPeerId provided
+          // Targeted unicast: send to specific peer if toPeerId provided
           if (data.toPeerId) {
-            broadcastToRoom(roomId, peerId, 'answer', {
+            // ✅ UNICAST: Send only to target peer
+            sendToSpecificPeer(roomId, data.toPeerId, 'answer', {
               fromPeerId: peerId,
               answer: data.answer,
-              toPeerId: data.toPeerId,
             });
           } else {
             // Fallback: broadcast to all
@@ -250,6 +267,47 @@ export async function POST(request: NextRequest) {
           reason: data.reason || 'page-reload',
           newPeerId: data.newPeerId,
         });
+        
+        return NextResponse.json({ success: true });
+
+      case 'vbg-settings':
+        // ✅ CRITICAL FIX: Broadcast Virtual Background settings to other peers
+        // Extract VBG data from nested 'data' object
+        const vbgData = data || {};
+        
+        console.log(`[Videolify Signal] 🎭 Broadcasting VBG settings from ${peerId} in room ${roomId}:`, {
+          enabled: vbgData.enabled,
+          mode: vbgData.mode,
+          hasImage: !!vbgData.backgroundImage,
+          toPeerId: vbgData.toPeerId
+        });
+        
+        // Update last seen
+        const vbgPeer = room.peers.get(peerId);
+        if (vbgPeer) {
+          vbgPeer.lastSeen = Date.now();
+        }
+        
+        // Prepare VBG data payload
+        const vbgPayload = {
+          fromPeerId: peerId,
+          enabled: vbgData.enabled,
+          mode: vbgData.mode,
+          blurAmount: vbgData.blurAmount,
+          backgroundImage: vbgData.backgroundImage,
+        };
+        
+        // Send to target peer or all peers
+        if (vbgData.toPeerId) {
+          // ✅ UNICAST: Send only to specific peer
+          const sent = sendToSpecificPeer(roomId, vbgData.toPeerId, 'vbg-settings', vbgPayload);
+          if (!sent) {
+            console.warn(`[Videolify Signal] ⚠️ Failed to send VBG settings to peer ${vbgData.toPeerId}`);
+          }
+        } else {
+          // ✅ BROADCAST: Send to all other peers in room
+          broadcastToRoom(roomId, peerId, 'vbg-settings', vbgPayload);
+        }
         
         return NextResponse.json({ success: true });
 
