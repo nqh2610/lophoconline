@@ -1327,7 +1327,7 @@ export function VideolifyFull({
             makingOfferRef.current = false;
             ignoreOfferRef.current = false;
           } else {
-            // Same peer - check if connection is actually connected
+            // Same peer - check connection state before deciding what to do
             const connState = peerConnectionRef.current.connectionState;
             const iceState = peerConnectionRef.current.iceConnectionState;
             
@@ -1336,13 +1336,19 @@ export function VideolifyFull({
               console.log('[Videolify] Set missing remote peer ID:', data.peerId);
             }
             
-            // Only return early if connection is ACTUALLY working
-            if (connState === 'connected' && (iceState === 'connected' || iceState === 'completed')) {
-              console.log('[Videolify] Connection exists and working to same peer - skipping');
+            // ✅ FIX: Only return early if BOTH connection AND ICE are FULLY established
+            // This prevents race condition where we skip negotiation too early
+            const isFullyConnected = connState === 'connected' && (iceState === 'connected' || iceState === 'completed');
+            const isNegotiating = connState === 'connecting' || connState === 'new' || iceState === 'checking' || iceState === 'new';
+            
+            if (isFullyConnected && !isNegotiating) {
+              console.log('[Videolify] Connection fully established - skipping duplicate peer-joined');
               return;
+            } else if (isNegotiating) {
+              console.log('[Videolify] Connection still negotiating - allowing fresh negotiation to avoid race condition');
+              // Don't return - let negotiation complete properly
             } else {
-              console.log('[Videolify] Connection exists but not working (conn:', connState, 'ice:', iceState, ') - recreating');
-              // Close and recreate
+              console.log('[Videolify] Connection exists but broken (conn:', connState, 'ice:', iceState, ') - recreating');
               peerConnectionRef.current.close();
               peerConnectionRef.current = null;
             }
