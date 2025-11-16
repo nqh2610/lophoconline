@@ -1652,9 +1652,9 @@ export function VideolifyFull({
           // SSE connection might have dropped temporarily (browser tab sleep, network hiccup, F5, etc.)
           // and will reconnect within 1-2 seconds. If we close channels now, P2P connection is lost forever.
           //
-          // Wait 2 seconds to see if peer reconnects (peer-joined event will cancel this timeout)
+          // Wait 1 second to see if peer reconnects (peer-joined event will cancel this timeout)
           const peerLeftTimeout = setTimeout(() => {
-            console.log('[Videolify] 2s grace period expired - peer did not reconnect, closing connection');
+            console.log('[Videolify] 1s grace period expired - peer did not reconnect, closing connection');
             setIsReconnecting(false);
 
             // ✅ Cleanup peer VBG config from localStorage
@@ -5477,7 +5477,7 @@ export function VideolifyFull({
                 <Video className="w-16 h-16 text-gray-400" />
               </div>
               <h3 className="text-2xl font-semibold text-white mb-2">
-                {isConnecting ? 'Đang kết nối...' : 'Đang chờ người khác tham gia'}
+                {(isConnecting || wasConnected || isReconnecting) ? 'Đang kết nối lại...' : 'Đang chờ người khác tham gia'}
               </h3>
               <p className="text-gray-400">
                 {isConnecting ? 'Vui lòng đợi trong giây lát' : 'Chia sẻ link phòng để mời người khác'}
