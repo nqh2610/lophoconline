@@ -333,6 +333,7 @@ export function VideolifyFull({
   const negotiationInProgressRef = useRef<boolean>(false);
   const channelTimeoutsRef = useRef<{[key: string]: NodeJS.Timeout}>({});
   const hasJoinedRef = useRef<boolean>(false); // Prevent double join
+  const usingDummyMediaRef = useRef<boolean>(false); // Track if using dummy tracks (permissions denied)
   
   // Read URL params for initial media state (from window.location)
   const getInitialMediaState = () => {
@@ -696,11 +697,13 @@ export function VideolifyFull({
             }
 
             localStreamRef.current = dummyStream;
+            usingDummyMediaRef.current = true; // Mark as using dummy tracks
             console.log('[Videolify] ✅ Dummy media stream created with', dummyStream.getTracks().length, 'tracks');
           } catch (dummyErr) {
             console.error('[Videolify] ❌ Failed to create dummy tracks:', dummyErr);
             // Fallback: empty stream (may cause connection issues)
             localStreamRef.current = new MediaStream();
+            usingDummyMediaRef.current = true;
           }
 
           // Update UI state to reflect no real media
@@ -5218,8 +5221,12 @@ export function VideolifyFull({
   const toggleVideo = async () => {
     if (localStreamRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        // Track exists - just toggle enable/disable
+      
+      // Check if this is a dummy track (from canvas, not real camera)
+      const isDummyTrack = usingDummyMediaRef.current && videoTrack?.label?.includes('canvas');
+      
+      if (videoTrack && !isDummyTrack) {
+        // Real track exists - just toggle enable/disable
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
         console.log(`🎥 [Videolify] Video ${videoTrack.enabled ? 'ON' : 'OFF'}`);
@@ -5244,8 +5251,17 @@ export function VideolifyFull({
           duration: 2000,
         });
       } else {
-        // No video track - request camera access
-        console.log('[Videolify] No video track, requesting camera access...');
+        // No real video track - request camera access
+        // This happens when: 1) No track at all, or 2) Dummy track from denied permissions
+        console.log('[Videolify] No real video track, requesting camera access...');
+        
+        // If there's a dummy track, remove it first
+        if (videoTrack && isDummyTrack) {
+          console.log('[Videolify] Removing dummy video track before requesting real camera');
+          localStreamRef.current.removeTrack(videoTrack);
+          videoTrack.stop();
+        }
+        
         try {
           const videoStream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -5276,20 +5292,43 @@ export function VideolifyFull({
             setIsVideoEnabled(true);
             console.log('🎥 [Videolify] Camera enabled');
             
+            // Mark as no longer using dummy media
+            usingDummyMediaRef.current = false;
+            
             toast({
               title: '📹 Camera đã bật',
               description: 'Người khác có thể nhìn thấy bạn',
               duration: 2000,
             });
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('[Videolify] Failed to access camera:', err);
-          toast({
-            title: '⚠️ Không thể truy cập camera',
-            description: 'Vui lòng cho phép quyền truy cập camera trong trình duyệt',
-            variant: 'destructive',
-            duration: 4000,
-          });
+          
+          // Detect permission denied vs other errors
+          const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
+          
+          if (isPermissionDenied) {
+            toast({
+              title: '🚫 Quyền camera bị từ chối',
+              description: 'Vui lòng click vào biểu tượng khóa 🔒 trên thanh địa chỉ → Cho phép Camera → Reload trang',
+              variant: 'destructive',
+              duration: 8000,
+            });
+          } else if (err.name === 'NotFoundError') {
+            toast({
+              title: '⚠️ Không tìm thấy camera',
+              description: 'Vui lòng kết nối camera và thử lại',
+              variant: 'destructive',
+              duration: 5000,
+            });
+          } else {
+            toast({
+              title: '⚠️ Không thể truy cập camera',
+              description: `Lỗi: ${err.message || 'Unknown error'}`,
+              variant: 'destructive',
+              duration: 5000,
+            });
+          }
         }
       }
     } else {
@@ -5300,8 +5339,12 @@ export function VideolifyFull({
   const toggleAudio = async () => {
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        // Track exists - just toggle enable/disable
+      
+      // Check if this is a dummy track (silent audio from AudioContext)
+      const isDummyTrack = usingDummyMediaRef.current && audioTrack && !audioTrack.label;
+      
+      if (audioTrack && !isDummyTrack) {
+        // Real track exists - just toggle enable/disable
         audioTrack.enabled = !audioTrack.enabled;
         setIsAudioEnabled(audioTrack.enabled);
         console.log(`🎤 [Videolify] Audio ${audioTrack.enabled ? 'ON' : 'OFF'}`);
@@ -5326,8 +5369,17 @@ export function VideolifyFull({
           duration: 2000,
         });
       } else {
-        // No audio track - request microphone access
-        console.log('[Videolify] No audio track, requesting microphone access...');
+        // No real audio track - request microphone access
+        // This happens when: 1) No track at all, or 2) Dummy track from denied permissions
+        console.log('[Videolify] No real audio track, requesting microphone access...');
+        
+        // If there's a dummy track, remove it first
+        if (audioTrack && isDummyTrack) {
+          console.log('[Videolify] Removing dummy audio track before requesting real microphone');
+          localStreamRef.current.removeTrack(audioTrack);
+          audioTrack.stop();
+        }
+        
         try {
           const audioStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true },
@@ -5363,15 +5415,38 @@ export function VideolifyFull({
               description: 'Người khác có thể nghe thấy bạn',
               duration: 2000,
             });
+            
+            // Mark as no longer using dummy media
+            usingDummyMediaRef.current = false;
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('[Videolify] Failed to access microphone:', err);
-          toast({
-            title: '⚠️ Không thể truy cập microphone',
-            description: 'Vui lòng cho phép quyền truy cập microphone trong trình duyệt',
-            variant: 'destructive',
-            duration: 4000,
-          });
+          
+          // Detect permission denied vs other errors
+          const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
+          
+          if (isPermissionDenied) {
+            toast({
+              title: '🚫 Quyền microphone bị từ chối',
+              description: 'Vui lòng click vào biểu tượng khóa 🔒 trên thanh địa chỉ → Cho phép Microphone → Reload trang',
+              variant: 'destructive',
+              duration: 8000,
+            });
+          } else if (err.name === 'NotFoundError') {
+            toast({
+              title: '⚠️ Không tìm thấy microphone',
+              description: 'Vui lòng kết nối microphone và thử lại',
+              variant: 'destructive',
+              duration: 5000,
+            });
+          } else {
+            toast({
+              title: '⚠️ Không thể truy cập microphone',
+              description: `Lỗi: ${err.message || 'Unknown error'}`,
+              variant: 'destructive',
+              duration: 5000,
+            });
+          }
         }
       }
     } else {
