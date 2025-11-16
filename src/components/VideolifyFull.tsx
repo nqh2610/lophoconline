@@ -5477,7 +5477,7 @@ export function VideolifyFull({
                 <Video className="w-16 h-16 text-gray-400" />
               </div>
               <h3 className="text-2xl font-semibold text-white mb-2">
-                {(isConnecting || wasConnected || isReconnecting) ? 'Đang kết nối lại...' : 'Đang chờ người khác tham gia'}
+                {isConnecting ? 'Đang kết nối...' : 'Đang chờ người khác tham gia'}
               </h3>
               <p className="text-gray-400">
                 {isConnecting ? 'Vui lòng đợi trong giây lát' : 'Chia sẻ link phòng để mời người khác'}
