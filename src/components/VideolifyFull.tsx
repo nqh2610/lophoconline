@@ -1328,29 +1328,38 @@ export function VideolifyFull({
             ignoreOfferRef.current = false;
           } else {
             // Same peer - check connection state before deciding what to do
-            const connState = peerConnectionRef.current.connectionState;
-            const iceState = peerConnectionRef.current.iceConnectionState;
+            const pc = peerConnectionRef.current;
+            const connState = pc.connectionState;
+            const iceState = pc.iceConnectionState;
+            const sigState = pc.signalingState;
             
             if (!remotePeerIdRef.current) {
               remotePeerIdRef.current = data.peerId;
               console.log('[Videolify] Set missing remote peer ID:', data.peerId);
             }
             
-            // ✅ FIX: Only return early if BOTH connection AND ICE are FULLY established
-            // This prevents race condition where we skip negotiation too early
-            const isFullyConnected = connState === 'connected' && (iceState === 'connected' || iceState === 'completed');
-            const isNegotiating = connState === 'connecting' || connState === 'new' || iceState === 'checking' || iceState === 'new';
+            // ✅ FIX: Only reset if connection is BROKEN, otherwise keep existing connection
+            const isFullyStable = connState === 'connected' && 
+                                  (iceState === 'connected' || iceState === 'completed') &&
+                                  sigState === 'stable';
+                                  
+            const isBroken = connState === 'failed' || 
+                            connState === 'closed' ||
+                            iceState === 'failed' ||
+                            iceState === 'closed';
             
-            if (isFullyConnected && !isNegotiating) {
-              console.log('[Videolify] Connection fully established - skipping duplicate peer-joined');
+            if (isFullyStable) {
+              console.log('[Videolify] Connection fully stable - skipping duplicate peer-joined');
               return;
-            } else if (isNegotiating) {
-              console.log('[Videolify] Connection still negotiating - allowing fresh negotiation to avoid race condition');
-              // Don't return - let negotiation complete properly
-            } else {
-              console.log('[Videolify] Connection exists but broken (conn:', connState, 'ice:', iceState, ') - recreating');
+            } else if (isBroken) {
+              // Connection is broken - need to reset
+              console.log('[Videolify] Connection broken (conn:', connState, 'ice:', iceState, ') - resetting');
               peerConnectionRef.current.close();
               peerConnectionRef.current = null;
+            } else {
+              // Connection is negotiating/connecting - KEEP IT and let it finish
+              console.log('[Videolify] Connection in progress (conn:', connState, 'ice:', iceState, 'sig:', sigState, ') - keeping existing connection');
+              return; // Don't create new connection
             }
           }
         } else {
@@ -2260,8 +2269,8 @@ export function VideolifyFull({
           handleICEFailure(pc);
           
         } else if (pc.iceConnectionState === 'disconnected') {
-          // TEMPORARY STATE: Give 3s to auto-recover before intervening
-          console.warn('⚠️ [Videolify] ICE Disconnected - waiting 3s for auto-recovery...');
+          // TEMPORARY STATE: Give 2s to auto-recover before intervening (reduced from 3s)
+          console.warn('⚠️ [Videolify] ICE Disconnected - waiting 2s for auto-recovery...');
           setConnectionStats(prev => ({ ...prev, connected: false }));
           
           // Clear any existing timeout
@@ -2269,10 +2278,10 @@ export function VideolifyFull({
             clearTimeout(reconnectTimeoutRef.current);
           }
           
-          // Wait 3s - if still disconnected, attempt ICE restart (lightweight)
+          // Wait 2s - if still disconnected, attempt ICE restart (lightweight)
           reconnectTimeoutRef.current = setTimeout(() => {
             if (pc.iceConnectionState === 'disconnected') {
-              console.warn('⚠️ [Videolify] Still disconnected after 3s - attempting ICE restart');
+              console.warn('⚠️ [Videolify] Still disconnected after 2s - attempting ICE restart');
               
               // Try lightweight ICE restart first (just refresh candidates)
               if ('restartIce' in pc && typeof pc.restartIce === 'function') {
@@ -2288,7 +2297,7 @@ export function VideolifyFull({
                 handleICEFailure(pc);
               }
             }
-          }, 3000);
+          }, 2000); // Reduced from 3000ms to 2000ms for faster recovery
           
         } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
           // SUCCESS: Connection healthy
@@ -2814,13 +2823,13 @@ export function VideolifyFull({
    * Connection Recovery Functions
    */
   async function handleICEFailure(pc: RTCPeerConnection) {
-    const MAX_ICE_RETRIES = 3;
+    const MAX_ICE_RETRIES = 1; // Reduced from 3 to 1 - fail fast and reconnect
     iceRestartAttemptsRef.current++;
     
     if (iceRestartAttemptsRef.current > MAX_ICE_RETRIES) {
-      console.error(`❌ [Videolify] ICE restart failed ${MAX_ICE_RETRIES} times - full reconnect needed`);
+      console.error(`❌ [Videolify] ICE restart failed ${MAX_ICE_RETRIES} times - triggering full reconnect immediately`);
       
-      // After 3 ICE restarts failed → Full reconnect
+      // After 1 ICE restart failed → Full reconnect immediately for 100% stability
       await fullReconnect();
       return;
     }
@@ -5780,14 +5789,14 @@ export function VideolifyFull({
           )}
         </div>
 
-        {/* Chat Sidebar */}
+        {/* Chat Sidebar - Right side like Google Meet */}
         {showChat && (
-          <Card className="w-80 bg-gray-800 border-gray-700 flex flex-col">
-            <div className="p-4 border-b border-gray-700">
+          <Card className="absolute top-4 right-4 bottom-28 w-80 bg-gray-800 border-gray-700 flex flex-col z-50">
+            <div className="p-4 border-b border-gray-700 flex-shrink-0">
               <h3 className="text-white font-semibold">Chat</h3>
             </div>
             
-            <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
+            <ScrollArea className="flex-1 p-4 overflow-y-auto" ref={chatScrollRef}>
               {chatMessages.length === 0 && (
                 <div className="text-center text-gray-500 mt-8">
                   <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -5817,7 +5826,7 @@ export function VideolifyFull({
               ))}
             </ScrollArea>
 
-            <div className="p-4 border-t border-gray-700 flex gap-2">
+            <div className="p-4 border-t border-gray-700 flex gap-2 flex-shrink-0">
               <Input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
