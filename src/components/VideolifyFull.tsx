@@ -105,6 +105,8 @@ export function VideolifyFull({
   const originalStreamRef = useRef<MediaStream | null>(null); // Original local stream
   const remoteOriginalStreamRef = useRef<MediaStream | null>(null); // Original remote stream (before VBG)
   const pendingRemoteVbgSettingsRef = useRef<any | null>(null); // Store VBG settings received before remote stream ready
+  const remoteVbgReadyRef = useRef<boolean>(false); // Track if remote VBG has been applied or confirmed not needed
+  const remoteStreamReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout to show video if VBG settings don't arrive
   
   // Peer ID initialization - MUST be stable across StrictMode double-render
   const peerIdRef = useRef<string>('');
@@ -1524,6 +1526,35 @@ export function VideolifyFull({
             }),
           });
           console.log('[Videolify] Answer sent to signaling server (targeted to:', data.fromPeerId, 'messageId:', messageId, ')');
+          
+          // ✅ PRIVACY FIX: Send VBG settings IMMEDIATELY after answer
+          const vbgEnabledLS = localStorage.getItem('vbg-enabled') === 'true';
+          const bgModeLS = localStorage.getItem('vbg-last-mode') || backgroundMode;
+          const bgImageLS = localStorage.getItem('vbg-background-image');
+          const blurAmountLS = parseInt(localStorage.getItem('vbg-blur-amount') || '10');
+          
+          if (vbgEnabledLS && bgModeLS !== 'none' && data.fromPeerId) {
+            console.log('📡 [VBG] Sending VBG settings immediately after answer');
+            
+            fetch('/api/videolify/signal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'vbg-settings',
+                roomId,
+                peerId: peerIdRef.current,
+                data: {
+                  enabled: true,
+                  mode: bgModeLS,
+                  blurAmount: bgModeLS === 'blur' ? blurAmountLS : undefined,
+                  backgroundImage: bgModeLS === 'image' ? bgImageLS : undefined,
+                  toPeerId: data.fromPeerId,
+                },
+              }),
+            }).catch(err => {
+              console.error('❌ [VBG] Failed to send VBG after answer:', err);
+            });
+          }
         } else {
           console.warn('[Videolify] Remote description set but signaling state not in have-remote-offer - skipping answer');
         }
@@ -2031,6 +2062,10 @@ export function VideolifyFull({
           remoteOriginalStreamRef.current = event.streams[0];
           console.log('💾 [VBG] Remote original stream stored');
 
+          // ✅ PRIVACY FIX: Do NOT show video immediately - wait for VBG settings first
+          setRemoteVbgLoading(true);
+          remoteVbgReadyRef.current = false;
+
           // ✅ CRITICAL FIX: Apply pending VBG settings if received before stream ready
           if (pendingRemoteVbgSettingsRef.current) {
             console.log('📦 [VBG] Applying pending VBG settings received earlier:', pendingRemoteVbgSettingsRef.current);
@@ -2038,14 +2073,34 @@ export function VideolifyFull({
             const peerId = remotePeerIdRef.current;
 
             if (peerId) {
-              // Apply pending settings
+              // Apply pending settings (this will set srcObject and end loading)
               applyRemoteVbgSettings(pendingData, peerId).catch(err => {
                 console.error('❌ [VBG] Failed to apply pending VBG settings:', err);
+                showRemoteVideoAfterVbgReady();
               });
+            } else {
+              // No peerId - fallback to showing original video
+              console.warn('⚠️ [VBG] Pending VBG settings but no peerId - showing original video');
+              showRemoteVideoAfterVbgReady();
             }
 
             // Clear pending settings
             pendingRemoteVbgSettingsRef.current = null;
+          } else {
+            // No pending VBG settings - wait for them or timeout
+            console.log('⏳ [VBG] Waiting for VBG settings from peer (3s timeout)...');
+            
+            if (remoteStreamReadyTimeoutRef.current) {
+              clearTimeout(remoteStreamReadyTimeoutRef.current);
+            }
+            
+            // Timeout: show original video if VBG settings don't arrive
+            remoteStreamReadyTimeoutRef.current = setTimeout(() => {
+              if (!remoteVbgReadyRef.current && remoteOriginalStreamRef.current) {
+                console.log('⏱️ [VBG] Timeout - showing original video');
+                showRemoteVideoAfterVbgReady();
+              }
+            }, 3000);
           }
 
           // Monitor stream state
@@ -2069,71 +2124,7 @@ export function VideolifyFull({
               return;
             }
             checkStreamHealth();
-          }, 5000); // Check every 5 seconds
-          
-          // Attach stream to remote video element
-          const attachStream = () => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = event.streams[0];
-              console.log('✅ [Videolify] Remote video stream attached');
-              
-              // ✅ STEP 6 (F5 Restore): Check localStorage for peer's VBG config
-              const peerId = remotePeerIdRef.current;
-              if (peerId) {
-                try {
-                  const savedMode = localStorage.getItem(`peer-${peerId}-vbg-mode`);
-                  const savedBlur = localStorage.getItem(`peer-${peerId}-vbg-blur`);
-                  const savedBackground = localStorage.getItem(`peer-${peerId}-vbg-background`);
-                  
-                  if (savedMode && savedMode !== 'none') {
-                    console.log('🎭 [VBG] Restoring peer VBG from localStorage:', {
-                      peerId,
-                      mode: savedMode,
-                      blur: savedBlur,
-                      hasBackground: !!savedBackground
-                    });
-                    
-                    // Show loading state before applying VBG
-                    setRemoteVbgLoading(true);
-                    
-                    // Apply VBG from saved config
-                    applyVbgToRemoteVideoWithConfig({
-                      mode: savedMode,
-                      blurAmount: parseInt(savedBlur || '10'),
-                      backgroundImage: savedBackground || undefined
-                    }).then(() => {
-                      // Hide loading after VBG ready
-                      setTimeout(() => setRemoteVbgLoading(false), 500);
-                    }).catch(err => {
-                      console.error('❌ [VBG] Failed to restore peer VBG:', err);
-                      setRemoteVbgLoading(false);
-                    });
-                  }
-                } catch (err) {
-                  console.error('❌ [VBG] Error reading peer VBG from localStorage:', err);
-                  setRemoteVbgLoading(false);
-                }
-              }
-              
-              return true;
-            }
-            return false;
-          };
-          
-          // Try to attach immediately
-          if (!attachStream()) {
-            // If ref not ready, retry a few times (React might still be rendering)
-            console.warn('[Videolify] Remote video ref not ready, retrying...');
-            let retries = 0;
-            const retryInterval = setInterval(() => {
-              if (attachStream() || retries++ > 10) {
-                clearInterval(retryInterval);
-                if (retries > 10) {
-                  console.error('[Videolify] Failed to attach stream after retries');
-                }
-              }
-            }, 100); // Try every 100ms for up to 1 second
-          }
+          }, 5000);
         } else {
           console.warn('[Videolify] No stream in ontrack event');
         }
@@ -2401,8 +2392,34 @@ export function VideolifyFull({
         });
         console.log('[Videolify] Offer sent to:', remotePeerIdRef.current, 'with messageId:', messageId);
         
-        // ✅ VBG will be sent when ICE connection becomes stable (see iceconnectionstatechange handler)
-        // This ensures peer is ready to receive the settings
+        // ✅ PRIVACY FIX: Send VBG settings IMMEDIATELY after offer
+        const vbgEnabledLS = localStorage.getItem('vbg-enabled') === 'true';
+        const bgModeLS = localStorage.getItem('vbg-last-mode') || backgroundMode;
+        const bgImageLS = localStorage.getItem('vbg-background-image');
+        const blurAmountLS = parseInt(localStorage.getItem('vbg-blur-amount') || '10');
+        
+        if (vbgEnabledLS && bgModeLS !== 'none') {
+          console.log('📡 [VBG] Sending VBG settings immediately after offer');
+          
+          fetch('/api/videolify/signal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'vbg-settings',
+              roomId,
+              peerId: peerIdRef.current,
+              data: {
+                enabled: true,
+                mode: bgModeLS,
+                blurAmount: bgModeLS === 'blur' ? blurAmountLS : undefined,
+                backgroundImage: bgModeLS === 'image' ? bgImageLS : undefined,
+                toPeerId: remotePeerIdRef.current,
+              },
+            }),
+          }).catch(err => {
+            console.error('❌ [VBG] Failed to send VBG after offer:', err);
+          });
+        }
       } else {
         console.log('[Videolify] Waiting to receive offer (answerer mode)');
       }
@@ -4848,6 +4865,62 @@ export function VideolifyFull({
   }
 
   /**
+   * Helper: Show remote video after VBG is ready or confirmed not needed
+   */
+  function showRemoteVideoAfterVbgReady() {
+    if (!remoteOriginalStreamRef.current || !remoteVideoRef.current) {
+      console.warn('⚠️ [VBG] Cannot show remote video - refs not ready');
+      return;
+    }
+
+    remoteVbgReadyRef.current = true;
+    
+    if (remoteStreamReadyTimeoutRef.current) {
+      clearTimeout(remoteStreamReadyTimeoutRef.current);
+      remoteStreamReadyTimeoutRef.current = null;
+    }
+
+    remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
+    console.log('✅ [VBG] Remote video shown (original stream)');
+
+    // Check localStorage for saved VBG config (F5 restore) BEFORE ending loading
+    const peerId = remotePeerIdRef.current;
+    let willRestoreVbg = false;
+    
+    if (peerId) {
+      try {
+        const savedMode = localStorage.getItem(`peer-${peerId}-vbg-mode`);
+        const savedBlur = localStorage.getItem(`peer-${peerId}-vbg-blur`);
+        const savedBackground = localStorage.getItem(`peer-${peerId}-vbg-background`);
+        
+        if (savedMode && savedMode !== 'none') {
+          willRestoreVbg = true;
+          console.log('🎭 [VBG] Restoring peer VBG from localStorage');
+          // Keep loading state true while restoring
+          
+          applyVbgToRemoteVideoWithConfig({
+            mode: savedMode,
+            blurAmount: parseInt(savedBlur || '10'),
+            backgroundImage: savedBackground || undefined
+          }).then(() => {
+            setTimeout(() => setRemoteVbgLoading(false), 500);
+          }).catch(err => {
+            console.error('❌ [VBG] Failed to restore peer VBG:', err);
+            setRemoteVbgLoading(false);
+          });
+        }
+      } catch (err) {
+        console.error('❌ [VBG] Error reading peer VBG from localStorage:', err);
+      }
+    }
+    
+    // Only end loading if not restoring VBG
+    if (!willRestoreVbg) {
+      setRemoteVbgLoading(false);
+    }
+  }
+
+  /**
    * Apply remote VBG settings received from peer via SSE
    */
   async function applyRemoteVbgSettings(data: any, peerId: string) {
@@ -4920,8 +4993,19 @@ export function VideolifyFull({
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = processedRemoteStream;
         console.log('✅ [VBG-DEBUG] Remote video srcObject updated to processed stream');
+        
+        // Mark as ready and end loading
+        remoteVbgReadyRef.current = true;
+        
+        if (remoteStreamReadyTimeoutRef.current) {
+          clearTimeout(remoteStreamReadyTimeoutRef.current);
+          remoteStreamReadyTimeoutRef.current = null;
+        }
+        
+        setTimeout(() => setRemoteVbgLoading(false), 500);
       } else {
         console.error('❌ [VBG-DEBUG] remoteVideoRef.current is null!');
+        showRemoteVideoAfterVbgReady();
       }
     } else {
       // Disable VBG - remove peer's VBG config from localStorage
@@ -4939,10 +5023,8 @@ export function VideolifyFull({
         remoteVbgProcessorRef.current = null;
       }
 
-      // Restore remote video srcObject to original stream
-      if (remoteVideoRef.current && remoteOriginalStreamRef.current) {
-        remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
-      }
+      // Show original video (VBG disabled)
+      showRemoteVideoAfterVbgReady();
     }
   }
 
@@ -6109,13 +6191,22 @@ export function VideolifyFull({
                 
                 {/* Virtual Background Menu - REDESIGNED RESPONSIVE */}
                 {isVbgMenuOpen && (
-                  <div
-                    id="vbg-menu"
-                    className="fixed md:absolute bottom-0 md:bottom-full left-0 right-0 md:left-auto md:right-0 md:mb-2 bg-gray-900/95 backdrop-blur-xl rounded-t-2xl md:rounded-2xl shadow-2xl border border-gray-700/50 w-full md:w-[420px] z-[9999] animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col"
-                    style={{
-                      maxHeight: 'min(85vh, 700px)'
-                    }}
-                  >
+                  <>
+                    {/* Backdrop overlay - click to close menu */}
+                    <div
+                      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9998]"
+                      onClick={() => setIsVbgMenuOpen(false)}
+                    />
+                    
+                    {/* Menu panel */}
+                    <div
+                      id="vbg-menu"
+                      className="fixed md:absolute bottom-0 md:bottom-full left-0 right-0 md:left-auto md:right-0 md:mb-2 bg-gray-900/95 backdrop-blur-xl rounded-t-2xl md:rounded-2xl shadow-2xl border border-gray-700/50 w-full md:w-[420px] z-[9999] animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col"
+                      style={{
+                        maxHeight: 'min(85vh, 700px)'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                   {/* Header - Fixed */}
                   <div className="flex items-center justify-between p-4 pb-3 border-b border-gray-700/50 flex-shrink-0">
                     <div className="flex items-center gap-2">
@@ -6404,6 +6495,7 @@ export function VideolifyFull({
                     </div>
                   </div>
                   </div>
+                  </>
                 )}
               </div>
             </TooltipTrigger>
