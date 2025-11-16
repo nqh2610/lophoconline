@@ -335,6 +335,7 @@ export function VideolifyFull({
   // UI state
   const [isConnecting, setIsConnecting] = useState(true);
   const [wasConnected, setWasConnected] = useState(false); // Track if connection was established before
+  const [isReconnecting, setIsReconnecting] = useState(false); // Track when peer is reconnecting (F5)
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [remoteVideoEnabled, setRemoteVideoEnabled] = useState(true); // Track remote peer's video status
@@ -523,34 +524,35 @@ export function VideolifyFull({
         console.log('📦 [VBG] Found saved background:', savedBg);
         setActivePreset(savedBg);
         
-        // Auto-apply background after media stream is ready
-        // Wait for localStreamRef to be initialized
+        // ✅ CRITICAL FIX: Don't block connection - load VBG in background AFTER stream ready
+        // VBG is local-only effect, doesn't affect P2P connection
+        // Delay loading to not slow down initial connection
         const checkAndApply = setInterval(() => {
           const hasStream = localStreamRef.current && localStreamRef.current.getVideoTracks().length > 0;
-          console.log('⏳ [VBG] Waiting for stream...', { hasStream, tracks: localStreamRef.current?.getVideoTracks().length });
           
           if (hasStream) {
             clearInterval(checkAndApply);
-            console.log('🎯 [VBG] Auto-applying saved background:', savedBg);
+            console.log('🎯 [VBG] Stream ready, loading background in background...');
             
             // Find the background preset
             const preset = PRESET_BACKGROUNDS.find(p => p.name === savedBg);
             if (preset) {
-              // Auto-apply with longer delay to ensure MediaPipe is fully ready
+              // Load VBG but don't block - run async without await
+              // This allows connection to proceed while VBG loads
               setTimeout(() => {
-                console.log('▶️ [VBG] Calling loadPresetBackground (delayed 5s for MediaPipe):', preset.name);
+                console.log('▶️ [VBG] Loading background (non-blocking):', preset.name);
                 loadPresetBackground(preset.name, preset.url);
-              }, 5000); // 5 second delay for MediaPipe initialization
+              }, 1000); // Reduced from 5s to 1s - MediaPipe will load when needed
             } else {
               console.error('❌ [VBG] Preset not found:', savedBg);
             }
           }
         }, 100); // Check every 100ms
         
-        // Cleanup after 15 seconds if not applied
-        setTimeout(() => clearInterval(checkAndApply), 15000);
+        // Cleanup after 10 seconds if not applied
+        setTimeout(() => clearInterval(checkAndApply), 10000);
       } else if (savedMode === 'blur' && vbgEnabled) {
-        // Handle blur mode restoration - auto-apply blur after stream ready
+        // Handle blur mode restoration - load in background, don't block connection
         console.log('📦 [VBG] Restoring blur mode...');
         const savedBlur = localStorage.getItem('vbg-blur-amount');
         const blurAmount = savedBlur ? parseInt(savedBlur) : 10;
@@ -560,15 +562,17 @@ export function VideolifyFull({
           
           if (hasStream) {
             clearInterval(checkAndApply);
+            // Apply blur in background - don't block connection
             setTimeout(() => {
               console.log('▶️ [VBG] Auto-applying blur:', blurAmount);
               toggleVirtualBackground('blur');
               setBlurAmount(blurAmount);
-            }, 3000);
+            }, 1000); // Reduced from 3s to 1s
           }
         }, 100);
         
-        setTimeout(() => clearInterval(checkAndApply), 15000);
+        // Cleanup after 10 seconds
+        setTimeout(() => clearInterval(checkAndApply), 10000);
       }
     } catch (err) {
       console.error('❌ [VBG] Failed to load saved background:', err);
@@ -594,10 +598,15 @@ export function VideolifyFull({
 
         try {
           console.log('[Videolify] 📹 Requesting media access...');
+          performance.mark('media-request-start');
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 1280 }, height: { ideal: 720 } },
             audio: { echoCancellation: true, noiseSuppression: true },
           });
+          performance.mark('media-request-end');
+          performance.measure('media-request-duration', 'media-request-start', 'media-request-end');
+          const mediaTime = performance.getEntriesByName('media-request-duration')[0]?.duration || 0;
+          console.log(`⏱️  [TIMING] Media request: ${Math.round(mediaTime)}ms`);
 
           localStreamRef.current = stream;
           if (localVideoRef.current) {
@@ -694,7 +703,12 @@ export function VideolifyFull({
           if (!hasJoinedRef.current) {
             hasJoinedRef.current = true; // Set to block duplicate calls
             console.log('[Videolify] 🚪 Joining room...');
+            performance.mark('join-room-start');
             await joinRoom();
+            performance.mark('join-room-end');
+            performance.measure('join-room-duration', 'join-room-start', 'join-room-end');
+            const joinTime = performance.getEntriesByName('join-room-duration')[0]?.duration || 0;
+            console.log(`⏱️  [TIMING] Join room: ${Math.round(joinTime)}ms`);
             console.log('[Videolify] ✅ Join room completed');
           } else {
             console.log('[Videolify] ⏭️ Already joined, skipping duplicate join from StrictMode');
@@ -1233,6 +1247,7 @@ export function VideolifyFull({
         if ((window as any).__peerLeftTimeout) {
           clearTimeout((window as any).__peerLeftTimeout);
           (window as any).__peerLeftTimeout = null;
+          setIsReconnecting(false); // Clear reconnecting state
           console.log('[Videolify] ✅ Peer reconnected - cancelled channel close timeout');
         }
 
@@ -1312,16 +1327,32 @@ export function VideolifyFull({
             makingOfferRef.current = false;
             ignoreOfferRef.current = false;
           } else {
-            console.log('[Videolify] Connection exists to same peer');
-            return;
+            // Same peer - check if connection is actually connected
+            const connState = peerConnectionRef.current.connectionState;
+            const iceState = peerConnectionRef.current.iceConnectionState;
+            
+            if (!remotePeerIdRef.current) {
+              remotePeerIdRef.current = data.peerId;
+              console.log('[Videolify] Set missing remote peer ID:', data.peerId);
+            }
+            
+            // Only return early if connection is ACTUALLY working
+            if (connState === 'connected' && (iceState === 'connected' || iceState === 'completed')) {
+              console.log('[Videolify] Connection exists and working to same peer - skipping');
+              return;
+            } else {
+              console.log('[Videolify] Connection exists but not working (conn:', connState, 'ice:', iceState, ') - recreating');
+              // Close and recreate
+              peerConnectionRef.current.close();
+              peerConnectionRef.current = null;
+            }
           }
-        }
-        
-        // Now: No connection (initial join or F5 cleaned)
-        // ✅ CRITICAL: Set remote peer ID if not already set
-        if (!remotePeerIdRef.current) {
-          remotePeerIdRef.current = data.peerId;
-          console.log('[Videolify] Set remote peer ID:', data.peerId);
+        } else {
+          // No connection - set remote peer ID if not already set
+          if (!remotePeerIdRef.current) {
+            remotePeerIdRef.current = data.peerId;
+            console.log('[Videolify] Set remote peer ID (fresh join):', data.peerId);
+          }
         }
         
         if (data.shouldInitiate) {
@@ -1608,18 +1639,23 @@ export function VideolifyFull({
       try {
         const data = JSON.parse(event.data);
         if (data.peerId === remotePeerIdRef.current) {
-          console.log('[Videolify] Peer left - waiting 5s before closing (SSE reconnect grace period)');
+          console.log('[Videolify] Peer left - waiting 2s before closing (F5 reconnect grace period)');
 
           // Mark when peer left for rejoin window
           peerLeftTimeRef.current = Date.now();
+          
+          // Show reconnecting state instead of connection lost
+          setIsReconnecting(true);
+          setConnectionStats(prev => ({ ...prev, connected: false }));
 
           // CRITICAL FIX: Don't close channels immediately!
-          // SSE connection might have dropped temporarily (browser tab sleep, network hiccup, etc.)
-          // and will reconnect within 1-5 seconds. If we close channels now, P2P connection is lost forever.
+          // SSE connection might have dropped temporarily (browser tab sleep, network hiccup, F5, etc.)
+          // and will reconnect within 1-2 seconds. If we close channels now, P2P connection is lost forever.
           //
-          // Wait 5 seconds to see if peer reconnects (peer-joined event will cancel this timeout)
+          // Wait 2 seconds to see if peer reconnects (peer-joined event will cancel this timeout)
           const peerLeftTimeout = setTimeout(() => {
-            console.log('[Videolify] 5s grace period expired - peer did not reconnect, closing connection');
+            console.log('[Videolify] 2s grace period expired - peer did not reconnect, closing connection');
+            setIsReconnecting(false);
 
             // ✅ Cleanup peer VBG config from localStorage
             try {
@@ -1663,7 +1699,7 @@ export function VideolifyFull({
 
             // Clear remote peer ID
             remotePeerIdRef.current = null;
-          }, 5000); // 5 second grace period
+          }, 2000); // 2 second grace period
 
           // Store timeout ID so peer-joined can cancel it
           (window as any).__peerLeftTimeout = peerLeftTimeout;
@@ -1680,6 +1716,7 @@ export function VideolifyFull({
               // Peer didn't rejoin within 30s
               console.log('[Videolify] Peer did not rejoin within 30s');
               peerLeftTimeRef.current = null;
+              setIsReconnecting(false); // Clear reconnecting state after timeout
             }
           }, 30000);
         }
@@ -2118,10 +2155,11 @@ export function VideolifyFull({
         console.log('[Videolify] ICE gathering state:', pc.iceGatheringState);
         
         if (pc.iceGatheringState === 'gathering') {
-          // Set timeout for stuck ICE gathering
+          performance.mark('ice-gathering-start');
+          // Set timeout for stuck ICE gathering - reduced from 15s to 8s
           iceGatheringTimeoutRef.current = setTimeout(() => {
             if (pc.iceGatheringState === 'gathering') {
-              console.warn('⚠️ [Videolify] ICE gathering stuck >15s - forcing completion');
+              console.warn('⚠️ [Videolify] ICE gathering stuck >8s - forcing completion');
               
               // If gathering fails, trigger ICE restart
               setTimeout(() => {
@@ -2129,10 +2167,18 @@ export function VideolifyFull({
                   console.error('[Videolify] ICE gathering failed - triggering restart');
                   handleICEFailure(pc);
                 }
-              }, 5000); // Give 5 more seconds before forcing restart
+              }, 3000); // Give 3 more seconds before forcing restart (reduced from 5s)
             }
-          }, 15000); // 15 seconds
+          }, 8000); // Reduced from 15s to 8s
         } else if (pc.iceGatheringState === 'complete') {
+          performance.mark('ice-gathering-end');
+          try {
+            performance.measure('ice-gathering-duration', 'ice-gathering-start', 'ice-gathering-end');
+            const iceTime = performance.getEntriesByName('ice-gathering-duration')[0]?.duration || 0;
+            console.log(`⏱️  [TIMING] ICE gathering: ${Math.round(iceTime)}ms`);
+          } catch (e) {
+            // Ignore if start mark not found
+          }
           console.log('✅ [Videolify] ICE gathering completed successfully');
           if (iceGatheringTimeoutRef.current) {
             clearTimeout(iceGatheringTimeoutRef.current);
@@ -2147,6 +2193,7 @@ export function VideolifyFull({
         
         if (pc.connectionState === 'connected') {
           // SUCCESS: Full connection established
+          performance.mark('p2p-connected');
           console.log('✅ [Videolify] P2P Connection Established - Server load now 0%');
           setIsConnecting(false);
           setWasConnected(true);
@@ -2162,8 +2209,8 @@ export function VideolifyFull({
           setIsConnecting(true);
           
         } else if (pc.connectionState === 'disconnected') {
-          // TEMPORARY: Wait 5s for auto-recovery (browser might reconnect automatically)
-          console.warn('⚠️ [Videolify] Connection disconnected - waiting 5s for auto-recovery...');
+          // TEMPORARY: Wait 2s for auto-recovery (browser might reconnect automatically or peer F5)
+          console.warn('⚠️ [Videolify] Connection disconnected - waiting 2s for auto-recovery...');
           setConnectionStats(prev => ({ ...prev, connected: false }));
           setIsConnecting(true);
           
@@ -2173,10 +2220,10 @@ export function VideolifyFull({
           
           reconnectTimeoutRef.current = setTimeout(() => {
             if (pc.connectionState === 'disconnected') {
-              console.warn('[Videolify] Still disconnected after 5s - triggering ICE restart');
+              console.warn('[Videolify] Still disconnected after 2s - triggering ICE restart');
               handleICEFailure(pc);
             }
-          }, 5000);
+          }, 2000);
           
         } else if (pc.connectionState === 'failed') {
           // TERMINAL: Connection completely failed → Need full reconnect
@@ -2310,10 +2357,15 @@ export function VideolifyFull({
           return;
         }
         
+        performance.mark('offer-start');
         makingOfferRef.current = true;
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         makingOfferRef.current = false;
+        performance.mark('offer-end');
+        performance.measure('offer-duration', 'offer-start', 'offer-end');
+        const offerTime = performance.getEntriesByName('offer-duration')[0]?.duration || 0;
+        console.log(`⏱️  [TIMING] Create offer: ${Math.round(offerTime)}ms`);
         console.log('[Videolify] Local description set (offer)');
 
         // Send offer with target peer and unique messageId
@@ -2490,7 +2542,12 @@ export function VideolifyFull({
     };
 
     channel.onerror = (error) => {
-      console.error('❌ [Videolify] Whiteboard DataChannel ERROR:', error);
+      // Don't spam console with errors during reconnection - expected behavior
+      if (isReconnecting) {
+        console.log('⚠️ [Videolify] Whiteboard DataChannel error during reconnect (expected)');
+      } else {
+        console.warn('⚠️ [Videolify] Whiteboard DataChannel error:', error);
+      }
     };
   }
 
@@ -3086,10 +3143,7 @@ export function VideolifyFull({
       const pc = peerConnectionRef.current;
       if (pc && (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed')) {
         console.log('[Videolify] Attempting to recreate control channel...');
-        toast({
-          title: "Control channel reconnecting...",
-          description: "Attempting to restore control connection",
-        });
+        // REMOVED: Annoying toast notification
         
         setTimeout(() => {
           try {
@@ -5277,7 +5331,11 @@ export function VideolifyFull({
   return (
     <div className="relative w-full h-screen bg-gray-900 flex flex-col">
       {/* Connection Status Indicator - Compact pill */}
-      <div className="absolute top-3 left-3 z-50 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-full border border-gray-700/50 shadow-md">
+      <div 
+        className="absolute top-3 left-3 z-50 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-full border border-gray-700/50 shadow-md"
+        data-testid="connection-indicator"
+        data-connected={connectionStats.connected ? 'true' : 'false'}
+      >
         <div className={`w-1.5 h-1.5 rounded-full ${
           connectionStats.connected
             ? 'bg-green-400 animate-pulse'
@@ -5321,14 +5379,29 @@ export function VideolifyFull({
                     </Button>
                   </>
                 ) : (
-                  // Waiting for first connection
+                  // Waiting for first connection (or reconnecting)
                   <>
-                    <div className="text-6xl mb-4">👋</div>
-                    <h2 className="text-white text-2xl font-semibold">Đang chờ người tham gia</h2>
-                    <p className="text-gray-400 text-lg">Chia sẻ link này để bắt đầu buổi học</p>
-                    <Badge className="bg-yellow-500/90 text-black px-4 py-2 text-base">
-                      ⏳ Phòng đã sẵn sàng - đang chờ người khác tham gia...
-                    </Badge>
+                    {isConnecting ? (
+                      // Connecting/Reconnecting state
+                      <>
+                        <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                        <h2 className="text-white text-2xl font-semibold">Đang kết nối...</h2>
+                        <p className="text-gray-400 text-lg">Vui lòng đợi trong giây lát</p>
+                        <Badge className="bg-blue-500/90 text-white px-4 py-2 text-base">
+                          🔄 Đang thiết lập kết nối...
+                        </Badge>
+                      </>
+                    ) : (
+                      // Initial waiting (only when not connecting)
+                      <>
+                        <div className="text-6xl mb-4">👋</div>
+                        <h2 className="text-white text-2xl font-semibold">Đang chờ người tham gia</h2>
+                        <p className="text-gray-400 text-lg">Chia sẻ link này để bắt đầu buổi học</p>
+                        <Badge className="bg-yellow-500/90 text-black px-4 py-2 text-base">
+                          ⏳ Phòng đã sẵn sàng - đang chờ người khác tham gia...
+                        </Badge>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -5369,13 +5442,10 @@ export function VideolifyFull({
             {!connectionStats.connected && wasConnected && !showWhiteboard && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90 backdrop-blur-sm z-10">
                 <div className="flex flex-col items-center gap-4 text-center px-4">
-                  <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-xl font-semibold text-yellow-400">Mất kết nối</h3>
-                    <p className="text-gray-300 text-sm">Đang tự động kết nối lại...</p>
-                    {connectionStats.iceState && (
-                      <p className="text-gray-500 text-xs">ICE: {connectionStats.iceState}</p>
-                    )}
+                    <h3 className="text-xl font-semibold text-blue-400">Đang kết nối lại...</h3>
+                    <p className="text-gray-300 text-sm">Vui lòng đợi trong giây lát...</p>
                   </div>
                 </div>
               </div>
