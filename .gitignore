@@ -47,6 +47,7 @@ test-*.txt
 test-*.html
 *.test.js
 *.test.ts
+*.mjs
 
 # Test directories
 test-screenshots/
