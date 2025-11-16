@@ -334,12 +334,22 @@ export function VideolifyFull({
   const channelTimeoutsRef = useRef<{[key: string]: NodeJS.Timeout}>({});
   const hasJoinedRef = useRef<boolean>(false); // Prevent double join
   
+  // Read URL params for initial media state (from window.location)
+  const getInitialMediaState = () => {
+    if (typeof window === 'undefined') return { video: true, audio: true };
+    const params = new URLSearchParams(window.location.search);
+    return {
+      video: params.get('video') !== 'false', // default true unless explicitly false
+      audio: params.get('audio') !== 'false', // default true unless explicitly false
+    };
+  };
+  
   // UI state
   const [isConnecting, setIsConnecting] = useState(true);
   const [wasConnected, setWasConnected] = useState(false); // Track if connection was established before
   const [isReconnecting, setIsReconnecting] = useState(false); // Track when peer is reconnecting (F5)
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(() => getInitialMediaState().video);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(() => getInitialMediaState().audio);
   const [remoteVideoEnabled, setRemoteVideoEnabled] = useState(true); // Track remote peer's video status
   const [remoteAudioEnabled, setRemoteAudioEnabled] = useState(true); // Track remote peer's audio status
   const [remotePeerName, setRemotePeerName] = useState<string>(''); // Track remote peer's display name
@@ -503,6 +513,18 @@ export function VideolifyFull({
   }, [roomId]);
 
   /**
+   * 0.4. CLEANUP TIMEOUT - Clear remote stream ready timeout on unmount
+   */
+  useEffect(() => {
+    return () => {
+      if (remoteStreamReadyTimeoutRef.current) {
+        clearTimeout(remoteStreamReadyTimeoutRef.current);
+        remoteStreamReadyTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  /**
    * 0.5. REMEMBER VIRTUAL BACKGROUND - Load from localStorage on mount
    */
   useEffect(() => {
@@ -599,12 +621,23 @@ export function VideolifyFull({
         console.log('[Videolify] ✅ WebRTC supported');
 
         try {
-          console.log('[Videolify] 📹 Requesting media access...');
+          const { video: initialVideo, audio: initialAudio } = getInitialMediaState();
+          console.log('[Videolify] 📹 Requesting media access... (video:', initialVideo, ', audio:', initialAudio, ')');
           performance.mark('media-request-start');
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: { echoCancellation: true, noiseSuppression: true },
-          });
+          
+          const constraints: MediaStreamConstraints = {};
+          if (initialVideo) {
+            constraints.video = { width: { ideal: 1280 }, height: { ideal: 720 } };
+          }
+          if (initialAudio) {
+            constraints.audio = { echoCancellation: true, noiseSuppression: true };
+          }
+          
+          // Only request media if at least one is enabled
+          const stream = (initialVideo || initialAudio) 
+            ? await navigator.mediaDevices.getUserMedia(constraints)
+            : new MediaStream(); // Empty stream if both disabled
+          
           performance.mark('media-request-end');
           performance.measure('media-request-duration', 'media-request-start', 'media-request-end');
           const mediaTime = performance.getEntriesByName('media-request-duration')[0]?.duration || 0;
@@ -2190,6 +2223,40 @@ export function VideolifyFull({
             clearTimeout(iceGatheringTimeoutRef.current);
             iceGatheringTimeoutRef.current = null;
           }
+        }
+      };
+
+      // CRITICAL: Handle track additions/removals (e.g., toggling video/audio)
+      pc.onnegotiationneeded = async () => {
+        // Prevent concurrent negotiations
+        if (negotiationInProgressRef.current) {
+          console.log('[Videolify] ⏸️  Negotiation already in progress, skipping onnegotiationneeded');
+          return;
+        }
+
+        try {
+          negotiationInProgressRef.current = true;
+          console.log('[Videolify] 🔄 Negotiation needed (track added/removed) - creating new offer');
+          
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          
+          console.log('[Videolify] 📤 Sending renegotiation offer to peer');
+          await fetch('/api/videolify/signal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'offer',
+              roomId,
+              peerId: peerIdRef.current,
+              data: { sdp: offer },
+            }),
+          });
+          
+          console.log('✅ [Videolify] Renegotiation offer sent successfully');
+        } catch (err) {
+          console.error('❌ [Videolify] Renegotiation failed:', err);
+          negotiationInProgressRef.current = false;
         }
       };
 
@@ -5427,26 +5494,19 @@ export function VideolifyFull({
 
   return (
     <div className="relative w-full h-screen bg-gray-900 flex flex-col">
-      {/* Connection Status Indicator - Compact pill */}
+      {/* Connection Status Indicator - Subtle dot with soft glow */}
       <div 
-        className="absolute top-3 left-3 z-50 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-full border border-gray-700/50 shadow-md"
+        className="absolute top-3 left-3 z-50"
         data-testid="connection-indicator"
         data-connected={connectionStats.connected ? 'true' : 'false'}
       >
-        <div className={`w-1.5 h-1.5 rounded-full ${
+        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
           connectionStats.connected
-            ? 'bg-green-400 animate-pulse'
+            ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]'
             : connectionStats.iceState === 'checking' || connectionStats.iceState === 'connecting'
-            ? 'bg-yellow-400 animate-pulse'
-            : 'bg-red-400'
+            ? 'bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.5)]'
+            : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
         }`} />
-        <span className="text-[10px] text-gray-200 font-medium">
-          {connectionStats.connected
-            ? 'Kết nối'
-            : connectionStats.iceState === 'checking' || connectionStats.iceState === 'connecting'
-            ? 'Đang kết nối'
-            : 'Mất kết nối'}
-        </span>
       </div>
 
       {/* Brand Logo - Bottom Right Corner (Small & Subtle) - Above Control Bar */}
