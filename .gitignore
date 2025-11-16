@@ -39,3 +39,29 @@ claude
 
 # Continue AI config with sensitive data
 .continue/
+
+# Test files
+test-*.mjs
+test-*.md
+test-*.txt
+test-*.html
+*.test.js
+*.test.ts
+
+# Documentation files (temporary/debug)
+*.md
+!README.md
+!CHANGELOG.md
+
+# Text files
+*.txt
+
+# Python scripts
+*.py
+
+# Batch files
+*.bat
+
+# Null files
+nul
+null
