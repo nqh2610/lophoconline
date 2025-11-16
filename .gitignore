@@ -48,6 +48,12 @@ test-*.html
 *.test.js
 *.test.ts
 
+# Test directories
+test-screenshots/
+test-results/
+tests/
+__tests__/
+
 # Documentation files (temporary/debug)
 *.md
 !README.md
