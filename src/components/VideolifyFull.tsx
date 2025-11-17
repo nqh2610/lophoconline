@@ -5304,6 +5304,22 @@ export function VideolifyFull({
         } catch (err: any) {
           console.error('[Videolify] Failed to access camera:', err);
           
+          // CRITICAL: When permission denied, mark video as OFF
+          setIsVideoEnabled(false);
+          
+          // Notify remote peer that video is OFF (not available)
+          if (controlChannelRef.current && controlChannelRef.current.readyState === 'open') {
+            try {
+              controlChannelRef.current.send(JSON.stringify({
+                type: 'video-toggle',
+                enabled: false,
+              }));
+              console.log('📤 [Videolify] Sent video-toggle: false (permission denied)');
+            } catch (e) {
+              console.warn('[Videolify] Failed to send video-toggle:', e);
+            }
+          }
+          
           // Detect permission denied vs other errors
           const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
           
@@ -5421,6 +5437,22 @@ export function VideolifyFull({
           }
         } catch (err: any) {
           console.error('[Videolify] Failed to access microphone:', err);
+          
+          // CRITICAL: When permission denied, mark audio as OFF
+          setIsAudioEnabled(false);
+          
+          // Notify remote peer that audio is OFF (not available)
+          if (controlChannelRef.current && controlChannelRef.current.readyState === 'open') {
+            try {
+              controlChannelRef.current.send(JSON.stringify({
+                type: 'audio-toggle',
+                enabled: false,
+              }));
+              console.log('📤 [Videolify] Sent audio-toggle: false (permission denied)');
+            } catch (e) {
+              console.warn('[Videolify] Failed to send audio-toggle:', e);
+            }
+          }
           
           // Detect permission denied vs other errors
           const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
