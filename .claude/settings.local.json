@@ -47,7 +47,11 @@
       "Bash(do:*)",
       "Bash(done)",
       "Bash(find:*)",
-      "Bash(.git/lost-found-recovery/TutorRegisterForm.tsx)"
+      "Bash(.git/lost-found-recovery/TutorRegisterForm.tsx)",
+      "Bash(npm install:*)",
+      "Bash(E:LopHocTrucTuyenTEST_NOW.md)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

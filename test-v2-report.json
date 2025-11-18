@@ -1,0 +1,18 @@
+{
+  "issues": [
+    {
+      "issue": "Test execution error",
+      "context": {
+        "error": "page.evaluate: Target page, context or browser has been closed",
+        "stack": "page.evaluate: Target page, context or browser has been closed\n    at monitorConnection (E:\\LopHocTrucTuyen\\test-v2-auto-fix.mjs:183:10)\n    at runTest (E:\\LopHocTrucTuyen\\test-v2-auto-fix.mjs:359:7)"
+      },
+      "timestamp": 1763476284538
+    }
+  ],
+  "fixes": [],
+  "summary": {
+    "totalIssues": 1,
+    "totalFixes": 0,
+    "status": "PARTIAL"
+  }
+}

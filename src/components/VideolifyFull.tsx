@@ -1026,6 +1026,33 @@ export function VideolifyFull({
   }, [connectionStats.connected]);
 
   /**
+   * Send user-info update when video/audio state changes
+   * This ensures remote peer knows when we're using dummy tracks (permissions denied)
+   */
+  useEffect(() => {
+    // Only send updates after connection is established
+    if (!connectionStats.connected) {
+      return;
+    }
+
+    if (!controlChannelRef.current || controlChannelRef.current.readyState !== 'open') {
+      return;
+    }
+
+    try {
+      controlChannelRef.current.send(JSON.stringify({
+        type: 'user-info',
+        userName: userDisplayName,
+        videoEnabled: isVideoEnabled,
+        audioEnabled: isAudioEnabled,
+      }));
+      console.log(`📤 [Videolify] Updated user-info: video=${isVideoEnabled}, audio=${isAudioEnabled}`);
+    } catch (e) {
+      console.warn('[Videolify] Failed to send user-info update:', e);
+    }
+  }, [isVideoEnabled, isAudioEnabled, userDisplayName, connectionStats.connected]);
+
+  /**
    * Auto scroll chat to bottom when new message arrives
    */
   useEffect(() => {
@@ -1042,7 +1069,11 @@ export function VideolifyFull({
       (window as any).__VIDEOLIFY_TEST_STATE__ = {
         channelStates,
         isConnecting,
-        connectionStats,
+        connectionStats: {
+          ...connectionStats,
+          remoteVideoEnabled,
+          remoteAudioEnabled,
+        },
         remotePeerId: remotePeerIdRef.current,
         peerConnectionState: peerConnectionRef.current?.connectionState,
         iceConnectionState: peerConnectionRef.current?.iceConnectionState,
@@ -1052,6 +1083,11 @@ export function VideolifyFull({
         // For test quality metrics
         peerConnection: peerConnectionRef.current,
         localStream: localStreamRef.current,
+        // For blocked camera test
+        usingDummyMedia: usingDummyMediaRef.current,
+        isVideoEnabled: isVideoEnabled,
+        isAudioEnabled: isAudioEnabled,
+        showWhiteboard,
       };
     }
   });
@@ -2047,6 +2083,8 @@ export function VideolifyFull({
           pc.addTransceiver('audio', { direction: 'recvonly' });
           pc.addTransceiver('video', { direction: 'recvonly' });
         } else {
+          // Add tracks normally (including dummy tracks)
+          // Dummy tracks are silent/blank but allow WebRTC negotiation to work
           tracks.forEach(track => {
             console.log(`[Videolify] Adding track: ${track.kind}`);
             pc.addTrack(track, localStreamRef.current!);
@@ -2097,6 +2135,56 @@ export function VideolifyFull({
           // ✅ STEP 5 (ontrack): Store original remote stream
           remoteOriginalStreamRef.current = event.streams[0];
           console.log('💾 [VBG] Remote original stream stored');
+          
+          // 📺 DETECT SCREEN SHARE: Check if this is screen share track
+          // Use getSettings() to check displaySurface instead of label
+          const trackSettings = event.track.getSettings();
+          console.log('🔍 [DEBUG] Checking if track is screen share:');
+          console.log('  - Track kind:', event.track.kind);
+          console.log('  - Track label:', event.track.label);
+          console.log('  - Track ID:', event.track.id);
+          console.log('  - Track settings:', trackSettings);
+          console.log('  - displaySurface:', trackSettings.displaySurface);
+          console.log('  - Label includes "screen":', event.track.label?.includes('screen'));
+          console.log('  - Label includes "display":', event.track.label?.toLowerCase().includes('display'));
+          console.log('  - Label includes "monitor":', event.track.label?.toLowerCase().includes('monitor'));
+          
+          // Check multiple indicators for screen share
+          const isScreenShare = event.track.kind === 'video' && (
+            trackSettings.displaySurface !== undefined || // Has displaySurface = screen share
+            event.track.label?.includes('screen') ||
+            event.track.label?.toLowerCase().includes('display')
+          );
+          
+          if (isScreenShare) {
+            console.log('📺 [Screen Share] Detected screen share track - bypassing VBG processing');
+            
+            // CRITICAL: Stop remote VBG processor if running
+            if (remoteVbgProcessorRef.current) {
+              console.log('🛑 [VBG] Stopping remote VBG processor for screen share');
+              remoteVbgProcessorRef.current.stopProcessing();
+              remoteVbgProcessorRef.current = null;
+            }
+            
+            // Show screen share immediately WITHOUT VBG processing
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = event.streams[0];
+              setRemoteVbgLoading(false);
+              remoteVbgReadyRef.current = true;
+              console.log('✅ [Screen Share] Remote screen share displayed immediately');
+            }
+            
+            // Clear any pending timeouts
+            if (remoteStreamReadyTimeoutRef.current) {
+              clearTimeout(remoteStreamReadyTimeoutRef.current);
+              remoteStreamReadyTimeoutRef.current = null;
+            }
+            
+            // CRITICAL: Set connecting to false
+            setIsConnecting(false);
+            
+            return; // Skip VBG logic for screen share
+          }
 
           // ✅ PRIVACY FIX: Do NOT show video immediately - wait for VBG settings first
           setRemoteVbgLoading(true);
@@ -3183,6 +3271,65 @@ export function VideolifyFull({
         } else if (control.type === 'audio-toggle') {
           console.log('🎤 [Videolify] Remote peer toggled audio:', control.enabled);
           setRemoteAudioEnabled(control.enabled);
+        } else if (control.type === 'screen-share-toggle') {
+          console.log('📺 [Videolify] Remote peer toggled screen share:', control.isSharing);
+          
+          if (control.isSharing) {
+            // Remote started screen share - STOP VBG and show screen
+            console.log('🖥️ [Screen Share] Remote started sharing - stopping VBG');
+            
+            // Stop VBG processor immediately
+            if (remoteVbgProcessorRef.current) {
+              remoteVbgProcessorRef.current.stopProcessing();
+              remoteVbgProcessorRef.current = null;
+              console.log('🛑 [VBG] Remote VBG processor stopped');
+            }
+            
+            // Show screen directly (no camera overlay, no VBG)
+            if (remoteVideoRef.current && remoteOriginalStreamRef.current) {
+              remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
+              console.log('✅ [Screen Share] Displaying screen share stream');
+            }
+            
+            setRemoteVideoEnabled(true);
+            setRemoteVbgLoading(false);
+            
+          } else {
+            // Remote stopped screen share - restore camera and VBG
+            console.log('🎥 [Screen Share] Remote stopped sharing - restoring camera');
+            setRemoteVideoEnabled(control.videoEnabled);
+            
+            // Restore VBG if camera is on
+            if (control.videoEnabled && remoteOriginalStreamRef.current) {
+              const peerId = remotePeerIdRef.current;
+              if (peerId) {
+                const savedMode = localStorage.getItem(`peer-${peerId}-vbg-mode`);
+                if (savedMode && savedMode !== 'none') {
+                  console.log('🎭 [VBG] Restoring VBG settings');
+                  setRemoteVbgLoading(true);
+                  
+                  const savedBlur = localStorage.getItem(`peer-${peerId}-vbg-blur`);
+                  const savedBackground = localStorage.getItem(`peer-${peerId}-vbg-background`);
+                  
+                  applyVbgToRemoteVideoWithConfig({
+                    mode: savedMode,
+                    blurAmount: parseInt(savedBlur || '10'),
+                    backgroundImage: savedBackground || undefined
+                  }).then(() => {
+                    setTimeout(() => setRemoteVbgLoading(false), 500);
+                  }).catch(err => {
+                    console.error('❌ [VBG] Failed to restore VBG:', err);
+                    setRemoteVbgLoading(false);
+                  });
+                } else {
+                  // No VBG, just show original camera
+                  if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
+                  }
+                }
+              }
+            }
+          }
         } else if (control.type === 'user-info') {
           console.log('👤 [Videolify] Received user-info:', control.userName);
           setRemotePeerName(control.userName || '');
@@ -3199,14 +3346,18 @@ export function VideolifyFull({
       setChannelStates(prev => ({ ...prev, control: 'open' }));
 
       // CRITICAL: Send user info to peer immediately
+      // Use usingDummyMediaRef to get CURRENT state (not async state)
+      const currentVideoEnabled = usingDummyMediaRef.current ? false : isVideoEnabled;
+      const currentAudioEnabled = usingDummyMediaRef.current ? false : isAudioEnabled;
+      
       try {
         channel.send(JSON.stringify({
           type: 'user-info',
           userName: userDisplayName,
-          videoEnabled: isVideoEnabled,
-          audioEnabled: isAudioEnabled,
+          videoEnabled: currentVideoEnabled,
+          audioEnabled: currentAudioEnabled,
         }));
-        console.log(`📤 [Videolify] Sent user-info: ${userDisplayName}`);
+        console.log(`📤 [Videolify] Sent user-info: ${userDisplayName} (video=${currentVideoEnabled}, audio=${currentAudioEnabled})`);
       } catch (e) {
         console.warn('[Videolify] Failed to send user-info:', e);
       }
@@ -4426,12 +4577,28 @@ export function VideolifyFull({
           screenStreamRef.current = null;
         }
         
-        // Re-add camera track
+        // Re-add camera track (use dummy if using dummy tracks)
         if (localStreamRef.current && peerConnectionRef.current) {
           const videoTrack = localStreamRef.current.getVideoTracks()[0];
           const sender = peerConnectionRef.current.getSenders().find(s => s.track?.kind === 'video');
-          if (sender) {
+          if (sender && videoTrack) {
             await sender.replaceTrack(videoTrack);
+            console.log(`✅ [Screen Share] Restored to ${usingDummyMediaRef.current ? 'dummy' : 'camera'} track`);
+          }
+        }
+        
+        // Notify remote peer that screen sharing stopped
+        if (controlChannelRef.current?.readyState === 'open') {
+          try {
+            const currentVideoEnabled = usingDummyMediaRef.current ? false : isVideoEnabled;
+            controlChannelRef.current.send(JSON.stringify({
+              type: 'screen-share-toggle',
+              isSharing: false,
+              videoEnabled: currentVideoEnabled
+            }));
+            console.log(`📤 [Screen Share] Notified remote peer: sharing=false, video=${currentVideoEnabled}`);
+          } catch (e) {
+            console.warn('⚠️ [Screen Share] Failed to notify remote:', e);
           }
         }
         
@@ -4485,6 +4652,20 @@ export function VideolifyFull({
             
             await sender.setParameters(params);
             console.log('✅ [Videolify] Screen share active with adaptive quality');
+            
+            // Notify remote peer that we're now sharing screen
+            if (controlChannelRef.current?.readyState === 'open') {
+              try {
+                controlChannelRef.current.send(JSON.stringify({
+                  type: 'screen-share-toggle',
+                  isSharing: true,
+                  videoEnabled: usingDummyMediaRef.current ? false : isVideoEnabled
+                }));
+                console.log('📤 [Screen Share] Notified remote peer: sharing=true');
+              } catch (e) {
+                console.warn('⚠️ [Screen Share] Failed to notify remote:', e);
+              }
+            }
             
             // 🔍 DEBUG: Check remote video AFTER starting screen share
             console.log('🔍 [Debug] Remote video AFTER screen share start:');
@@ -4952,6 +5133,21 @@ export function VideolifyFull({
 
     remoteVideoRef.current.srcObject = remoteOriginalStreamRef.current;
     console.log('✅ [VBG] Remote video shown (original stream)');
+    
+    // 📺 CHECK IF SCREEN SHARE: Don't apply VBG to screen share
+    const videoTracks = remoteOriginalStreamRef.current.getVideoTracks();
+    const trackSettings = videoTracks.length > 0 ? videoTracks[0].getSettings() : {};
+    const isScreenShare = videoTracks.length > 0 && (
+      trackSettings.displaySurface !== undefined ||
+      videoTracks[0].label?.includes('screen') ||
+      videoTracks[0].label?.toLowerCase().includes('display')
+    );
+    
+    if (isScreenShare) {
+      console.log('📺 [Screen Share] Detected screen share - skipping VBG processing');
+      setRemoteVbgLoading(false);
+      return;
+    }
 
     // Check localStorage for saved VBG config (F5 restore) BEFORE ending loading
     const peerId = remotePeerIdRef.current;
@@ -4997,6 +5193,26 @@ export function VideolifyFull({
     if (!remoteOriginalStreamRef.current) {
       console.warn('⚠️ [VBG-DEBUG] No remote stream available - cannot apply VBG');
       return;
+    }
+
+    // 📺 CRITICAL: Don't apply VBG to screen share!
+    const videoTracks = remoteOriginalStreamRef.current.getVideoTracks();
+    if (videoTracks.length > 0) {
+      const trackSettings = videoTracks[0].getSettings();
+      const isScreenShare = trackSettings.displaySurface !== undefined ||
+                            videoTracks[0].label?.includes('screen') ||
+                            videoTracks[0].label?.toLowerCase().includes('display');
+      if (isScreenShare) {
+        console.log('📺 [VBG] Skipping VBG settings - remote is sharing screen');
+        // Still mark as ready and end loading
+        remoteVbgReadyRef.current = true;
+        if (remoteStreamReadyTimeoutRef.current) {
+          clearTimeout(remoteStreamReadyTimeoutRef.current);
+          remoteStreamReadyTimeoutRef.current = null;
+        }
+        setRemoteVbgLoading(false);
+        return;
+      }
     }
 
     if (data.enabled) {
@@ -5108,6 +5324,19 @@ export function VideolifyFull({
       return;
     }
 
+    // 📺 CRITICAL: Don't apply VBG to screen share!
+    const videoTracks = remoteOriginalStreamRef.current.getVideoTracks();
+    if (videoTracks.length > 0) {
+      const trackSettings = videoTracks[0].getSettings();
+      const isScreenShare = trackSettings.displaySurface !== undefined ||
+                            videoTracks[0].label?.includes('screen') ||
+                            videoTracks[0].label?.toLowerCase().includes('display');
+      if (isScreenShare) {
+        console.log('📺 [VBG] Skipping VBG - remote is sharing screen');
+        return;
+      }
+    }
+
     try {
       console.log('🎭 [VBG] Applying VBG to remote video...');
 
@@ -5153,6 +5382,19 @@ export function VideolifyFull({
     if (!remoteOriginalStreamRef.current) {
       console.warn('⚠️ [VBG] No remote stream to process');
       return;
+    }
+
+    // 📺 CRITICAL: Don't apply VBG to screen share!
+    const videoTracks = remoteOriginalStreamRef.current.getVideoTracks();
+    if (videoTracks.length > 0) {
+      const trackSettings = videoTracks[0].getSettings();
+      const isScreenShare = trackSettings.displaySurface !== undefined ||
+                            videoTracks[0].label?.includes('screen') ||
+                            videoTracks[0].label?.toLowerCase().includes('display');
+      if (isScreenShare) {
+        console.log('📺 [VBG] Skipping VBG - remote is sharing screen');
+        return;
+      }
     }
 
     try {
@@ -5222,10 +5464,11 @@ export function VideolifyFull({
     if (localStreamRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
       
-      // Check if this is a dummy track (from canvas, not real camera)
-      const isDummyTrack = usingDummyMediaRef.current && videoTrack?.label?.includes('canvas');
+      // Check if using dummy media (permissions denied)
+      // When dummy media is in use, we should always try to request real camera
+      const isDummyMedia = usingDummyMediaRef.current;
       
-      if (videoTrack && !isDummyTrack) {
+      if (videoTrack && !isDummyMedia) {
         // Real track exists - just toggle enable/disable
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
@@ -5253,10 +5496,10 @@ export function VideolifyFull({
       } else {
         // No real video track - request camera access
         // This happens when: 1) No track at all, or 2) Dummy track from denied permissions
-        console.log('[Videolify] No real video track, requesting camera access...');
+        console.log('[Videolify] No real video track (dummy media active), requesting camera access...');
         
         // If there's a dummy track, remove it first
-        if (videoTrack && isDummyTrack) {
+        if (videoTrack && isDummyMedia) {
           console.log('[Videolify] Removing dummy video track before requesting real camera');
           localStreamRef.current.removeTrack(videoTrack);
           videoTrack.stop();
@@ -5296,7 +5539,7 @@ export function VideolifyFull({
             usingDummyMediaRef.current = false;
             
             toast({
-              title: '📹 Camera đã bật',
+              title: '📹 Camera bật',
               description: 'Người khác có thể nhìn thấy bạn',
               duration: 2000,
             });
@@ -5356,10 +5599,10 @@ export function VideolifyFull({
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       
-      // Check if this is a dummy track (silent audio from AudioContext)
-      const isDummyTrack = usingDummyMediaRef.current && audioTrack && !audioTrack.label;
+      // Check if using dummy media (permissions denied)
+      const isDummyMedia = usingDummyMediaRef.current;
       
-      if (audioTrack && !isDummyTrack) {
+      if (audioTrack && !isDummyMedia) {
         // Real track exists - just toggle enable/disable
         audioTrack.enabled = !audioTrack.enabled;
         setIsAudioEnabled(audioTrack.enabled);
@@ -5387,10 +5630,10 @@ export function VideolifyFull({
       } else {
         // No real audio track - request microphone access
         // This happens when: 1) No track at all, or 2) Dummy track from denied permissions
-        console.log('[Videolify] No real audio track, requesting microphone access...');
+        console.log('[Videolify] No real audio track (dummy media active), requesting microphone access...');
         
         // If there's a dummy track, remove it first
-        if (audioTrack && isDummyTrack) {
+        if (audioTrack && isDummyMedia) {
           console.log('[Videolify] Removing dummy audio track before requesting real microphone');
           localStreamRef.current.removeTrack(audioTrack);
           audioTrack.stop();
@@ -5725,11 +5968,11 @@ export function VideolifyFull({
               <div className="flex items-center gap-3 mb-2">
                 <VideoOff className="w-6 h-6 text-red-400" />
                 <h3 className="text-2xl font-semibold text-white">
-                  Camera đã tắt
+                  Camera tắt
                 </h3>
               </div>
               <p className="text-gray-400 text-lg">
-                {remotePeerName || 'Người kia'} đã tắt camera
+                {remotePeerName || 'Người kia'} tắt camera
               </p>
             </div>
           )}
@@ -5926,8 +6169,8 @@ export function VideolifyFull({
                   }`}
                 />
 
-                {/* Local Camera Off Overlay */}
-                {!isVideoEnabled && (
+                {/* Local Camera Off Overlay - Show when video disabled OR using dummy tracks */}
+                {(!isVideoEnabled || usingDummyMediaRef.current) && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg border-2 border-white shadow-lg cursor-move drag-handle">
                     <div className={`rounded-full bg-gray-800 flex items-center justify-center shadow-xl mb-2 ${
                       pipSize === 'small' ? 'w-12 h-12' :

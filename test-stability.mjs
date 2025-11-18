@@ -119,6 +119,12 @@ async function testOnce(attempt) {
 async function runStabilityTest() {
   console.log('🔬 STABILITY TEST - Running 10 fresh joins\n');
   
+  // WARMUP: First attempt is always slower (cold start)
+  console.log('🔥 WARMUP - Skipping first attempt (cold start)...');
+  await testOnce(0);
+  console.log('✅ Warmup complete, starting real tests\n');
+  await new Promise(r => setTimeout(r, 3000));
+  
   const results = [];
   
   for (let i = 1; i <= 10; i++) {
