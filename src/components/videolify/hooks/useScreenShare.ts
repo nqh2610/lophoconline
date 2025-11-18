@@ -4,10 +4,42 @@
 
 import { useState, useRef, useCallback } from 'react';
 
-export function useScreenShare(peerConnection: RTCPeerConnection | null) {
+export function useScreenShare(
+  peerConnection: RTCPeerConnection | null,
+  onStopped?: () => void
+) {
   const [isSharing, setIsSharing] = useState(false);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const screenSenderRef = useRef<RTCRtpSender | null>(null);
   const qualityMonitorRef = useRef<number | null>(null);
+
+  // ✅ Define stopSharing FIRST to avoid circular dependency
+  const stopSharing = useCallback(async () => {
+    if (!peerConnection) return;
+
+    if (qualityMonitorRef.current) {
+      clearInterval(qualityMonitorRef.current);
+      qualityMonitorRef.current = null;
+    }
+
+    // ✅ Remove screen share track from PeerConnection
+    if (screenSenderRef.current) {
+      peerConnection.removeTrack(screenSenderRef.current);
+      screenSenderRef.current = null;
+    }
+
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+    }
+
+    setIsSharing(false);
+    
+    // ✅ Notify parent that screen share stopped
+    onStopped?.();
+    
+    console.log('[useScreenShare] Stopped');
+  }, [peerConnection, onStopped]);
 
   const startSharing = useCallback(async () => {
     if (!peerConnection) return;
@@ -23,10 +55,12 @@ export function useScreenShare(peerConnection: RTCPeerConnection | null) {
 
       screenStreamRef.current = screenStream;
       const screenTrack = screenStream.getVideoTracks()[0];
-      const sender = peerConnection.getSenders().find((s) => s.track?.kind === 'video');
+      
+      // ✅ Add screen track as ADDITIONAL track (don't replace camera)
+      const sender = peerConnection.addTrack(screenTrack, screenStream);
+      screenSenderRef.current = sender;
 
       if (sender) {
-        await sender.replaceTrack(screenTrack);
 
         // Adaptive encoding
         const settings = screenTrack.getSettings();
@@ -67,6 +101,7 @@ export function useScreenShare(peerConnection: RTCPeerConnection | null) {
         }, 3000);
 
         screenTrack.onended = () => {
+          console.log('[useScreenShare] Track ended by user (browser stop button)');
           stopSharing();
         };
 
@@ -75,24 +110,7 @@ export function useScreenShare(peerConnection: RTCPeerConnection | null) {
     } catch (err) {
       console.error('[useScreenShare] Failed:', err);
     }
-  }, [peerConnection]);
-
-  const stopSharing = useCallback(async () => {
-    if (!peerConnection) return;
-
-    if (qualityMonitorRef.current) {
-      clearInterval(qualityMonitorRef.current);
-      qualityMonitorRef.current = null;
-    }
-
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach((t) => t.stop());
-      screenStreamRef.current = null;
-    }
-
-    setIsSharing(false);
-    console.log('[useScreenShare] Stopped');
-  }, [peerConnection]);
+  }, [peerConnection, stopSharing]);
 
   const toggleSharing = useCallback(() => {
     if (isSharing) {
@@ -104,6 +122,7 @@ export function useScreenShare(peerConnection: RTCPeerConnection | null) {
 
   return {
     isSharing,
+    screenStream: screenStreamRef.current,
     startSharing,
     stopSharing,
     toggleSharing,

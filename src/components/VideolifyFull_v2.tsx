@@ -67,6 +67,7 @@ export function VideolifyFull_v2({
   const [showFileTransfer, setShowFileTransfer] = useState(false);
   const [showVbgPanel, setShowVbgPanel] = useState(false);
   const [showDebugStats, setShowDebugStats] = useState(false);
+  const [chatInput, setChatInput] = useState('');
 
   // Call State
   const [handRaised, setHandRaised] = useState(false);
@@ -74,6 +75,8 @@ export function VideolifyFull_v2({
   const [remoteVideoEnabled, setRemoteVideoEnabled] = useState(true);
   const [remoteAudioEnabled, setRemoteAudioEnabled] = useState(true);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [remoteScreenStream, setRemoteScreenStream] = useState<MediaStream | null>(null);
+  const remoteCameraStreamRef = useRef<MediaStream | null>(null);
 
   // PiP controls - Separate for local and remote
   const [localPipSize, setLocalPipSize] = useState<'small' | 'medium' | 'large'>('medium');
@@ -116,10 +119,43 @@ export function VideolifyFull_v2({
   const webrtc = useWebRTC({
     peerId,
     onTrack: (event) => {
-      console.log('[VideolifyFull_v2] Remote track received');
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
+      console.log('[VideolifyFull_v2] Remote track received:', event.track.kind, 'streamId:', event.streams[0]?.id);
+      const stream = event.streams[0];
+      
+      if (!stream) return;
+      
+      // ✅ Detect screen share by checking if stream has ONLY video track (no audio)
+      // We need to wait a bit for all tracks to be added to the stream
+      setTimeout(() => {
+        const videoTracks = stream.getVideoTracks();
+        const audioTracks = stream.getAudioTracks();
+        
+        console.log('[VideolifyFull_v2] Stream analysis:', {
+          streamId: stream.id,
+          videoTracks: videoTracks.length,
+          audioTracks: audioTracks.length,
+          totalTracks: stream.getTracks().length
+        });
+        
+        // Screen share = video only (1 video track, 0 audio tracks)
+        // Camera = video + audio (1 video + 1 audio track)
+        if (videoTracks.length === 1 && audioTracks.length === 0) {
+          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected');
+          setRemoteScreenStream(stream);
+          
+          // ✅ CRITICAL: Listen for track ended to clear screen share
+          event.track.onended = () => {
+            console.log('[VideolifyFull_v2] Screen share track ended - clearing display');
+            setRemoteScreenStream(null);
+          };
+        } else if (videoTracks.length > 0 || audioTracks.length > 0) {
+          console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected');
+          remoteCameraStreamRef.current = stream;
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = stream;
+          }
+        }
+      }, 100);
     },
     onConnectionStateChange: (state) => {
       console.log('[VideolifyFull_v2] Connection state:', state);
@@ -160,7 +196,29 @@ export function VideolifyFull_v2({
     },
   });
 
-  const screenShare = useScreenShare(webrtc.peerConnection);
+  const screenShare = useScreenShare(
+    webrtc.peerConnection,
+    async () => {
+      // ✅ CRITICAL: Handle screen share stopped (by browser button or programmatically)
+      console.log('[VideolifyFull_v2] Screen share stopped - notifying peer');
+      
+      // Wait for track removal
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Renegotiate
+      if (webrtc.peerConnection && remotePeerIdRef.current) {
+        console.log('[VideolifyFull_v2] Creating new offer after screen share stopped');
+        const offer = await webrtc.createOffer();
+        if (offer) {
+          await signaling.sendOffer(offer, remotePeerIdRef.current);
+        }
+      }
+      
+      // Send control message to peer
+      console.log('[VideolifyFull_v2] Sending screen-share-toggle: false');
+      sendControl('screen-share-toggle', { isSharing: false });
+    }
+  );
 
   const signaling = useSignaling({
     roomId,
@@ -256,15 +314,29 @@ export function VideolifyFull_v2({
     controlChannelRef.current = channel;
     channel.onmessage = (e) => {
       const control = JSON.parse(e.data);
+      console.log('[VideolifyFull_v2] Control message received:', control);
+      
       if (control.type === 'hand-raise') setRemoteHandRaised(control.raised);
       else if (control.type === 'video-toggle') setRemoteVideoEnabled(control.enabled);
       else if (control.type === 'audio-toggle') setRemoteAudioEnabled(control.enabled);
+      else if (control.type === 'screen-share-toggle') {
+        console.log('[VideolifyFull_v2] Screen share toggle received:', control.isSharing);
+        // Clear remote screen stream when peer stops sharing
+        if (!control.isSharing) {
+          console.log('[VideolifyFull_v2] ✅ CLEARING remote screen stream');
+          setRemoteScreenStream(null);
+        }
+      }
     };
   }, []);
 
   const sendControl = useCallback((type: string, data: any) => {
     if (controlChannelRef.current?.readyState === 'open') {
-      controlChannelRef.current.send(JSON.stringify({ type, ...data }));
+      const message = JSON.stringify({ type, ...data });
+      console.log('[VideolifyFull_v2] Sending control message:', message);
+      controlChannelRef.current.send(message);
+    } else {
+      console.warn('[VideolifyFull_v2] Cannot send control - DataChannel not open:', controlChannelRef.current?.readyState);
     }
   }, []);
 
@@ -365,10 +437,32 @@ export function VideolifyFull_v2({
     sendControl('audio-toggle', { enabled: !media.isAudioEnabled });
   }, [media, sendControl]);
 
-  const handleToggleScreenShare = useCallback(() => {
-    screenShare.toggleSharing();
-    sendControl('screen-share-toggle', { isSharing: !screenShare.isSharing });
-  }, [screenShare, sendControl]);
+  const handleToggleScreenShare = useCallback(async () => {
+    if (screenShare.isSharing) {
+      // Stopping - onStopped callback will handle notification
+      await screenShare.stopSharing();
+    } else {
+      // Starting screen share
+      await screenShare.startSharing();
+      
+      // Wait for track to be added
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Renegotiate
+      if (webrtc.peerConnection && remotePeerIdRef.current) {
+        console.log('[VideolifyFull_v2] Screen share started - creating new offer');
+        const offer = await webrtc.createOffer();
+        if (offer) {
+          console.log('[VideolifyFull_v2] Sending offer to peer:', remotePeerIdRef.current);
+          await signaling.sendOffer(offer, remotePeerIdRef.current);
+        }
+      }
+      
+      // Send control message
+      console.log('[VideolifyFull_v2] Sending screen-share-toggle: true');
+      sendControl('screen-share-toggle', { isSharing: true });
+    }
+  }, [screenShare, webrtc, signaling, sendControl]);
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
@@ -459,9 +553,9 @@ export function VideolifyFull_v2({
 
 
         {/* Main Area */}
-        <div className="flex-1 flex">
-          {/* Video Area with padding for control bar */}
-          <div className="flex-1 relative bg-gray-800 pb-24">
+        <div className="flex-1 flex overflow-hidden">
+          {/* Video Area with padding for control bar - FIX: Use calc to prevent overflow */}
+          <div className="flex-1 relative bg-gray-800" style={{ height: 'calc(100vh - 6rem)' }}>
             {/* Waiting/Connecting State (exact v1) */}
             {!connectionStats.connected && (
               <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -491,22 +585,40 @@ export function VideolifyFull_v2({
 
             {/* Main Content Area - Logo/Screen Share/Whiteboard */}
             <div className="relative w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
-              {/* Screen Share Video (when sharing) */}
+              {/* Local Screen Share Video (when I'm sharing) */}
               {screenShare.isSharing && screenShare.screenStream && (
-                <video
-                  ref={(el) => {
-                    if (el && screenShare.screenStream) {
-                      el.srcObject = screenShare.screenStream;
-                    }
-                  }}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
+                <div className="relative w-full h-full">
+                  <video
+                    ref={(el) => {
+                      if (el && screenShare.screenStream) {
+                        el.srcObject = screenShare.screenStream;
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+
+              {/* Remote Screen Share Video (when peer is sharing) */}
+              {!screenShare.isSharing && remoteScreenStream && (
+                <div className="relative w-full h-full">
+                  <video
+                    ref={(el) => {
+                      if (el && remoteScreenStream) {
+                        el.srcObject = remoteScreenStream;
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                </div>
               )}
 
               {/* Welcome Screen with Logo (when not sharing) */}
-              {!screenShare.isSharing && !showWhiteboard && (
+              {!screenShare.isSharing && !remoteScreenStream && !showWhiteboard && (
                 <div className="text-center space-y-8">
                   <div className="text-white text-6xl font-bold mb-4">
                     📚 Học trực tuyến
