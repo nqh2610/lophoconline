@@ -80,51 +80,70 @@ export function useSignaling(options: UseSignalingOptions) {
   const connect = useCallback((): Promise<void> => {
     // ✅ If already connected, return resolved promise
     if (eventSourceRef.current?.readyState === 1) { // OPEN
-      console.log('[useSignaling] Already connected');
+      console.log('[useSignaling] ✅ Already connected, readyState:', eventSourceRef.current.readyState);
       return Promise.resolve();
     }
 
     // ✅ If connecting, return existing promise
     if (connectPromiseRef.current) {
-      console.log('[useSignaling] Already connecting, returning existing promise');
+      console.log('[useSignaling] ⏳ Already connecting, returning existing promise');
       return connectPromiseRef.current;
     }
 
     // ✅ Create new connection
     const promise = new Promise<void>((resolve, reject) => {
       const url = `/api/videolify/stream?roomId=${roomId}&peerId=${peerId}&accessToken=${accessToken}`;
-      console.log('[useSignaling] 🔌 Creating EventSource:', url);
+      console.log('[useSignaling] 🔌 Creating new EventSource connection');
+      console.log('[useSignaling]    URL:', url);
+      console.log('[useSignaling]    Time:', new Date().toISOString());
 
       // Timeout after 30 seconds (allow time for initial API compilation)
       const timeout = setTimeout(() => {
+        const state = eventSourceRef.current?.readyState;
         console.error('[useSignaling] ❌ SSE connection timeout after 30s');
-        console.error('[useSignaling] EventSource state:', eventSourceRef.current?.readyState);
+        console.error('[useSignaling]    EventSource state:', state);
+        console.error('[useSignaling]    State meaning:', state === 0 ? 'CONNECTING' : state === 1 ? 'OPEN' : state === 2 ? 'CLOSED' : 'UNKNOWN');
+        console.error('[useSignaling]    Time:', new Date().toISOString());
+
         if (eventSourceRef.current) {
           eventSourceRef.current.close();
           eventSourceRef.current = null;
         }
         connectPromiseRef.current = null; // Clear promise on timeout
-        reject(new Error('SSE connection timeout'));
+        reject(new Error('SSE connection timeout - server may be slow or unreachable'));
       }, 30000);
 
-      console.log('[useSignaling] 📡 Instantiating new EventSource...');
+      console.log('[useSignaling] 📡 Instantiating EventSource object...');
+      const startTime = Date.now();
       const es = new EventSource(url);
-      console.log('[useSignaling] EventSource created, readyState:', es.readyState);
+      const createTime = Date.now() - startTime;
+      console.log('[useSignaling]    EventSource created in', createTime, 'ms');
+      console.log('[useSignaling]    Initial readyState:', es.readyState, '(0=CONNECTING, 1=OPEN, 2=CLOSED)');
       eventSourceRef.current = es;
 
       // ✅ Use onopen instead of event listener - fires immediately when connection opens
       es.onopen = () => {
+        const openTime = Date.now() - startTime;
         clearTimeout(timeout);
-        console.log('[useSignaling] ✅ SSE onopen fired! readyState:', es.readyState);
+        console.log('[useSignaling] ✅ SSE onopen fired!');
+        console.log('[useSignaling]    Connection established in', openTime, 'ms');
+        console.log('[useSignaling]    Final readyState:', es.readyState);
+        console.log('[useSignaling]    Time:', new Date().toISOString());
         isConnectedRef.current = true;
         connectPromiseRef.current = null; // Clear promise
+
+        // ✅ CRITICAL: Clear handled peers on new connection to allow fresh peer-joined events
+        handledPeersRef.current.clear();
+        console.log('[useSignaling]    Cleared handled peers for fresh connection');
+
         callbacksRef.current.onConnected?.();
         resolve(); // Resolve promise when connected
       };
 
       // Also listen for custom 'connected' event from server (backup)
-      es.addEventListener('connected', () => {
-        console.log('[useSignaling] ✅ Received connected event from server');
+      es.addEventListener('connected', (e) => {
+        console.log('[useSignaling] ✅ Received "connected" event from server');
+        console.log('[useSignaling]    Event data:', e.data);
       });
 
       es.addEventListener('peer-joined', (e) => {
@@ -173,12 +192,26 @@ export function useSignaling(options: UseSignalingOptions) {
     });
 
       es.onerror = (error) => {
+        const errorTime = Date.now() - startTime;
         clearTimeout(timeout);
-        console.error('[useSignaling] SSE error:', error);
+        console.error('[useSignaling] ❌ SSE onerror fired!');
+        console.error('[useSignaling]    Error occurred at', errorTime, 'ms');
+        console.error('[useSignaling]    EventSource state:', es.readyState);
+        console.error('[useSignaling]    Error object:', error);
+        console.error('[useSignaling]    Time:', new Date().toISOString());
+
         isConnectedRef.current = false;
         connectPromiseRef.current = null; // Clear promise
         callbacksRef.current.onDisconnected?.();
-        // Don't reject here - connection might recover
+
+        // ⚠️ CRITICAL: Reject promise on first error to unblock initialization
+        // This prevents the component from waiting 30s for timeout
+        if (es.readyState === 2) { // CLOSED
+          console.error('[useSignaling]    Connection CLOSED - rejecting promise');
+          reject(new Error('SSE connection failed - readyState CLOSED'));
+        } else {
+          console.warn('[useSignaling]    Connection error but not closed - might recover');
+        }
       };
     });
 
@@ -261,6 +294,12 @@ export function useSignaling(options: UseSignalingOptions) {
     };
   }, [disconnect]);
 
+  // Clear handled peers (for debugging/recovery)
+  const clearHandledPeers = useCallback(() => {
+    handledPeersRef.current.clear();
+    console.log('[useSignaling] Manually cleared handled peers');
+  }, []);
+
   return {
     connect,
     disconnect,
@@ -270,6 +309,7 @@ export function useSignaling(options: UseSignalingOptions) {
     sendIceCandidate,
     sendVbgSettings,
     leaveRoom,
+    clearHandledPeers,
     isConnected: isConnectedRef.current,
   };
 }

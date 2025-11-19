@@ -45,11 +45,12 @@ export function useScreenShare(
     if (!peerConnection) return;
 
     try {
+      // ✅ Request higher resolution like Google Meet for better text clarity
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 },
-          frameRate: { ideal: 15, max: 30 },
+          width: { ideal: 2560, max: 3840 },  // Support up to 4K
+          height: { ideal: 1440, max: 2160 },
+          frameRate: { ideal: 30, max: 60 },  // Smooth scrolling
         },
       });
 
@@ -62,25 +63,26 @@ export function useScreenShare(
 
       if (sender) {
 
-        // Adaptive encoding
+        // Adaptive encoding - higher quality for text readability
         const settings = screenTrack.getSettings();
         const { width, height } = settings;
         const params = sender.getParameters();
 
         if (!params.encodings) params.encodings = [{}];
 
-        const needsDownscale = (width && width > 1920) || (height && height > 1080);
+        // Allow higher bitrate for text clarity
+        const needsDownscale = (width && width > 2560) || (height && height > 1440);
         if (needsDownscale) {
-          const downscaleFactor = Math.max((width || 1920) / 1920, (height || 1080) / 1080);
+          const downscaleFactor = Math.max((width || 2560) / 2560, (height || 1440) / 1440);
           params.encodings[0].scaleResolutionDownBy = downscaleFactor;
-          params.encodings[0].maxBitrate = 3000000;
+          params.encodings[0].maxBitrate = 8000000;  // 8 Mbps for high quality
         } else {
           params.encodings[0].scaleResolutionDownBy = 1.0;
-          params.encodings[0].maxBitrate = 5000000;
+          params.encodings[0].maxBitrate = 10000000; // 10 Mbps for crisp text
         }
 
         await sender.setParameters(params);
-        console.log('[useScreenShare] Started with adaptive quality');
+        console.log('[useScreenShare] Started with high quality for text clarity');
 
         // Quality monitoring
         qualityMonitorRef.current = window.setInterval(async () => {

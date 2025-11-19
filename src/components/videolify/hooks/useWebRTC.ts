@@ -54,17 +54,25 @@ export function useWebRTC(options: UseWebRTCOptions) {
       onConnectionStateChange?.(state);
     };
 
-    pc.oniceconnectionstatechange = () => {
+    pc.oniceconnectionstatechange = async () => {
       const state = pc.iceConnectionState;
       console.log('[useWebRTC] ICE state:', state);
       setIceState(state);
 
-      // Handle disconnection
-      if (state === 'disconnected') {
-        setTimeout(() => {
-          if (pc.iceConnectionState === 'disconnected') {
-            console.warn('[useWebRTC] Still disconnected, attempting ICE restart');
-            // ICE restart handled by caller
+      // ✅ CRITICAL: Auto ICE restart on failed/disconnected
+      if (state === 'disconnected' || state === 'failed') {
+        console.warn('[useWebRTC] ICE', state, '- will attempt restart in 2s');
+        setTimeout(async () => {
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            console.log('[useWebRTC] 🔄 Auto ICE restart triggered');
+            try {
+              const offer = await pc.createOffer({ iceRestart: true });
+              await pc.setLocalDescription(offer);
+              onIceCandidate?.({ type: 'ice-restart', sdp: offer.sdp } as any);
+              console.log('[useWebRTC] ICE restart offer sent');
+            } catch (err) {
+              console.error('[useWebRTC] ICE restart failed:', err);
+            }
           }
         }, 2000);
       }
@@ -94,8 +102,31 @@ export function useWebRTC(options: UseWebRTCOptions) {
       makingOfferRef.current = true;
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      console.log('[useWebRTC] Offer created');
-      return offer;
+
+      // ✅ CRITICAL: Wait for ICE gathering to complete for better connectivity
+      if (pc.iceGatheringState !== 'complete') {
+        console.log('[useWebRTC] Waiting for ICE gathering to complete...');
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            console.warn('[useWebRTC] ICE gathering timeout, proceeding anyway');
+            resolve();
+          }, 3000); // 3s timeout
+
+          const checkState = () => {
+            if (pc.iceGatheringState === 'complete') {
+              clearTimeout(timeout);
+              console.log('[useWebRTC] ICE gathering complete');
+              resolve();
+            }
+          };
+
+          pc.addEventListener('icegatheringstatechange', checkState);
+          checkState(); // Check immediately in case already complete
+        });
+      }
+
+      console.log('[useWebRTC] Offer created with', pc.localDescription?.sdp.match(/a=candidate/g)?.length || 0, 'candidates');
+      return pc.localDescription!.toJSON();
     } catch (err) {
       console.error('[useWebRTC] Create offer failed:', err);
       return null;
@@ -134,8 +165,31 @@ export function useWebRTC(options: UseWebRTCOptions) {
         await pc.setRemoteDescription(offer);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        console.log('[useWebRTC] Answer created');
-        return answer;
+
+        // ✅ CRITICAL: Wait for ICE gathering to complete
+        if (pc.iceGatheringState !== 'complete') {
+          console.log('[useWebRTC] Waiting for ICE gathering (answer)...');
+          await new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => {
+              console.warn('[useWebRTC] ICE gathering timeout (answer)');
+              resolve();
+            }, 3000);
+
+            const checkState = () => {
+              if (pc.iceGatheringState === 'complete') {
+                clearTimeout(timeout);
+                console.log('[useWebRTC] ICE gathering complete (answer)');
+                resolve();
+              }
+            };
+
+            pc.addEventListener('icegatheringstatechange', checkState);
+            checkState();
+          });
+        }
+
+        console.log('[useWebRTC] Answer created with', pc.localDescription?.sdp.match(/a=candidate/g)?.length || 0, 'candidates');
+        return pc.localDescription!.toJSON();
       } catch (err) {
         console.error('[useWebRTC] Handle offer failed:', err);
         return null;

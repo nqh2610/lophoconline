@@ -66,43 +66,72 @@ export async function GET(request: NextRequest) {
     return new Response('Missing roomId or peerId', { status: 400 });
   }
 
-  // Create SSE stream
+  console.log(`[SSE] Incoming connection request: ${peerId} in room ${roomId}`);
+
+  // ✅ CRITICAL: Use TransformStream for better control over flushing
+  const encoder = new TextEncoder();
+  let heartbeatInterval: NodeJS.Timeout | null = null;
+  const connectionId = `${roomId}-${peerId}-${Date.now()}`;
+
   const stream = new ReadableStream({
     start(controller) {
-      const connectionId = `${roomId}-${peerId}-${Date.now()}`;
+      console.log(`[SSE] Stream started: ${connectionId}`);
 
       // Store connection
       connections.set(connectionId, { controller, roomId, peerId });
 
-      // Send initial connection message
-      const welcome = `event: connected\ndata: ${JSON.stringify({ peerId })}\n\n`;
-      controller.enqueue(new TextEncoder().encode(welcome));
+      try {
+        // ✅ CRITICAL: Send initial connection message IMMEDIATELY
+        // This ensures EventSource.onopen fires quickly
+        const welcome = `event: connected\ndata: ${JSON.stringify({ peerId })}\n\n`;
+        controller.enqueue(encoder.encode(welcome));
+        console.log(`[SSE] ✅ Welcome message enqueued for ${peerId}`);
+      } catch (err) {
+        console.error(`[SSE] Error sending welcome:`, err);
+        connections.delete(connectionId);
+        try {
+          controller.error(err);
+        } catch {}
+        return;
+      }
 
       // Heartbeat to keep connection alive (30s for reduced bandwidth)
-      const heartbeat = setInterval(() => {
+      heartbeatInterval = setInterval(() => {
         try {
-          controller.enqueue(new TextEncoder().encode(': heartbeat\n\n'));
+          controller.enqueue(encoder.encode(': heartbeat\n\n'));
         } catch (err) {
-          clearInterval(heartbeat);
+          console.error('[SSE] Heartbeat error:', err);
+          if (heartbeatInterval) clearInterval(heartbeatInterval);
           connections.delete(connectionId);
         }
       }, 30000);
 
       // Cleanup on disconnect
       request.signal.addEventListener('abort', () => {
-        clearInterval(heartbeat);
+        console.log(`[SSE] Client aborted connection: ${peerId}`);
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
         connections.delete(connectionId);
-        console.log(`[SSE] Client disconnected: ${peerId}`);
       });
+    },
+
+    cancel() {
+      console.log(`[SSE] Stream cancelled: ${connectionId}`);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      connections.delete(connectionId);
     },
   });
 
+  console.log(`[SSE] Returning Response with SSE headers`);
+
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
+      'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no', // Disable nginx buffering
+      'Access-Control-Allow-Origin': '*', // Allow CORS for SSE
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }

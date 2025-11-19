@@ -15,14 +15,16 @@ import { useScreenShare } from './videolify/hooks/useScreenShare';
 import { useFileTransfer } from './videolify/hooks/useFileTransfer';
 import { useVirtualBackground } from './videolify/hooks/useVirtualBackground';
 import { useRecording } from './videolify/hooks/useRecording';
+import { useConnectionEstablishment } from './videolify/hooks/useConnectionEstablishment';
 import type { VideolifyFullProps } from './videolify/types';
+import { addLocalTracksToPC, recreatePeerConnection } from '@/utils/webrtc-helpers';
 
 import Draggable from 'react-draggable';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { User, VideoOff, MicOff, Eye, EyeOff, Maximize2, Minimize2, Hand } from 'lucide-react';
+import { User, VideoOff, MicOff, Eye, Hand } from 'lucide-react';
 
 // UI Components
 import { VirtualBackgroundPanel } from './videolify/ui/VirtualBackgroundPanel';
@@ -31,10 +33,18 @@ import { WhiteboardPanel } from './videolify/ui/WhiteboardPanel';
 import { VideoCallToolbar } from './videolify/ui/VideoCallToolbar';
 import { FileTransferPanel } from './videolify/ui/FileTransferPanel';
 import { DebugStatsPanel } from './videolify/ui/DebugStatsPanel';
+import { CameraOffOverlay } from './videolify/ui/CameraOffOverlay';
+import { NameBadge } from './videolify/ui/NameBadge';
+import { PiPControlBar } from './videolify/ui/PiPControlBar';
 
 // ✅ CRITICAL: Global initialization tracker to prevent StrictMode double-init
 // MUST be outside component so it persists across component remounts
-const initializedRooms = new Map<string, { initialized: boolean, timestamp: number }>();
+const initializedRooms = new Map<string, {
+  initialized: boolean;
+  timestamp: number;
+  completed: boolean; // Track if async initialization completed
+}>();
+
 
 export function VideolifyFull_v2({
   roomId,
@@ -77,6 +87,12 @@ export function VideolifyFull_v2({
   const [isConnecting, setIsConnecting] = useState(true);
   const [remoteScreenStream, setRemoteScreenStream] = useState<MediaStream | null>(null);
   const remoteCameraStreamRef = useRef<MediaStream | null>(null);
+  const [remoteUserName, setRemoteUserName] = useState<string>('');
+  const [remoteVideoHasFrames, setRemoteVideoHasFrames] = useState(false);
+  const [localVideoHasFrames, setLocalVideoHasFrames] = useState(false);
+  // Speaking detection disabled
+  const isLocalSpeaking = false;
+  const isRemoteSpeaking = false;
 
   // PiP controls - Separate for local and remote
   const [localPipSize, setLocalPipSize] = useState<'small' | 'medium' | 'large'>('medium');
@@ -119,43 +135,77 @@ export function VideolifyFull_v2({
   const webrtc = useWebRTC({
     peerId,
     onTrack: (event) => {
-      console.log('[VideolifyFull_v2] Remote track received:', event.track.kind, 'streamId:', event.streams[0]?.id);
+      console.log('[VideolifyFull_v2] 🎬 Remote track received:', event.track.kind, 'streamId:', event.streams[0]?.id);
       const stream = event.streams[0];
-      
-      if (!stream) return;
-      
-      // ✅ Detect screen share by checking if stream has ONLY video track (no audio)
-      // We need to wait a bit for all tracks to be added to the stream
+
+      if (!stream) {
+        console.warn('[VideolifyFull_v2] ⚠️ No stream in track event!');
+        return;
+      }
+
+      // Wait a bit for all tracks to be added to stream
       setTimeout(() => {
         const videoTracks = stream.getVideoTracks();
         const audioTracks = stream.getAudioTracks();
-        
-        console.log('[VideolifyFull_v2] Stream analysis:', {
+
+        // Get track settings to check for screen share
+        const trackSettings = event.track.kind === 'video' ? (event.track as MediaStreamTrack).getSettings() : {};
+
+        console.log('[VideolifyFull_v2] 📊 Stream analysis:', {
           streamId: stream.id,
+          trackKind: event.track.kind,
+          trackLabel: event.track.label,
+          trackSettings: trackSettings,
           videoTracks: videoTracks.length,
           audioTracks: audioTracks.length,
           totalTracks: stream.getTracks().length
         });
-        
-        // Screen share = video only (1 video track, 0 audio tracks)
-        // Camera = video + audio (1 video + 1 audio track)
-        if (videoTracks.length === 1 && audioTracks.length === 0) {
-          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected');
+
+        // ✅ Detect screen share using multiple methods (in priority order):
+        // 1. Check track label (contains "screen", "window", etc.)
+        // 2. Check displaySurface setting (exists only for screen share)
+        // 3. Fallback: video-only stream (no audio)
+        const trackLabel = event.track.label.toLowerCase();
+        const hasScreenLabel = trackLabel.includes('screen') ||
+                               trackLabel.includes('window') ||
+                               trackLabel.includes('monitor') ||
+                               trackLabel.includes('display');
+        const hasDisplaySurface = 'displaySurface' in trackSettings;
+        const isVideoOnly = event.track.kind === 'video' && videoTracks.length > 0 && audioTracks.length === 0;
+
+        const isScreenShare = hasScreenLabel || hasDisplaySurface || isVideoOnly;
+
+        console.log('[VideolifyFull_v2] 🔍 Screen share detection:', {
+          hasScreenLabel,
+          hasDisplaySurface,
+          isVideoOnly,
+          finalDecision: isScreenShare
+        });
+
+        if (isScreenShare) {
+          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected - setting to main area');
           setRemoteScreenStream(stream);
-          
-          // ✅ CRITICAL: Listen for track ended to clear screen share
+
+          // Listen for track ended to clear screen share
           event.track.onended = () => {
             console.log('[VideolifyFull_v2] Screen share track ended - clearing display');
             setRemoteScreenStream(null);
           };
-        } else if (videoTracks.length > 0 || audioTracks.length > 0) {
-          console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected');
+        } else {
+          console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected - setting to camera frame');
           remoteCameraStreamRef.current = stream;
-          if (remoteVideoRef.current) {
+
+          if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
+            console.log('[VideolifyFull_v2] 🎥 Setting remote video srcObject to stream:', stream.id);
             remoteVideoRef.current.srcObject = stream;
           }
+
+          // Listen for track ended
+          event.track.onended = () => {
+            console.log('[VideolifyFull_v2] ⚠️ Camera track ended:', event.track.kind);
+          };
         }
-      }, 100);
+      }, 100); // Wait 100ms for all tracks to be added
     },
     onConnectionStateChange: (state) => {
       console.log('[VideolifyFull_v2] Connection state:', state);
@@ -196,6 +246,63 @@ export function VideolifyFull_v2({
     },
   });
 
+  // ✅ Setup control channel handler (must be defined before connection hook)
+  const setupControlChannel = useCallback((channel: RTCDataChannel) => {
+    console.log('[VideolifyFull_v2] 📡 Setting up control channel, state:', channel.readyState);
+    controlChannelRef.current = channel;
+
+    channel.onopen = () => {
+      console.log('[VideolifyFull_v2] ✅ Control channel OPEN');
+    };
+
+    channel.onclose = () => {
+      console.log('[VideolifyFull_v2] ⚠️ Control channel CLOSED');
+    };
+
+    channel.onerror = (error) => {
+      console.error('[VideolifyFull_v2] ❌ Control channel ERROR:', error);
+    };
+
+    channel.onmessage = (e) => {
+      const control = JSON.parse(e.data);
+      console.log('[VideolifyFull_v2] 📨 Control message received:', control);
+
+      if (control.type === 'hand-raise') {
+        setRemoteHandRaised(control.raised);
+        if (control.userName) setRemoteUserName(control.userName);
+      }
+      else if (control.type === 'video-toggle') setRemoteVideoEnabled(control.enabled);
+      else if (control.type === 'audio-toggle') setRemoteAudioEnabled(control.enabled);
+      else if (control.type === 'screen-share-toggle') {
+        console.log('[VideolifyFull_v2] Screen share toggle received:', control.isSharing);
+        // Clear remote screen stream when peer stops sharing
+        if (!control.isSharing) {
+          console.log('[VideolifyFull_v2] ✅ CLEARING remote screen stream');
+          setRemoteScreenStream(null);
+        }
+      }
+    };
+  }, []);
+
+  // ✅ Connection establishment hook - centralized logic for all connection scenarios
+  const connection = useConnectionEstablishment({
+    webrtc,
+    media,
+    remotePeerIdRef,
+    onDataChannelsCreated: useCallback((channels: {
+      chat: RTCDataChannel | null;
+      whiteboard: RTCDataChannel | null;
+      control: RTCDataChannel | null;
+      file: RTCDataChannel | null;
+    }) => {
+      console.log('[VideolifyFull_v2] Data channels created by hook - setting up handlers');
+      if (channels.chat) chat.setupChannel(channels.chat);
+      if (channels.whiteboard) whiteboard.setupChannel(channels.whiteboard);
+      if (channels.control) setupControlChannel(channels.control);
+      if (channels.file) fileTransfer.setupChannel(channels.file);
+    }, [chat, whiteboard, fileTransfer]),
+  });
+
   const screenShare = useScreenShare(
     webrtc.peerConnection,
     async () => {
@@ -228,68 +335,47 @@ export function VideolifyFull_v2({
     role,
     callbacks: {
       onPeerJoined: async (event) => {
-        remotePeerIdRef.current = event.peerId;
-        
-        // Close existing connection if any (for reconnection scenario)
-        if (webrtc.peerConnection) {
-          console.log('[VideolifyFull_v2] Closing existing connection before reconnection');
-          webrtc.close();
-        }
-        
-        // ✅ ALWAYS create PeerConnection for both initiator and answerer
-        webrtc.createPeerConnection();
+        console.log('[VideolifyFull_v2] 🔔 Peer joined:', event.peerId, 'shouldInitiate:', event.shouldInitiate);
 
-        // ✅ FIX F5: Add tracks if available, but DON'T WAIT
-        // Connection works without media - user can enable later
-        if (media.localStream) {
-          console.log('[VideolifyFull_v2] Adding tracks to PC:', media.localStream.getTracks().length);
-          media.localStream.getTracks().forEach((track) => {
-            webrtc.addTrack(track, media.localStream!);
-          });
+        // ✅ Use centralized connection establishment hook
+        const offer = await connection.establishConnection(
+          event.peerId,
+          event.shouldInitiate,
+          'peer-joined'
+        );
+
+        // ✅ Send offer if we're the initiator
+        if (offer) {
+          console.log('[VideolifyFull_v2] ✅ Offer created by hook, sending to peer:', event.peerId);
+          await signaling.sendOffer(offer, event.peerId);
+        } else if (event.shouldInitiate) {
+          console.error('[VideolifyFull_v2] ❌ Failed to create offer - hook returned null');
         } else {
-          console.log('[VideolifyFull_v2] No media stream yet - connecting without media (user can enable later)');
-        }
-
-        if (event.shouldInitiate) {
-          const chatCh = webrtc.createDataChannel('chat', { ordered: true });
-          const whiteboardCh = webrtc.createDataChannel('whiteboard', { ordered: true });
-          const controlCh = webrtc.createDataChannel('control', { ordered: true });
-          const fileCh = webrtc.createDataChannel('file', { ordered: false });
-
-          if (chatCh) chat.setupChannel(chatCh);
-          if (whiteboardCh) whiteboard.setupChannel(whiteboardCh);
-          if (controlCh) setupControlChannel(controlCh);
-          if (fileCh) fileTransfer.setupChannel(fileCh);
-
-          const offer = await webrtc.createOffer();
-          if (offer) await signaling.sendOffer(offer, event.peerId);
+          console.log('[VideolifyFull_v2] 📥 Not initiator - waiting for offer');
         }
       },
       onOffer: async (event) => {
-        remotePeerIdRef.current = event.fromPeerId;
-        
-        // ✅ Create PC if not exists (backup for answerer)
-        if (!webrtc.peerConnection) {
-          webrtc.createPeerConnection();
-          
-          // ✅ FIX F5: Add tracks if available, but DON'T WAIT
-          if (media.localStream) {
-            console.log('[VideolifyFull_v2] Adding tracks in onOffer:', media.localStream.getTracks().length);
-            media.localStream.getTracks().forEach((track) => {
-              webrtc.addTrack(track, media.localStream!);
-            });
-          } else {
-            console.log('[VideolifyFull_v2] No media stream in onOffer - answering without media');
-          }
-        }
-        
+        console.log('[VideolifyFull_v2] 📥 Offer received from:', event.fromPeerId);
+
+        // ✅ Use hook to ensure PeerConnection exists with tracks
+        connection.ensurePeerConnection(event.fromPeerId, 'onOffer');
+
+        console.log('[VideolifyFull_v2] Processing offer and creating answer...');
         const answer = await webrtc.handleOffer(event.offer, event.fromPeerId);
-        if (answer) await signaling.sendAnswer(answer, event.fromPeerId);
+        if (answer) {
+          console.log('[VideolifyFull_v2] ✅ Answer created, sending to peer:', event.fromPeerId);
+          await signaling.sendAnswer(answer, event.fromPeerId);
+        } else {
+          console.error('[VideolifyFull_v2] ❌ Failed to create answer!');
+        }
       },
       onAnswer: async (event) => {
+        console.log('[VideolifyFull_v2] 📨 Answer received from:', event.fromPeerId);
         await webrtc.handleAnswer(event.answer);
+        console.log('[VideolifyFull_v2] ✅ Answer processed');
       },
       onIceCandidate: async (event) => {
+        console.log('[VideolifyFull_v2] 🧊 ICE candidate received from:', event.fromPeerId);
         await webrtc.addIceCandidate(event.candidate);
       },
       onVbgSettings: async (event) => {
@@ -299,36 +385,38 @@ export function VideolifyFull_v2({
       },
       onPeerLeft: (event) => {
         console.log('[VideolifyFull_v2] Peer left:', event.peerId);
-        // Only show toast if we had an active connection with this peer
-        if (remotePeerIdRef.current === event.peerId && connectionStats.connected) {
-          toast({ title: 'Người khác đã rời phòng', variant: 'destructive' });
-          onCallEnd?.();
+
+        // ✅ CRITICAL FIX: Reset connection if this was our connected peer
+        if (remotePeerIdRef.current === event.peerId) {
+          console.log('[VideolifyFull_v2] 🔴 Connected peer left - resetting connection state');
+
+          // Close existing connection
+          webrtc.close();
+
+          // Reset remote peer ref to allow new connection
+          remotePeerIdRef.current = null;
+
+          // Reset remote streams
+          remoteCameraStreamRef.current = null;
+          setRemoteScreenStream(null);
+
+          // Clear remote video
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = null;
+          }
+
+          // Show toast only if we were actually connected
+          if (connectionStats.connected) {
+            toast({ title: 'Người khác đã rời phòng - chờ kết nối lại...', variant: 'default' });
+          }
+
+          console.log('[VideolifyFull_v2] ✅ Connection reset complete - ready for new peer-joined');
         } else {
           console.log('[VideolifyFull_v2] Ignoring peer-left for non-connected peer:', event.peerId);
         }
       },
     },
   });
-
-  const setupControlChannel = useCallback((channel: RTCDataChannel) => {
-    controlChannelRef.current = channel;
-    channel.onmessage = (e) => {
-      const control = JSON.parse(e.data);
-      console.log('[VideolifyFull_v2] Control message received:', control);
-      
-      if (control.type === 'hand-raise') setRemoteHandRaised(control.raised);
-      else if (control.type === 'video-toggle') setRemoteVideoEnabled(control.enabled);
-      else if (control.type === 'audio-toggle') setRemoteAudioEnabled(control.enabled);
-      else if (control.type === 'screen-share-toggle') {
-        console.log('[VideolifyFull_v2] Screen share toggle received:', control.isSharing);
-        // Clear remote screen stream when peer stops sharing
-        if (!control.isSharing) {
-          console.log('[VideolifyFull_v2] ✅ CLEARING remote screen stream');
-          setRemoteScreenStream(null);
-        }
-      }
-    };
-  }, []);
 
   const sendControl = useCallback((type: string, data: any) => {
     if (controlChannelRef.current?.readyState === 'open') {
@@ -341,23 +429,45 @@ export function VideolifyFull_v2({
   }, []);
 
   useEffect(() => {
-    // ✅ CRITICAL FIX: Use GLOBAL flag to prevent React StrictMode double-init
-    const roomKey = `${roomId}-${peerId}`;
+    // ✅ CRITICAL FIX: Use ROOM-BASED key (NOT peerId) to prevent StrictMode double-init
+    // roomKey based on roomId + userId only (peerId changes every mount!)
+    const roomKey = `${roomId}`;
     const now = Date.now();
 
-    // Check if already initialized recently (within 1 second)
+    console.log('[VideolifyFull_v2] 🚀 Component mounting - roomKey:', roomKey);
+
+    // ✅ CRITICAL: Check if already initialized recently (StrictMode remount)
     const existing = initializedRooms.get(roomKey);
-    if (existing && (now - existing.timestamp) < 1000) {
-      console.log('[VideolifyFull_v2] ⚠️ Already initialized, skipping duplicate mount (StrictMode)');
-      // ✅ CRITICAL: Return empty cleanup to prevent disconnecting on StrictMode remount
-      return () => {
-        console.log('[VideolifyFull_v2] Skipped mount cleanup - connections preserved');
-      };
+    if (existing && (now - existing.timestamp) < 2000) {
+      const timeSinceInit = now - existing.timestamp;
+      console.log('[VideolifyFull_v2] ⚠️ Already initialized', timeSinceInit, 'ms ago');
+
+      // ✅ CRITICAL: Only skip if initialization COMPLETED
+      if (existing.completed) {
+        console.log('[VideolifyFull_v2] ⚠️ SKIPPING initialization (StrictMode remount + completed)');
+        console.log('[VideolifyFull_v2] 📊 Debug info:', {
+          roomKey,
+          timeSinceInit,
+          peerId,
+          completed: existing.completed,
+          existingTimestamp: new Date(existing.timestamp).toISOString(),
+          currentTimestamp: new Date(now).toISOString()
+        });
+
+        // Return cleanup that does nothing
+        return () => {
+          console.log('[VideolifyFull_v2] Cleanup for skipped mount - no action needed');
+        };
+      } else {
+        console.log('[VideolifyFull_v2] ⚠️ Initialization in progress - allowing mount 2 to complete it');
+        // ✅ CRITICAL: Clear handled peers to allow fresh peer-joined events
+        signaling.clearHandledPeers();
+      }
     }
 
-    // Mark as initialized GLOBALLY
-    initializedRooms.set(roomKey, { initialized: true, timestamp: now });
-    console.log('[VideolifyFull_v2] ✅ Marked as initialized globally');
+    // Mark as initialized (for StrictMode detection in cleanup)
+    initializedRooms.set(roomKey, { initialized: true, timestamp: now, completed: false });
+    console.log('[VideolifyFull_v2] ✅ First mount - proceeding with initialization at', new Date(now).toISOString());
 
     // ✅ CRITICAL: Handle visibility change (tab switch, minimize)
     const handleVisibilityChange = () => {
@@ -367,7 +477,7 @@ export function VideolifyFull_v2({
         console.log('[VideolifyFull_v2] Page visible - connection active');
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     (async () => {
@@ -396,30 +506,204 @@ export function VideolifyFull_v2({
 
       // ✅ Connect to SSE and join room (ALWAYS, even without media)
       console.log('[VideolifyFull_v2] Connecting to SSE...');
-      await signaling.connect();
-      console.log('[VideolifyFull_v2] SSE connected, now joining room...');
+      console.log('[VideolifyFull_v2] Time:', new Date().toISOString());
 
-      const joinResponse = await signaling.joinRoom();
-      console.log('[VideolifyFull_v2] Joined room, existing peers:', joinResponse.peers || []);
+      try {
+        await signaling.connect();
+        console.log('[VideolifyFull_v2] ✅ SSE connected successfully!');
+        console.log('[VideolifyFull_v2] Time:', new Date().toISOString());
+      } catch (err) {
+        console.error('[VideolifyFull_v2] ❌ SSE connection failed:', err);
+        console.error('[VideolifyFull_v2] This is a CRITICAL error - cannot proceed without signaling');
+        toast({
+          title: 'Lỗi kết nối',
+          description: 'Không thể kết nối đến server. Vui lòng tải lại trang.',
+          variant: 'destructive',
+        });
+        return; // Stop initialization
+      }
+
+      console.log('[VideolifyFull_v2] Now joining room...');
+      try {
+        const joinResponse = await signaling.joinRoom();
+        console.log('[VideolifyFull_v2] ✅ Joined room successfully!');
+        console.log('[VideolifyFull_v2] Existing peers:', joinResponse.peers || []);
+        console.log('[VideolifyFull_v2] Time:', new Date().toISOString());
+
+        // ✅ Mark initialization as completed
+        const current = initializedRooms.get(roomKey);
+        if (current) {
+          initializedRooms.set(roomKey, { ...current, completed: true });
+          console.log('[VideolifyFull_v2] ✅ Initialization completed and marked');
+        }
+      } catch (err) {
+        console.error('[VideolifyFull_v2] ❌ Join room failed:', err);
+        toast({
+          title: 'Lỗi tham gia phòng',
+          description: 'Không thể tham gia phòng học. Vui lòng thử lại.',
+          variant: 'destructive',
+        });
+      }
     })();
 
     return () => {
-      console.log('[VideolifyFull_v2] Cleanup triggered');
-      
+      console.log('[VideolifyFull_v2] Cleanup triggered - checking if StrictMode or real unmount');
+
       // Remove event listeners
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      
-      // ✅ CRITICAL for F5: Just disconnect SSE and close PC
-      // DON'T send leave signal - let server timeout handle it (prevents race condition)
-      // DON'T stop media - preserve for reconnection
+
+      // ✅ CRITICAL: Check if this is StrictMode (flag exists and recent)
+      const existing = initializedRooms.get(roomKey);
+      const isStrictMode = existing && (Date.now() - existing.timestamp) < 2000;
+
+      if (isStrictMode) {
+        console.log('[VideolifyFull_v2] ⚠️ StrictMode cleanup detected - NOT disconnecting');
+        // Don't disconnect - StrictMode will remount immediately
+        return;
+      }
+
+      console.log('[VideolifyFull_v2] 🔴 REAL unmount - cleaning up connections');
+
+      // Cleanup connections
       signaling.disconnect();
       webrtc.close();
       vbg.destroy();
-      
-      // Clear initialization flag immediately (allow re-init)
+
+      // Clear initialization flag
       initializedRooms.delete(roomKey);
+      console.log('[VideolifyFull_v2] Initialization flag cleared');
     };
   }, [roomId, peerId]);
+
+  // ✅ Monitor remote video element for frames
+  useEffect(() => {
+    const videoElement = remoteVideoRef.current;
+    if (!videoElement) return;
+
+    let frameCheckInterval: number | null = null;
+
+    const checkVideoFrames = () => {
+      if (!videoElement.srcObject) {
+        setRemoteVideoHasFrames(false);
+        return;
+      }
+
+      const stream = videoElement.srcObject as MediaStream;
+      const videoTracks = stream.getVideoTracks();
+
+      if (videoTracks.length === 0) {
+        setRemoteVideoHasFrames(false);
+        return;
+      }
+
+      const videoTrack = videoTracks[0];
+
+      // Check if track is live and enabled
+      const isLive = videoTrack.readyState === 'live';
+      const isEnabled = videoTrack.enabled;
+
+      // Check if video element has actual video frames
+      const hasVideoData = videoElement.videoWidth > 0 && videoElement.videoHeight > 0;
+
+      const hasFrames = isLive && isEnabled && hasVideoData;
+      setRemoteVideoHasFrames(hasFrames);
+
+      console.log('[VideolifyFull_v2] 🎥 Remote video frame check:', {
+        isLive,
+        isEnabled,
+        hasVideoData,
+        videoWidth: videoElement.videoWidth,
+        videoHeight: videoElement.videoHeight,
+        hasFrames
+      });
+    };
+
+    // Check frames every 500ms
+    frameCheckInterval = window.setInterval(checkVideoFrames, 500);
+
+    // Also check on certain video events
+    videoElement.addEventListener('loadedmetadata', checkVideoFrames);
+    videoElement.addEventListener('playing', checkVideoFrames);
+    videoElement.addEventListener('emptied', () => setRemoteVideoHasFrames(false));
+
+    // Initial check
+    checkVideoFrames();
+
+    return () => {
+      if (frameCheckInterval) clearInterval(frameCheckInterval);
+      videoElement.removeEventListener('loadedmetadata', checkVideoFrames);
+      videoElement.removeEventListener('playing', checkVideoFrames);
+      videoElement.removeEventListener('emptied', () => setRemoteVideoHasFrames(false));
+    };
+  }, []);
+
+  // ✅ Monitor local video element for frames
+  useEffect(() => {
+    const videoElement = localVideoRef.current;
+    if (!videoElement) return;
+
+    let frameCheckInterval: number | null = null;
+
+    const checkVideoFrames = () => {
+      if (!videoElement.srcObject) {
+        setLocalVideoHasFrames(false);
+        return;
+      }
+
+      const stream = videoElement.srcObject as MediaStream;
+      const videoTracks = stream.getVideoTracks();
+
+      if (videoTracks.length === 0) {
+        setLocalVideoHasFrames(false);
+        return;
+      }
+
+      const videoTrack = videoTracks[0];
+      const isLive = videoTrack.readyState === 'live';
+      const isEnabled = videoTrack.enabled;
+      const hasVideoData = videoElement.videoWidth > 0 && videoElement.videoHeight > 0;
+
+      const hasFrames = isLive && isEnabled && hasVideoData;
+      setLocalVideoHasFrames(hasFrames);
+    };
+
+    // Check frames every 500ms
+    frameCheckInterval = window.setInterval(checkVideoFrames, 500);
+
+    videoElement.addEventListener('loadedmetadata', checkVideoFrames);
+    videoElement.addEventListener('playing', checkVideoFrames);
+    videoElement.addEventListener('emptied', () => setLocalVideoHasFrames(false));
+
+    // Initial check
+    checkVideoFrames();
+
+    return () => {
+      if (frameCheckInterval) clearInterval(frameCheckInterval);
+      videoElement.removeEventListener('loadedmetadata', checkVideoFrames);
+      videoElement.removeEventListener('playing', checkVideoFrames);
+      videoElement.removeEventListener('emptied', () => setLocalVideoHasFrames(false));
+    };
+  }, []);
+
+  // ✅ Ensure local video srcObject is set when PiP becomes visible
+  useEffect(() => {
+    if (localPipVisible && localVideoRef.current && media.localStream) {
+      if (localVideoRef.current.srcObject !== media.localStream) {
+        localVideoRef.current.srcObject = media.localStream;
+        console.log('[VideolifyFull_v2] Restored local video srcObject');
+      }
+    }
+  }, [localPipVisible, media.localStream]);
+
+  // ✅ Ensure remote video srcObject is set when PiP becomes visible
+  useEffect(() => {
+    if (remotePipVisible && remoteVideoRef.current && remoteCameraStreamRef.current) {
+      if (remoteVideoRef.current.srcObject !== remoteCameraStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteCameraStreamRef.current;
+        console.log('[VideolifyFull_v2] Restored remote video srcObject');
+      }
+    }
+  }, [remotePipVisible]);
 
   useEffect(() => {
     if (showWhiteboard && whiteboardCanvasRef.current && !whiteboard.canvas) {
@@ -473,7 +757,7 @@ export function VideolifyFull_v2({
   const toggleHandRaise = () => {
     const newState = !handRaised;
     setHandRaised(newState);
-    sendControl('hand-raise', { raised: newState });
+    sendControl('hand-raise', { raised: newState, userName: userDisplayName });
   };
 
   const handleFilePick = () => {
@@ -554,8 +838,8 @@ export function VideolifyFull_v2({
 
         {/* Main Area */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Video Area with padding for control bar - FIX: Use calc to prevent overflow */}
-          <div className="flex-1 relative bg-gray-800" style={{ height: 'calc(100vh - 6rem)' }}>
+          {/* Video Area - Full height */}
+          <div className="flex-1 relative bg-gray-800">
             {/* Waiting/Connecting State (exact v1) */}
             {!connectionStats.connected && (
               <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -584,10 +868,10 @@ export function VideolifyFull_v2({
             )}
 
             {/* Main Content Area - Logo/Screen Share/Whiteboard */}
-            <div className="relative w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+            <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
               {/* Local Screen Share Video (when I'm sharing) */}
               {screenShare.isSharing && screenShare.screenStream && (
-                <div className="relative w-full h-full">
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900">
                   <video
                     ref={(el) => {
                       if (el && screenShare.screenStream) {
@@ -596,14 +880,15 @@ export function VideolifyFull_v2({
                     }}
                     autoPlay
                     playsInline
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain drop-shadow-2xl"
+                    style={{ maxHeight: '100%', maxWidth: '100%' }}
                   />
                 </div>
               )}
 
               {/* Remote Screen Share Video (when peer is sharing) */}
               {!screenShare.isSharing && remoteScreenStream && (
-                <div className="relative w-full h-full">
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900">
                   <video
                     ref={(el) => {
                       if (el && remoteScreenStream) {
@@ -612,7 +897,8 @@ export function VideolifyFull_v2({
                     }}
                     autoPlay
                     playsInline
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain drop-shadow-2xl"
+                    style={{ maxHeight: '100%', maxWidth: '100%' }}
                   />
                 </div>
               )}
@@ -630,214 +916,115 @@ export function VideolifyFull_v2({
                 </div>
               )}
 
-          {/* Local Video PiP - Draggable */}
+          {/* Local Video PiP - Draggable - Smaller and positioned for horizontal layout */}
           {localPipVisible && (
             <Draggable bounds="parent" handle=".drag-handle" defaultPosition={{ x: 0, y: 0 }}>
               <div className={`absolute top-3 right-3 z-30 group ${
-                localPipSize === 'small' ? 'w-40 h-30' :
-                localPipSize === 'medium' ? 'w-64 h-48' :
-                'w-96 h-72'
+                localPipSize === 'small' ? 'w-32 h-24' :
+                localPipSize === 'medium' ? 'w-48 h-36' :
+                'w-64 h-48'
               }`}>
                 <video
                   ref={localVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover rounded-lg border-2 border-blue-500 shadow-lg cursor-move drag-handle ${
-                    media.isVideoEnabled ? 'block' : 'hidden'
-                  }`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move drag-handle transition-all duration-200 ${
+                    isLocalSpeaking
+                      ? 'border-[3px] border-blue-400 shadow-blue-400/50'
+                      : 'border-2 border-blue-500/50'
+                  } ${media.isVideoEnabled && localVideoHasFrames ? 'block' : 'hidden'}`}
                 />
 
-                {/* Camera Off Overlay */}
-                {!media.isVideoEnabled && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg border-2 border-blue-500 shadow-lg cursor-move drag-handle">
-                    <div className={`rounded-full bg-gray-800 flex items-center justify-center shadow-xl mb-2 ${
-                      localPipSize === 'small' ? 'w-12 h-12' :
-                      localPipSize === 'medium' ? 'w-16 h-16' :
-                      'w-24 h-24'
-                    }`}>
-                      <User className={`text-gray-400 ${
-                        localPipSize === 'small' ? 'w-6 h-6' :
-                        localPipSize === 'medium' ? 'w-8 h-8' :
-                        'w-12 h-12'
-                      }`} />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <VideoOff className={`text-red-400 ${
-                        localPipSize === 'small' ? 'w-3 h-3' :
-                        localPipSize === 'medium' ? 'w-4 h-4' :
-                        'w-5 h-5'
-                      }`} />
-                      <p className={`text-white font-semibold ${
-                        localPipSize === 'small' ? 'text-xs' :
-                        localPipSize === 'medium' ? 'text-sm' :
-                        'text-base'
-                      }`}>
-                        Camera tắt
-                      </p>
-                    </div>
+                {/* Camera Off Overlay - Show when: video disabled or no video frames (blocked/permission denied) */}
+                {(!media.isVideoEnabled || !localVideoHasFrames) && (
+                  <div className="border-2 border-blue-500 shadow-lg cursor-move drag-handle rounded-lg">
+                    <CameraOffOverlay pipSize={localPipSize} />
                   </div>
                 )}
 
-                {/* Name Label */}
-                <div className="absolute bottom-2 left-2 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-semibold">
-                  {userDisplayName}
-                </div>
+                {/* Mic Muted Indicator - Local */}
+                {!media.isAudioEnabled && (
+                  <div className="absolute top-2 left-2 bg-red-500/90 text-white p-1.5 rounded-full flex items-center justify-center">
+                    <MicOff className="w-4 h-4" />
+                  </div>
+                )}
 
                 {/* PiP Controls - Show on hover */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={toggleLocalPipSize}
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 w-7 p-0 bg-black/50 hover:bg-black/70"
-                      >
-                        {localPipSize === 'small' ? <Maximize2 className="w-3 h-3" /> :
-                         localPipSize === 'medium' ? <Maximize2 className="w-4 h-4" /> :
-                         <Minimize2 className="w-4 h-4" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {localPipSize === 'small' ? 'Phóng to' :
-                       localPipSize === 'medium' ? 'Phóng to thêm' : 'Thu nhỏ'}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setLocalPipVisible(false)}
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 w-7 p-0 bg-black/50 hover:bg-black/70"
-                      >
-                        <EyeOff className="w-3 h-3" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Ẩn video của tôi</TooltipContent>
-                  </Tooltip>
-                </div>
+                <PiPControlBar
+                  pipSize={localPipSize}
+                  onResize={toggleLocalPipSize}
+                  onHide={() => setLocalPipVisible(false)}
+                />
               </div>
             </Draggable>
           )}
 
-          {/* Remote Video PiP - Below Local Video */}
+          {/* Remote Video PiP - Positioned to the left of Local Video (horizontal layout) */}
           {remotePipVisible && (
-            <Draggable bounds="parent" handle=".drag-handle-remote" defaultPosition={{ x: 0, y: 200 }}>
-              <div className={`absolute top-52 right-3 z-30 group ${
-                remotePipSize === 'small' ? 'w-40 h-30' :
-                remotePipSize === 'medium' ? 'w-64 h-48' :
-                'w-96 h-72'
+            <Draggable bounds="parent" handle=".drag-handle-remote" defaultPosition={{ x: -210, y: 0 }}>
+              <div className={`absolute top-3 right-3 z-30 group ${
+                remotePipSize === 'small' ? 'w-32 h-24' :
+                remotePipSize === 'medium' ? 'w-48 h-36' :
+                'w-64 h-48'
               }`}>
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className={`w-full h-full object-cover rounded-lg border-2 border-green-500 shadow-lg cursor-move drag-handle-remote ${
-                    connectionStats.connected && remoteVideoEnabled ? 'block' : 'hidden'
-                  }`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move drag-handle-remote transition-all duration-200 ${
+                    isRemoteSpeaking
+                      ? 'border-[3px] border-green-400 shadow-green-400/50'
+                      : 'border-2 border-green-500/50'
+                  } ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames ? 'block' : 'hidden'}`}
                 />
 
-                {/* Camera Off Overlay */}
-                {(!connectionStats.connected || !remoteVideoEnabled) && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg border-2 border-green-500 shadow-lg cursor-move drag-handle-remote">
-                    <div className={`rounded-full bg-gray-800 flex items-center justify-center shadow-xl mb-2 ${
-                      remotePipSize === 'small' ? 'w-12 h-12' :
-                      remotePipSize === 'medium' ? 'w-16 h-16' :
-                      'w-24 h-24'
-                    }`}>
-                      <User className={`text-gray-400 ${
-                        remotePipSize === 'small' ? 'w-6 h-6' :
-                        remotePipSize === 'medium' ? 'w-8 h-8' :
-                        'w-12 h-12'
-                      }`} />
-                    </div>
-                    <p className={`text-white font-semibold ${
-                      remotePipSize === 'small' ? 'text-xs' :
-                      remotePipSize === 'medium' ? 'text-sm' :
-                      'text-base'
-                    }`}>
-                      {role === 'tutor' ? 'Học viên' : 'Giáo viên'}
-                    </p>
+                {/* Camera Off Overlay - Show when: not connected, video disabled, or no video frames */}
+                {(!connectionStats.connected || !remoteVideoEnabled || !remoteVideoHasFrames) && (
+                  <div className="border-2 border-green-500 shadow-lg cursor-move drag-handle-remote rounded-lg">
+                    <CameraOffOverlay pipSize={remotePipSize} />
                   </div>
                 )}
 
-                {/* Name Label */}
-                <div className="absolute bottom-2 left-2 bg-green-500/90 text-white px-2 py-1 rounded text-xs font-semibold">
-                  {role === 'tutor' ? 'Học viên' : 'Giáo viên'}
-                </div>
-
                 {/* Mic Muted Indicator */}
                 {connectionStats.connected && !remoteAudioEnabled && (
-                  <div className="absolute top-2 left-2 bg-red-500/90 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                    <MicOff className="w-3 h-3" />
-                    <span>Mic tắt</span>
+                  <div className="absolute top-2 left-2 bg-red-500/90 text-white p-1.5 rounded-full flex items-center justify-center">
+                    <MicOff className="w-4 h-4" />
                   </div>
                 )}
 
                 {/* PiP Controls - Show on hover */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={toggleRemotePipSize}
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 w-7 p-0 bg-black/50 hover:bg-black/70"
-                      >
-                        {remotePipSize === 'small' ? <Maximize2 className="w-3 h-3" /> :
-                         remotePipSize === 'medium' ? <Maximize2 className="w-4 h-4" /> :
-                         <Minimize2 className="w-4 h-4" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {remotePipSize === 'small' ? 'Phóng to' :
-                       remotePipSize === 'medium' ? 'Phóng to thêm' : 'Thu nhỏ'}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setRemotePipVisible(false)}
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 w-7 p-0 bg-black/50 hover:bg-black/70"
-                      >
-                        <EyeOff className="w-3 h-3" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Ẩn video người khác</TooltipContent>
-                  </Tooltip>
-                </div>
+                <PiPControlBar
+                  pipSize={remotePipSize}
+                  onResize={toggleRemotePipSize}
+                  onHide={() => setRemotePipVisible(false)}
+                />
               </div>
             </Draggable>
           )}
 
-          {/* Show Hidden Video Buttons */}
-          <div className="absolute bottom-32 right-4 z-40 flex flex-col gap-2">
+          {/* Show Hidden Video Buttons - Compact, bottom-right corner */}
+          <div className="absolute bottom-4 right-4 z-40 flex gap-2">
             {!localPipVisible && (
               <Button
                 onClick={() => setLocalPipVisible(true)}
                 variant="outline"
-                size="sm"
-                className="bg-blue-500/90 hover:bg-blue-600 border-blue-400 text-white"
+                size="icon"
+                className="bg-blue-500/90 hover:bg-blue-600 border-blue-400 text-white w-10 h-10"
+                title="Hiện video của tôi"
               >
-                <Eye className="w-4 h-4 mr-2" />
-                Hiện video của tôi
+                <Eye className="w-5 h-5" />
               </Button>
             )}
             {!remotePipVisible && (
               <Button
                 onClick={() => setRemotePipVisible(true)}
                 variant="outline"
-                size="sm"
-                className="bg-green-500/90 hover:bg-green-600 border-green-400 text-white"
+                size="icon"
+                className="bg-green-500/90 hover:bg-green-600 border-green-400 text-white w-10 h-10"
+                title={`Hiện video ${role === 'tutor' ? 'học viên' : 'giáo viên'}`}
               >
-                <Eye className="w-4 h-4 mr-2" />
-                Hiện video {role === 'tutor' ? 'học viên' : 'giáo viên'}
+                <Eye className="w-5 h-5" />
               </Button>
             )}
           </div>
@@ -858,10 +1045,15 @@ export function VideolifyFull_v2({
               </>
             )}
 
-            {/* Hand Raise Indicator */}
+            {/* Hand Raise Indicator - Centered for visibility */}
             {remoteHandRaised && connectionStats.connected && (
-              <div className="absolute top-4 right-4 z-20 bg-yellow-500 text-white p-3 rounded-full shadow-lg animate-bounce">
-                <Hand className="w-8 h-8" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-3">
+                <div className="bg-yellow-500 text-white p-6 rounded-full shadow-2xl animate-bounce">
+                  <Hand className="w-16 h-16" />
+                </div>
+                <div className="bg-yellow-500/95 text-white px-6 py-3 rounded-full shadow-xl">
+                  <p className="text-xl font-bold">{remoteUserName || 'Người dùng'} giơ tay!</p>
+                </div>
               </div>
             )}
 
@@ -874,8 +1066,8 @@ export function VideolifyFull_v2({
                   </Badge>
                 )}
                 {!remoteAudioEnabled && (
-                  <Badge className="bg-red-500/90 text-white px-3 py-1">
-                    <MicOff className="w-3 h-3 mr-1" /> Mic tắt
+                  <Badge className="bg-red-500/90 text-white px-2 py-1">
+                    <MicOff className="w-4 h-4" />
                   </Badge>
                 )}
               </div>

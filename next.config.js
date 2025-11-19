@@ -35,12 +35,30 @@ const nextConfig = {
   // Cache control headers
   async headers() {
     return [
+      // ✅ CRITICAL: Exclude SSE endpoints from cache headers
       {
-        source: '/:path*',
+        source: '/api/videolify/stream',
         headers: [
           {
             key: 'Cache-Control',
-            value: process.env.NODE_ENV === 'development' 
+            value: 'no-cache, no-transform',
+          },
+          {
+            key: 'Connection',
+            value: 'keep-alive',
+          },
+          {
+            key: 'X-Accel-Buffering',
+            value: 'no',
+          },
+        ],
+      },
+      {
+        source: '/:path((?!api/videolify/stream).*)*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: process.env.NODE_ENV === 'development'
               ? 'no-store, no-cache, must-revalidate, proxy-revalidate'
               : 'public, max-age=3600, stale-while-revalidate=86400',
           },
