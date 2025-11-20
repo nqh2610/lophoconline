@@ -1,0 +1,72 @@
+{
+  "ROOM": "autojoin-loop-1763543477140",
+  "SUMMARY": {
+    "total": 10,
+    "firstSuccess": 10,
+    "firstFail": 0,
+    "reopenFixed": 0,
+    "reopenRateAmongFails": 0
+  },
+  "RESULTS": [
+    {
+      "iteration": 1,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 2,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 3,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 4,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 5,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 6,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 7,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 8,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 9,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    },
+    {
+      "iteration": 10,
+      "firstConnected": true,
+      "firstSseOk": true,
+      "reopenSuccess": false
+    }
+  ]
+}

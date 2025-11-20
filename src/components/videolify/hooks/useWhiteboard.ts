@@ -134,11 +134,25 @@ export function useWhiteboard(roomId: string) {
     }
   }, []);
 
+  const setBrushColor = useCallback((color: string) => {
+    if (canvasRef.current) {
+      canvasRef.current.freeDrawingBrush.color = color;
+    }
+  }, []);
+
+  const setBrushWidth = useCallback((width: number) => {
+    if (canvasRef.current) {
+      canvasRef.current.freeDrawingBrush.width = width;
+    }
+  }, []);
+
   return {
     initialize,
     setupChannel,
     clearCanvas,
     setDrawingMode,
+    setBrushColor,
+    setBrushWidth,
     canvas: canvasRef.current,
   };
 }

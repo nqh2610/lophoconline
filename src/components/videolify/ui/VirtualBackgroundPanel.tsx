@@ -51,7 +51,7 @@ export function VirtualBackgroundPanel({
     <>
       {/* Backdrop overlay - click to close menu */}
       <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9998]"
+        className="fixed inset-0 bg-black/20 z-[9998]"
         onClick={onClose}
       />
 

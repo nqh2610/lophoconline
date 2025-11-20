@@ -17,6 +17,7 @@
     "optimize": "npm run create-indexes && echo Performance optimization complete!"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.0",
     "@hookform/resolvers": "^3.10.0",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@radix-ui/react-accordion": "^1.2.4",
@@ -79,6 +80,7 @@
     "react-draggable": "^4.5.0",
     "react-hook-form": "^7.55.0",
     "react-icons": "^5.5.0",
+    "react-resizable": "^3.0.5",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
     "socket.io": "^4.8.1",

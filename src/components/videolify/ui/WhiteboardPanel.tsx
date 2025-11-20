@@ -9,6 +9,8 @@ interface WhiteboardPanelProps {
   onClose: () => void;
   onClearCanvas: () => void;
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  currentColor: string;
+  onColorChange: (color: string) => void;
 }
 
 export function WhiteboardPanel({
@@ -16,6 +18,8 @@ export function WhiteboardPanel({
   onClose,
   onClearCanvas,
   canvasRef,
+  currentColor,
+  onColorChange,
 }: WhiteboardPanelProps) {
   if (!show) return null;
 
@@ -31,6 +35,17 @@ export function WhiteboardPanel({
             <X className="w-4 h-4" />
           </Button>
         </div>
+      </div>
+      <div className="px-4 py-2 border-b flex items-center gap-2">
+        <span className="text-sm">Màu:</span>
+        {['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'].map((c) => (
+          <button
+            key={c}
+            onClick={() => onColorChange(c)}
+            className={`w-6 h-6 rounded-full border-2 ${currentColor === c ? 'border-blue-500' : 'border-gray-300'}`}
+            style={{ backgroundColor: c }}
+          />
+        ))}
       </div>
       <div className="flex-1 p-4">
         <canvas ref={canvasRef} className="border border-gray-300 w-full h-full" />

@@ -10,12 +10,13 @@ import { useSignaling } from './videolify/hooks/useSignaling';
 import { useWebRTC } from './videolify/hooks/useWebRTC';
 import { useMediaDevices } from './videolify/hooks/useMediaDevices';
 import { useChat } from './videolify/hooks/useChat';
-import { useWhiteboard } from './videolify/hooks/useWhiteboard';
+import { useExcalidrawSync } from './videolify/hooks/useExcalidrawSync';
 import { useScreenShare } from './videolify/hooks/useScreenShare';
 import { useFileTransfer } from './videolify/hooks/useFileTransfer';
 import { useVirtualBackground } from './videolify/hooks/useVirtualBackground';
 import { useRecording } from './videolify/hooks/useRecording';
 import { useConnectionEstablishment } from './videolify/hooks/useConnectionEstablishment';
+import { useReactions } from './videolify/hooks/useReactions';
 import type { VideolifyFullProps } from './videolify/types';
 import { addLocalTracksToPC, recreatePeerConnection } from '@/utils/webrtc-helpers';
 
@@ -29,7 +30,7 @@ import { User, VideoOff, MicOff, Eye, Hand } from 'lucide-react';
 // UI Components
 import { VirtualBackgroundPanel } from './videolify/ui/VirtualBackgroundPanel';
 import { ChatPanel } from './videolify/ui/ChatPanel';
-import { WhiteboardPanel } from './videolify/ui/WhiteboardPanel';
+import { WhiteboardExcalidraw } from './videolify/ui/WhiteboardExcalidraw';
 import { VideoCallToolbar } from './videolify/ui/VideoCallToolbar';
 import { FileTransferPanel } from './videolify/ui/FileTransferPanel';
 import { DebugStatsPanel } from './videolify/ui/DebugStatsPanel';
@@ -100,12 +101,50 @@ export function VideolifyFull_v2({
   const [remotePipSize, setRemotePipSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [remotePipVisible, setRemotePipVisible] = useState(true);
 
+  // Individual PiP positions to allow separate dragging and avoid overlap
+  const [localPos, setLocalPos] = useState({ x: 0, y: 0 });
+  const [remotePos, setRemotePos] = useState({ x: 0, y: 160 });
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const localNodeRef = useRef<HTMLDivElement | null>(null);
+  const remoteNodeRef = useRef<HTMLDivElement | null>(null);
+
+  const ensureNoOverlap = useCallback((moved: 'local' | 'remote') => {
+    const localEl = localNodeRef.current as HTMLDivElement | null;
+    const remoteEl = remoteNodeRef.current as HTMLDivElement | null;
+    const containerEl = containerRef.current as HTMLDivElement | null;
+    if (!localEl || !remoteEl || !containerEl) return;
+
+    const lRect = localEl.getBoundingClientRect();
+    const rRect = remoteEl.getBoundingClientRect();
+    const cRect = containerEl.getBoundingClientRect();
+
+    const gap = 20; // px — increased gap requested by user
+
+    const intersects = !(lRect.right < rRect.left || lRect.left > rRect.right || lRect.bottom < rRect.top || lRect.top > rRect.bottom);
+    if (!intersects) return;
+
+    if (moved === 'local') {
+      // move remote below local
+      const desiredTop = lRect.bottom + gap;
+      const newY = Math.max(0, Math.round(desiredTop - cRect.top));
+      setRemotePos((p) => ({ x: p.x, y: newY }));
+    } else {
+      // moved remote -> move local above remote
+      const desiredTop = rRect.top - gap - lRect.height;
+      const newY = Math.max(0, Math.round(desiredTop - cRect.top));
+      setLocalPos((p) => ({ x: p.x, y: newY }));
+    }
+  }, []);
+
   // File transfer
   const [isFileTransferMinimized, setIsFileTransferMinimized] = useState(false);
 
   // VBG category filter
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Track initial VBG state when opening panel
+  const [initialVbgEnabled, setInitialVbgEnabled] = useState(false);
 
   // Connection stats
   const [connectionStats, setConnectionStats] = useState({
@@ -121,16 +160,35 @@ export function VideolifyFull_v2({
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const whiteboardCanvasRef = useRef<HTMLCanvasElement>(null);
+  const excalidrawAPIRef = useRef<any>(null);
   const remotePeerIdRef = useRef<string | null>(null);
   const controlChannelRef = useRef<RTCDataChannel | null>(null);
 
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [lastMessageTime, setLastMessageTime] = useState<number>(0);
+
   const media = useMediaDevices();
-  const chat = useChat({ userName: userDisplayName });
-  const whiteboard = useWhiteboard(roomId);
+  const chat = useChat({
+    userName: userDisplayName,
+    onNewMessage: (message) => {
+      if (!showChat) {
+        setUnreadChatCount(prev => prev + 1);
+        setLastMessageTime(Date.now());
+
+        // Show toast notification
+        toast({
+          title: `💬 ${message.userName}`,
+          description: message.message.substring(0, 100),
+          duration: 3000,
+        });
+      }
+    },
+  });
+  const excalidrawSync = useExcalidrawSync(roomId);
   const fileTransfer = useFileTransfer();
   const vbg = useVirtualBackground();
   const recording = useRecording();
+  const reactions = useReactions(userDisplayName);
 
   const webrtc = useWebRTC({
     peerId,
@@ -240,7 +298,7 @@ export function VideolifyFull_v2({
     onDataChannel: (channel) => {
       console.log('[VideolifyFull_v2] Data channel received:', channel.label);
       if (channel.label === 'chat') chat.setupChannel(channel);
-      else if (channel.label === 'whiteboard') whiteboard.setupChannel(channel);
+      else if (channel.label === 'whiteboard') excalidrawSync.setupChannel(channel);
       else if (channel.label === 'control') setupControlChannel(channel);
       else if (channel.label === 'file') fileTransfer.setupChannel(channel);
     },
@@ -281,8 +339,26 @@ export function VideolifyFull_v2({
           setRemoteScreenStream(null);
         }
       }
+      else if (control.type === 'whiteboard-toggle') {
+        console.log('[VideolifyFull_v2] Whiteboard toggle received:', control.isOpen);
+        // Auto-open whiteboard when peer opens it
+        setShowWhiteboard(control.isOpen);
+        if (control.isOpen) {
+          toast({ title: '📝 Bảng trắng đã được mở bởi người khác' });
+        }
+      }
+      else if (control.type === 'reaction') {
+        console.log('[VideolifyFull_v2] Reaction received:', control.reactionType, 'from:', control.userName);
+        // Add remote reaction
+        reactions.addRemoteReaction({
+          type: control.reactionType,
+          emoji: control.emoji,
+          fromMe: false,
+          userName: control.userName,
+        });
+      }
     };
-  }, []);
+  }, [reactions]);
 
   // ✅ Connection establishment hook - centralized logic for all connection scenarios
   const connection = useConnectionEstablishment({
@@ -297,10 +373,10 @@ export function VideolifyFull_v2({
     }) => {
       console.log('[VideolifyFull_v2] Data channels created by hook - setting up handlers');
       if (channels.chat) chat.setupChannel(channels.chat);
-      if (channels.whiteboard) whiteboard.setupChannel(channels.whiteboard);
+      if (channels.whiteboard) excalidrawSync.setupChannel(channels.whiteboard);
       if (channels.control) setupControlChannel(channels.control);
       if (channels.file) fileTransfer.setupChannel(channels.file);
-    }, [chat, whiteboard, fileTransfer]),
+    }, [chat, excalidrawSync, fileTransfer]),
   });
 
   const screenShare = useScreenShare(
@@ -705,12 +781,6 @@ export function VideolifyFull_v2({
     }
   }, [remotePipVisible]);
 
-  useEffect(() => {
-    if (showWhiteboard && whiteboardCanvasRef.current && !whiteboard.canvas) {
-      whiteboard.initialize(whiteboardCanvasRef.current);
-    }
-  }, [showWhiteboard]);
-
   const handleToggleVideo = useCallback(() => {
     media.toggleVideo();
     sendControl('video-toggle', { enabled: !media.isVideoEnabled });
@@ -759,6 +829,36 @@ export function VideolifyFull_v2({
     setHandRaised(newState);
     sendControl('hand-raise', { raised: newState, userName: userDisplayName });
   };
+
+  const handleSendReaction = useCallback((type: 'heart' | 'like' | 'clap' | 'fire') => {
+    // Add local reaction
+    reactions.sendReaction(type);
+
+    // Emoji mapping
+    const emojiMap = {
+      heart: '❤️',
+      like: '👍',
+      clap: '👏',
+      fire: '🔥',
+    };
+
+    // Send to peer via control channel
+    sendControl('reaction', {
+      reactionType: type,
+      emoji: emojiMap[type],
+      userName: userDisplayName,
+    });
+  }, [reactions, sendControl, userDisplayName]);
+
+  const handleToggleWhiteboard = useCallback(() => {
+    const newState = !showWhiteboard;
+    setShowWhiteboard(newState);
+
+    // Send control message to peer
+    sendControl('whiteboard-toggle', { isOpen: newState });
+
+    console.log('[VideolifyFull_v2] Whiteboard toggled:', newState);
+  }, [showWhiteboard, sendControl]);
 
   const handleFilePick = () => {
     const input = document.createElement('input');
@@ -868,7 +968,7 @@ export function VideolifyFull_v2({
             )}
 
             {/* Main Content Area - Logo/Screen Share/Whiteboard */}
-            <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+              <div ref={containerRef} className="relative w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
               {/* Local Screen Share Video (when I'm sharing) */}
               {screenShare.isSharing && screenShare.screenStream && (
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900">
@@ -907,98 +1007,82 @@ export function VideolifyFull_v2({
               {!screenShare.isSharing && !remoteScreenStream && !showWhiteboard && (
                 <div className="text-center space-y-8">
                   <div className="text-white text-6xl font-bold mb-4">
-                    📚 Học trực tuyến
+                    📚 Lớp Học Online
                   </div>
-                  <p className="text-gray-400 text-2xl">Chào mừng đến với lớp học!</p>
                   <div className="text-gray-500 text-lg">
                     Bắt đầu chia sẻ màn hình hoặc sử dụng bảng trắng để dạy học
                   </div>
                 </div>
               )}
 
-          {/* Local Video PiP - Draggable - Smaller and positioned for horizontal layout */}
+          {/* Individual draggable PiPs with collision avoidance */}
           {localPipVisible && (
-            <Draggable bounds="parent" handle=".drag-handle" defaultPosition={{ x: 0, y: 0 }}>
-              <div className={`absolute top-3 right-3 z-30 group ${
-                localPipSize === 'small' ? 'w-32 h-24' :
-                localPipSize === 'medium' ? 'w-48 h-36' :
-                'w-64 h-48'
-              }`}>
+            <Draggable
+              bounds="parent"
+              position={localPos}
+              onDrag={(_, d) => setLocalPos({ x: d.x, y: d.y })}
+              onStop={(_, d) => { setLocalPos({ x: d.x, y: d.y }); setTimeout(() => ensureNoOverlap('local'), 0); }}
+            >
+              <div
+                ref={localNodeRef}
+                style={{ position: 'absolute', top: 12, right: 12, zIndex: 30 }}
+                className={`group transition-all duration-200 ${localPipSize === 'small' ? 'w-32 h-24' : localPipSize === 'medium' ? 'w-48 h-36' : 'w-64 h-48'}`}>
                 <video
                   ref={localVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move drag-handle transition-all duration-200 ${
-                    isLocalSpeaking
-                      ? 'border-[3px] border-blue-400 shadow-blue-400/50'
-                      : 'border-2 border-blue-500/50'
-                  } ${media.isVideoEnabled && localVideoHasFrames ? 'block' : 'hidden'}`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move transition-all duration-200 ${isLocalSpeaking ? 'border-[3px] border-blue-400 shadow-blue-400/50' : 'border-2 border-blue-500/50'} ${media.isVideoEnabled && localVideoHasFrames ? 'block' : 'hidden'}`}
                 />
 
-                {/* Camera Off Overlay - Show when: video disabled or no video frames (blocked/permission denied) */}
                 {(!media.isVideoEnabled || !localVideoHasFrames) && (
-                  <div className="border-2 border-blue-500 shadow-lg cursor-move drag-handle rounded-lg">
+                  <div className="border-2 border-blue-500 shadow-lg rounded-lg">
                     <CameraOffOverlay pipSize={localPipSize} />
                   </div>
                 )}
 
-                {/* Mic Muted Indicator - Local */}
                 {!media.isAudioEnabled && (
                   <div className="absolute top-2 left-2 bg-red-500/90 text-white p-1.5 rounded-full flex items-center justify-center">
                     <MicOff className="w-4 h-4" />
                   </div>
                 )}
 
-                {/* PiP Controls - Show on hover */}
-                <PiPControlBar
-                  pipSize={localPipSize}
-                  onResize={toggleLocalPipSize}
-                  onHide={() => setLocalPipVisible(false)}
-                />
+                <PiPControlBar pipSize={localPipSize} onResize={toggleLocalPipSize} onHide={() => setLocalPipVisible(false)} />
               </div>
             </Draggable>
           )}
 
-          {/* Remote Video PiP - Positioned to the left of Local Video (horizontal layout) */}
           {remotePipVisible && (
-            <Draggable bounds="parent" handle=".drag-handle-remote" defaultPosition={{ x: -210, y: 0 }}>
-              <div className={`absolute top-3 right-3 z-30 group ${
-                remotePipSize === 'small' ? 'w-32 h-24' :
-                remotePipSize === 'medium' ? 'w-48 h-36' :
-                'w-64 h-48'
-              }`}>
+            <Draggable
+              bounds="parent"
+              position={remotePos}
+              onDrag={(_, d) => setRemotePos({ x: d.x, y: d.y })}
+              onStop={(_, d) => { setRemotePos({ x: d.x, y: d.y }); setTimeout(() => ensureNoOverlap('remote'), 0); }}
+            >
+              <div
+                ref={remoteNodeRef}
+                style={{ position: 'absolute', top: 12, right: 12, zIndex: 29 }}
+                className={`group transition-all duration-200 ${remotePipSize === 'small' ? 'w-32 h-24' : remotePipSize === 'medium' ? 'w-48 h-36' : 'w-64 h-48'}`}>
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move drag-handle-remote transition-all duration-200 ${
-                    isRemoteSpeaking
-                      ? 'border-[3px] border-green-400 shadow-green-400/50'
-                      : 'border-2 border-green-500/50'
-                  } ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames ? 'block' : 'hidden'}`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move transition-all duration-200 ${isRemoteSpeaking ? 'border-[3px] border-green-400 shadow-green-400/50' : 'border-2 border-green-500/50'} ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames ? 'block' : 'hidden'}`}
                 />
 
-                {/* Camera Off Overlay - Show when: not connected, video disabled, or no video frames */}
                 {(!connectionStats.connected || !remoteVideoEnabled || !remoteVideoHasFrames) && (
-                  <div className="border-2 border-green-500 shadow-lg cursor-move drag-handle-remote rounded-lg">
+                  <div className="border-2 border-green-500 shadow-lg rounded-lg">
                     <CameraOffOverlay pipSize={remotePipSize} />
                   </div>
                 )}
 
-                {/* Mic Muted Indicator */}
                 {connectionStats.connected && !remoteAudioEnabled && (
                   <div className="absolute top-2 left-2 bg-red-500/90 text-white p-1.5 rounded-full flex items-center justify-center">
                     <MicOff className="w-4 h-4" />
                   </div>
                 )}
 
-                {/* PiP Controls - Show on hover */}
-                <PiPControlBar
-                  pipSize={remotePipSize}
-                  onResize={toggleRemotePipSize}
-                  onHide={() => setRemotePipVisible(false)}
-                />
+                <PiPControlBar pipSize={remotePipSize} onResize={toggleRemotePipSize} onHide={() => setRemotePipVisible(false)} />
               </div>
             </Draggable>
           )}
@@ -1087,13 +1171,25 @@ export function VideolifyFull_v2({
         showChat={showChat}
         showWhiteboard={showWhiteboard}
         showVbgPanel={showVbgPanel}
-        onToggleChat={() => setShowChat(!showChat)}
-        onToggleWhiteboard={() => setShowWhiteboard(!showWhiteboard)}
-        onToggleVbgPanel={() => setShowVbgPanel(!showVbgPanel)}
+        onToggleChat={() => {
+          setShowChat(!showChat);
+          if (!showChat) {
+            setUnreadChatCount(0);
+          }
+        }}
+        unreadChatCount={unreadChatCount}
+        onToggleWhiteboard={handleToggleWhiteboard}
+        onToggleVbgPanel={() => {
+          if (!showVbgPanel) {
+            setInitialVbgEnabled(vbg.enabled);
+          }
+          setShowVbgPanel(!showVbgPanel);
+        }}
         onFilePick={handleFilePick}
         vbgEnabled={vbg.enabled}
         handRaised={handRaised}
         onToggleHandRaise={toggleHandRaise}
+        onSendReaction={handleSendReaction}
         isRecording={recording.isRecording}
         onToggleRecording={() => recording.toggleRecording(media.localStream!)}
         showDebugStats={showDebugStats}
@@ -1104,28 +1200,46 @@ export function VideolifyFull_v2({
       {/* Chat Panel */}
       <ChatPanel
         show={showChat}
-        onClose={() => setShowChat(false)}
-        messages={chat.messages.map((msg) => ({
-          text: msg.message,
-          fromMe: msg.fromMe,
-          sender: msg.userName,
-          timestamp: Date.now(),
-        }))}
-        onSendMessage={(message) => chat.sendMessage(message)}
+        onClose={() => {
+          setShowChat(false);
+          setUnreadChatCount(0);
+        }}
+        messages={chat.messages}
+        onSendMessage={(message) => {
+          chat.sendMessage(message);
+        }}
+        onReaction={(messageIndex, emoji) => chat.addReaction(messageIndex, emoji)}
+        typingUsers={chat.typingUsers}
         userDisplayName={userDisplayName}
+        role={role as 'teacher' | 'student'}
       />
 
-      {/* Whiteboard Panel */}
-      <WhiteboardPanel
+      {/* Excalidraw Whiteboard Panel */}
+      <WhiteboardExcalidraw
         show={showWhiteboard}
-        onClose={() => setShowWhiteboard(false)}
-        onClearCanvas={whiteboard.clearCanvas}
-        canvasRef={whiteboardCanvasRef}
+        onClose={() => {
+          setShowWhiteboard(false);
+          // Notify peer that whiteboard is closed
+          sendControl('whiteboard-toggle', { isOpen: false });
+        }}
+        excalidrawAPI={excalidrawAPIRef.current}
+        onAPIReady={(api) => {
+          excalidrawAPIRef.current = api;
+          excalidrawSync.setExcalidrawAPI(api);
+        }}
+        onChange={excalidrawSync.handleChange}
+        role={role as 'teacher' | 'student'}
+        userName={userDisplayName}
       />
 
       <VirtualBackgroundPanel
         show={showVbgPanel}
-        onClose={() => setShowVbgPanel(false)}
+        onClose={() => {
+          setShowVbgPanel(false);
+          if (vbg.enabled === initialVbgEnabled) {
+            handleVbgNone();
+          }
+        }}
         vbgEnabled={vbg.enabled}
         vbgMode={vbg.mode}
         blurAmount={vbg.blurAmount}
@@ -1162,6 +1276,27 @@ export function VideolifyFull_v2({
         connectionStats={connectionStats}
         isRecording={recording.isRecording}
       />
+
+      {/* Floating Heart Animations */}
+      {reactions.reactions.length > 0 && (
+        <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+          {reactions.reactions.map((reaction) => (
+            <div
+              key={reaction.id}
+              className="absolute animate-float-up"
+              style={{
+                left: `${reaction.x}%`,
+                bottom: '0',
+                animation: 'float-up 4s ease-out forwards',
+              }}
+            >
+              <div className="text-5xl animate-sway">
+                {reaction.emoji}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       </div>
     </TooltipProvider>

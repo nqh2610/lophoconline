@@ -2,6 +2,151 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Floating Heart Animations */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-100vh) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes sway {
+  0%, 100% {
+    transform: translateX(0) rotate(-5deg);
+  }
+  25% {
+    transform: translateX(10px) rotate(5deg);
+  }
+  50% {
+    transform: translateX(-10px) rotate(-5deg);
+  }
+  75% {
+    transform: translateX(5px) rotate(3deg);
+  }
+}
+
+.animate-float-up {
+  animation: float-up 4s ease-out forwards;
+}
+
+.animate-sway {
+  animation: sway 2s ease-in-out infinite;
+}
+
+/* React Resizable Styles */
+.react-resizable {
+  position: relative;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  z-index: 10;
+}
+
+.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-resizable-handle-sw {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+.react-resizable-handle-ne {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.react-resizable-handle-nw {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.react-resizable-handle-s {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 5px;
+  cursor: s-resize;
+}
+
+.react-resizable-handle-n {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 5px;
+  cursor: n-resize;
+}
+
+.react-resizable-handle-e {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 100%;
+  cursor: e-resize;
+}
+
+.react-resizable-handle-w {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 100%;
+  cursor: w-resize;
+}
+
+/* Visual resize handles */
+.react-resizable-handle-se::after,
+.react-resizable-handle-sw::after,
+.react-resizable-handle-ne::after,
+.react-resizable-handle-nw::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #4f46e5;
+  border: 1px solid white;
+  border-radius: 2px;
+}
+
+.react-resizable-handle-se::after {
+  bottom: 2px;
+  right: 2px;
+}
+
+.react-resizable-handle-sw::after {
+  bottom: 2px;
+  left: 2px;
+}
+
+.react-resizable-handle-ne::after {
+  top: 2px;
+  right: 2px;
+}
+
+.react-resizable-handle-nw::after {
+  top: 2px;
+  left: 2px;
+}
+
 /* TipTap Editor Styles */
 .ProseMirror {
   outline: none;
@@ -317,6 +462,29 @@
     content: attr(data-placeholder);
     color: hsl(var(--muted-foreground));
     pointer-events: none;
+  }
+
+  /* Custom scrollbar for dark theme menus */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent-foreground));
   }
 
   /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
