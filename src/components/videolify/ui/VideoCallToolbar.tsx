@@ -340,16 +340,20 @@ export function VideoCallToolbar({
 
         {/* Reactions - Click to send, right-click for menu */}
         {onSendReaction && (
-          <DropdownMenu open={isReactionMenuOpen} onOpenChange={setIsReactionMenuOpen}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
+          <div className="relative">
+            <DropdownMenu open={isReactionMenuOpen} onOpenChange={setIsReactionMenuOpen}>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleReactionClick}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReactionClick();
+                    }}
                     onContextMenu={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       setIsReactionMenuOpen(true);
                     }}
                     className={`rounded-full transition-all duration-200 hover:scale-110 active:scale-125 h-9 w-9 p-0 bg-gradient-to-br ${reactionConfig[selectedReaction].gradient} ${reactionConfig[selectedReaction].hoverGradient} text-white shadow-lg hover:shadow-xl ${reactionConfig[selectedReaction].shadow}`}
@@ -360,20 +364,19 @@ export function VideoCallToolbar({
                       <span className="text-lg">{reactionConfig[selectedReaction].emoji}</span>
                     )}
                   </Button>
-                  {/* Hidden dropdown trigger for menu */}
-                  <DropdownMenuTrigger asChild className="hidden">
-                    <button />
-                  </DropdownMenuTrigger>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p className="text-xs">
-                  Click: {reactionConfig[selectedReaction].label} {reactionConfig[selectedReaction].emoji}<br />
-                  <span className="text-[10px] opacity-70">Chuột phải: Đổi reaction</span>
-                </p>
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent side="right" align="start" className="min-w-[140px] ml-2">
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">
+                    Click: {reactionConfig[selectedReaction].label} {reactionConfig[selectedReaction].emoji}<br />
+                    <span className="text-[10px] opacity-70">Chuột phải: Đổi reaction</span>
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+              {/* Hidden trigger positioned at button location */}
+              <DropdownMenuTrigger asChild>
+                <div className="absolute inset-0 pointer-events-none" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="center" className="min-w-[140px]">
               <DropdownMenuItem
                 onClick={() => handleSelectReaction('heart')}
                 className={`cursor-pointer flex items-center gap-2 text-base ${
@@ -424,6 +427,7 @@ export function VideoCallToolbar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         )}
 
         {/* Recording */}

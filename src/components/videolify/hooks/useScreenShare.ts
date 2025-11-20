@@ -6,7 +6,8 @@ import { useState, useRef, useCallback } from 'react';
 
 export function useScreenShare(
   peerConnection: RTCPeerConnection | null,
-  onStopped?: () => void
+  onStopped?: () => void,
+  onNeedRenegotiation?: () => Promise<void>
 ) {
   const [isSharing, setIsSharing] = useState(false);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -34,12 +35,18 @@ export function useScreenShare(
     }
 
     setIsSharing(false);
-    
+
+    // ✅ CRITICAL: Trigger renegotiation so peer knows track was removed
+    if (onNeedRenegotiation) {
+      console.log('[useScreenShare] 🔄 Triggering renegotiation after removing screen track');
+      await onNeedRenegotiation();
+    }
+
     // ✅ Notify parent that screen share stopped
     onStopped?.();
     
     console.log('[useScreenShare] Stopped');
-  }, [peerConnection, onStopped]);
+  }, [peerConnection, onStopped, onNeedRenegotiation]);
 
   const startSharing = useCallback(async () => {
     if (!peerConnection) return;
@@ -56,10 +63,16 @@ export function useScreenShare(
 
       screenStreamRef.current = screenStream;
       const screenTrack = screenStream.getVideoTracks()[0];
-      
+
       // ✅ Add screen track as ADDITIONAL track (don't replace camera)
       const sender = peerConnection.addTrack(screenTrack, screenStream);
       screenSenderRef.current = sender;
+
+      // ✅ CRITICAL: Trigger renegotiation so peer knows about new track
+      if (onNeedRenegotiation) {
+        console.log('[useScreenShare] 🔄 Triggering renegotiation after adding screen track');
+        await onNeedRenegotiation();
+      }
 
       if (sender) {
 
@@ -112,7 +125,7 @@ export function useScreenShare(
     } catch (err) {
       console.error('[useScreenShare] Failed:', err);
     }
-  }, [peerConnection, stopSharing]);
+  }, [peerConnection, stopSharing, onNeedRenegotiation]);
 
   const toggleSharing = useCallback(() => {
     if (isSharing) {

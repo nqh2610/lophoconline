@@ -201,69 +201,38 @@ export function VideolifyFull_v2({
         return;
       }
 
-      // Wait a bit for all tracks to be added to stream
+      // ✅ Detect screen share by checking if stream has ONLY video track (no audio)
+      // We need to wait a bit for all tracks to be added to the stream
       setTimeout(() => {
         const videoTracks = stream.getVideoTracks();
         const audioTracks = stream.getAudioTracks();
 
-        // Get track settings to check for screen share
-        const trackSettings = event.track.kind === 'video' ? (event.track as MediaStreamTrack).getSettings() : {};
-
-        console.log('[VideolifyFull_v2] 📊 Stream analysis:', {
+        console.log('[VideolifyFull_v2] Stream analysis:', {
           streamId: stream.id,
-          trackKind: event.track.kind,
-          trackLabel: event.track.label,
-          trackSettings: trackSettings,
           videoTracks: videoTracks.length,
           audioTracks: audioTracks.length,
           totalTracks: stream.getTracks().length
         });
 
-        // ✅ Detect screen share using multiple methods (in priority order):
-        // 1. Check track label (contains "screen", "window", etc.)
-        // 2. Check displaySurface setting (exists only for screen share)
-        // 3. Fallback: video-only stream (no audio)
-        const trackLabel = event.track.label.toLowerCase();
-        const hasScreenLabel = trackLabel.includes('screen') ||
-                               trackLabel.includes('window') ||
-                               trackLabel.includes('monitor') ||
-                               trackLabel.includes('display');
-        const hasDisplaySurface = 'displaySurface' in trackSettings;
-        const isVideoOnly = event.track.kind === 'video' && videoTracks.length > 0 && audioTracks.length === 0;
-
-        const isScreenShare = hasScreenLabel || hasDisplaySurface || isVideoOnly;
-
-        console.log('[VideolifyFull_v2] 🔍 Screen share detection:', {
-          hasScreenLabel,
-          hasDisplaySurface,
-          isVideoOnly,
-          finalDecision: isScreenShare
-        });
-
-        if (isScreenShare) {
-          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected - setting to main area');
+        // Screen share = video only (1 video track, 0 audio tracks)
+        // Camera = video + audio (1 video + 1 audio track)
+        if (videoTracks.length === 1 && audioTracks.length === 0) {
+          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected');
           setRemoteScreenStream(stream);
 
-          // Listen for track ended to clear screen share
+          // ✅ CRITICAL: Listen for track ended to clear screen share
           event.track.onended = () => {
             console.log('[VideolifyFull_v2] Screen share track ended - clearing display');
             setRemoteScreenStream(null);
           };
-        } else {
-          console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected - setting to camera frame');
+        } else if (videoTracks.length > 0 || audioTracks.length > 0) {
+          console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected');
           remoteCameraStreamRef.current = stream;
-
-          if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
-            console.log('[VideolifyFull_v2] 🎥 Setting remote video srcObject to stream:', stream.id);
+          if (remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = stream;
           }
-
-          // Listen for track ended
-          event.track.onended = () => {
-            console.log('[VideolifyFull_v2] ⚠️ Camera track ended:', event.track.kind);
-          };
         }
-      }, 100); // Wait 100ms for all tracks to be added
+      }, 100);
     },
     onConnectionStateChange: (state) => {
       console.log('[VideolifyFull_v2] Connection state:', state);
@@ -384,10 +353,10 @@ export function VideolifyFull_v2({
     async () => {
       // ✅ CRITICAL: Handle screen share stopped (by browser button or programmatically)
       console.log('[VideolifyFull_v2] Screen share stopped - notifying peer');
-      
+
       // Wait for track removal
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       // Renegotiate
       if (webrtc.peerConnection && remotePeerIdRef.current) {
         console.log('[VideolifyFull_v2] Creating new offer after screen share stopped');
@@ -396,10 +365,21 @@ export function VideolifyFull_v2({
           await signaling.sendOffer(offer, remotePeerIdRef.current);
         }
       }
-      
+
       // Send control message to peer
       console.log('[VideolifyFull_v2] Sending screen-share-toggle: false');
       sendControl('screen-share-toggle', { isSharing: false });
+    },
+    async () => {
+      // ✅ CRITICAL: Renegotiate after adding/removing screen track
+      if (webrtc.peerConnection && remotePeerIdRef.current) {
+        console.log('[VideolifyFull_v2] Renegotiating after screen share track change');
+        await new Promise(resolve => setTimeout(resolve, 100)); // Wait for track to be added
+        const offer = await webrtc.createOffer();
+        if (offer) {
+          await signaling.sendOffer(offer, remotePeerIdRef.current);
+        }
+      }
     }
   );
 

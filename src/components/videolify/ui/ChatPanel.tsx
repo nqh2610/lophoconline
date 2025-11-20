@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   X, Send, GripVertical, ThumbsUp, HelpCircle,
-  CheckCircle, Smile, MoreVertical
+  CheckCircle, Smile, MoreVertical, MessageSquare
 } from 'lucide-react';
 import { useState, KeyboardEvent, useEffect, useRef } from 'react';
 import Draggable from 'react-draggable';
@@ -20,13 +20,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { ChatMessage as ChatMessageType } from '../types';
 
-export interface ChatMessage {
-  text: string;
-  fromMe: boolean;
-  sender: string;
-  timestamp: number;
-  reactions?: { emoji: string; users: string[] }[];
+export interface ChatMessage extends ChatMessageType {
+  // Compatibility aliases for existing code
+  text?: string;
+  sender?: string;
 }
 
 interface ChatPanelProps {
@@ -59,10 +58,7 @@ export function ChatPanel({
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages.length]);
 
@@ -117,152 +113,110 @@ export function ChatPanel({
     return reaction?.users.includes(userDisplayName) || false;
   };
 
-  const ChatContent = (
-    <Card className="flex flex-col shadow-2xl overflow-hidden h-full">
-      {/* Header - Draggable handle */}
-      <div className="chat-header p-3 border-b font-semibold flex justify-between items-center bg-white cursor-move select-none">
-        <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-gray-400" />
-          <span className="text-sm">💬 Chat</span>
+  // Shorten name intelligently
+  const getShortName = (fullName: string) => {
+    if (!fullName) return 'User';
 
+    const parts = fullName.trim().split(/\s+/);
+
+    // If single word, return as is (max 12 chars)
+    if (parts.length === 1) {
+      return parts[0].length > 12 ? parts[0].substring(0, 12) + '...' : parts[0];
+    }
+
+    // If 2 words, return last 2 words (Vietnamese: "Văn A", English: "John D")
+    if (parts.length === 2) {
+      return parts.join(' ');
+    }
+
+    // If 3+ words (Vietnamese full name), return last 2 words
+    // "Nguyễn Văn A" → "Văn A"
+    return parts.slice(-2).join(' ');
+  };
+
+  const ChatContent = (
+    <Card className="flex flex-col shadow-2xl overflow-hidden" style={{ height: '100%' }}>
+      {/* Header - Draggable handle - Fixed height */}
+      <div className="chat-header px-4 py-3 border-b font-semibold flex justify-between items-center bg-gradient-to-r from-blue-50 to-white cursor-move select-none flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-blue-600" />
+          <span className="text-sm font-semibold text-gray-800">Chat</span>
           {/* Role badge */}
-          <Badge variant={role === 'teacher' ? 'default' : 'secondary'} className="text-xs">
+          <Badge variant={role === 'teacher' ? 'default' : 'secondary'} className="text-sm h-5 px-1.5">
             {role === 'teacher' ? '👨‍🏫' : '👨‍🎓'}
           </Badge>
         </div>
-
-        <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={onClose} title="Đóng">
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0 hover:bg-red-100" title="Đóng">
+          <X className="w-4 h-4 text-gray-500" />
+        </Button>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="space-y-3">
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'} group`}
-            >
-              <div className="flex gap-2 max-w-[85%]">
-                {/* Avatar for received messages */}
-                {!msg.fromMe && (
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarFallback className="text-xs">
-                      {msg.sender.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+      {/* Messages Area - Flexible height with custom scrollbar */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3"
+        ref={scrollAreaRef}
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#cbd5e1 #f1f5f9'
+        }}
+      >
+        <div className="space-y-1">
+          {messages.map((msg, idx) => {
+            // Check if previous message is from same sender (for grouping)
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const sameAsPrev = prevMsg && prevMsg.fromMe === msg.fromMe &&
+              (prevMsg.sender || prevMsg.userName) === (msg.sender || msg.userName);
+            const showAvatar = !sameAsPrev;
+            const fullName = msg.sender || msg.userName || 'User';
+            const shortName = getShortName(fullName);
 
-                <div className="flex flex-col gap-1">
-                  {/* Message bubble */}
-                  <div
-                    className={`rounded-lg px-3 py-2 ${
-                      msg.fromMe
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-900'
-                    }`}
-                  >
-                    {/* Sender name + time */}
-                    <div className="flex justify-between items-start gap-2 mb-1">
-                      <div className="text-xs font-medium opacity-80">
-                        {msg.sender}
+            return (
+              <div
+                key={idx}
+                className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'} ${sameAsPrev ? '' : 'mt-1.5'}`}
+              >
+                <div className={`flex gap-1.5 max-w-[80%] ${msg.fromMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* Avatar - only show for first message in group */}
+                  {showAvatar ? (
+                    <Avatar className="w-6 h-6 flex-shrink-0 shadow-sm" title={fullName}>
+                      <AvatarFallback className="text-[9px] font-semibold bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                        {fullName[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="w-6" />
+                  )}
+
+                  <div className="flex flex-col">
+                    {/* Sender name - only for first message in group and not from me */}
+                    {showAvatar && !msg.fromMe && (
+                      <div className="text-[11px] font-semibold text-gray-700 px-1 mb-1" title={fullName}>
+                        {shortName}
                       </div>
-                      <div className="text-xs opacity-70 whitespace-nowrap">
-                        {formatTime(msg.timestamp)}
+                    )}
+
+                    {/* Message bubble */}
+                    <div
+                      className={`rounded-xl px-2.5 py-1.5 ${
+                        msg.fromMe
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-gray-200 text-gray-900'
+                      }`}
+                    >
+                      {/* Message text with time inline */}
+                      <div className="flex items-end gap-2">
+                        <div className="text-[13px] leading-snug break-words flex-1">
+                          {msg.text || msg.message}
+                        </div>
+                        <div className={`text-[9px] flex-shrink-0 opacity-70 ${msg.fromMe ? 'text-blue-50' : 'text-gray-500'}`}>
+                          {formatTime(msg.timestamp)}
+                        </div>
                       </div>
                     </div>
-
-                    {/* Message text */}
-                    <div className="text-sm break-words">{msg.text}</div>
-                  </div>
-
-                  {/* Reactions bar */}
-                  <div className="flex gap-1 items-center ml-1">
-                    {/* Existing reactions */}
-                    {['👍', '❓', '✅'].map((emoji) => {
-                      const count = getReactionCount(msg, emoji);
-                      const hasReacted = hasUserReacted(msg, emoji);
-
-                      if (count === 0 && !msg.fromMe) {
-                        return (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReaction(idx, emoji)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs hover:scale-110 transform duration-100 px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200"
-                            title={`Phản ứng ${emoji}`}
-                          >
-                            {emoji}
-                          </button>
-                        );
-                      }
-
-                      if (count > 0) {
-                        return (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReaction(idx, emoji)}
-                            className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 transition-all ${
-                              hasReacted
-                                ? 'bg-blue-100 border border-blue-500'
-                                : 'bg-gray-100 hover:bg-gray-200'
-                            }`}
-                          >
-                            <span>{emoji}</span>
-                            <span className="text-[10px] font-medium">{count}</span>
-                          </button>
-                        );
-                      }
-
-                      return null;
-                    })}
-
-                    {/* Show quick reaction buttons on hover for received messages */}
-                    {!msg.fromMe &&
-                      getReactionCount(msg, '👍') === 0 &&
-                      getReactionCount(msg, '❓') === 0 &&
-                      getReactionCount(msg, '✅') === 0 && (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          <button
-                            onClick={() => handleReaction(idx, '👍')}
-                            className="text-xs hover:scale-110 transform duration-100 px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200"
-                            title="Thích"
-                          >
-                            👍
-                          </button>
-                          <button
-                            onClick={() => handleReaction(idx, '❓')}
-                            className="text-xs hover:scale-110 transform duration-100 px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200"
-                            title="Thắc mắc"
-                          >
-                            ❓
-                          </button>
-                          <button
-                            onClick={() => handleReaction(idx, '✅')}
-                            className="text-xs hover:scale-110 transform duration-100 px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200"
-                            title="Hiểu rồi"
-                          >
-                            ✅
-                          </button>
-                        </div>
-                      )
-                    }
                   </div>
                 </div>
-
-                {/* Avatar for sent messages */}
-                {msg.fromMe && (
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarFallback className="text-xs bg-blue-600 text-white">
-                      {msg.sender.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Typing indicator */}
           {typingUsers.length > 0 && (
@@ -270,7 +224,7 @@ export function ChatPanel({
               <div className="flex gap-2 items-center">
                 <Avatar className="w-8 h-8">
                   <AvatarFallback className="text-xs">
-                    {typingUsers[0].charAt(0).toUpperCase()}
+                    {typingUsers[0]?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="bg-gray-200 rounded-lg px-3 py-2">
@@ -284,30 +238,31 @@ export function ChatPanel({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Input Area */}
-      <div className="p-3 border-t bg-white">
-        <div className="flex gap-2">
+      {/* Input Area - Fixed height */}
+      <div className="px-4 py-3 border-t bg-gray-50 flex-shrink-0">
+        <div className="flex gap-2 items-center">
           <Input
             placeholder="Nhập tin nhắn..."
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={handleKeyPress}
-            className="flex-1"
+            className="flex-1 h-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!chatInput.trim()}
             size="icon"
+            className="h-10 w-10 bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-
         {/* Hints */}
-        <div className="text-xs text-muted-foreground mt-2">
-          Enter để gửi
+        <div className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1">
+          <span className="opacity-60">💡</span>
+          <span>Enter để gửi tin nhắn</span>
         </div>
       </div>
     </Card>
