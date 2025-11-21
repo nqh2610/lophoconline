@@ -881,6 +881,7 @@ export function VideolifyFull_v2({
 
   const handleVbgBlur = async () => {
     if (localVideoRef.current && media.localStream) {
+      setActivePreset(null); // ✅ Clear active preset when selecting blur
       await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'blur');
       await signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! });
     }
@@ -888,6 +889,7 @@ export function VideolifyFull_v2({
 
   const handleVbgNone = async () => {
     if (localVideoRef.current) {
+      setActivePreset(null); // ✅ Clear active preset when disabling VBG
       vbg.disableVirtualBackground(localVideoRef.current);
       await signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! });
     }
