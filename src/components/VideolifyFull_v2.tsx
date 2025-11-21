@@ -15,8 +15,10 @@ import { useScreenShare } from './videolify/hooks/useScreenShare';
 import { useFileTransfer } from './videolify/hooks/useFileTransfer';
 import { useVirtualBackground } from './videolify/hooks/useVirtualBackground';
 import { useRecording } from './videolify/hooks/useRecording';
+import { useScreenRecording } from './videolify/hooks/useScreenRecording';
 import { useConnectionEstablishment } from './videolify/hooks/useConnectionEstablishment';
 import { useReactions } from './videolify/hooks/useReactions';
+import { usePiPPreview } from './videolify/hooks/usePiPPreview';
 import type { VideolifyFullProps } from './videolify/types';
 import { addLocalTracksToPC, recreatePeerConnection } from '@/utils/webrtc-helpers';
 
@@ -25,7 +27,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { User, VideoOff, MicOff, Eye, Hand } from 'lucide-react';
+import { User, VideoOff, MicOff, Eye, Hand, Monitor, Maximize, Minimize, PictureInPicture2, X } from 'lucide-react';
 
 // UI Components
 import { VirtualBackgroundPanel } from './videolify/ui/VirtualBackgroundPanel';
@@ -104,6 +106,12 @@ export function VideolifyFull_v2({
   const [remotePipSize, setRemotePipSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [remotePipVisible, setRemotePipVisible] = useState(true);
 
+  // Fullscreen state for screen share
+  const [isScreenShareFullscreen, setIsScreenShareFullscreen] = useState(false);
+
+  // PiP preview state
+  const [pipPreviewManuallyClose, setPipPreviewManuallyClosed] = useState(false);
+
   // Individual PiP positions to allow separate dragging and avoid overlap
   const [localPos, setLocalPos] = useState({ x: 0, y: 0 });
   const [remotePos, setRemotePos] = useState({ x: 0, y: 160 });
@@ -166,6 +174,8 @@ export function VideolifyFull_v2({
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const screenShareVideoRef = useRef<HTMLVideoElement>(null); // ✅ Stable ref for local screen share video
+  const remoteScreenShareVideoRef = useRef<HTMLVideoElement>(null); // ✅ Stable ref for remote screen share video
   const excalidrawAPIRef = useRef<any>(null);
   const remotePeerIdRef = useRef<string | null>(null);
   const controlChannelRef = useRef<RTCDataChannel | null>(null);
@@ -194,7 +204,9 @@ export function VideolifyFull_v2({
   const fileTransfer = useFileTransfer();
   const vbg = useVirtualBackground();
   const recording = useRecording();
+  const screenRecording = useScreenRecording();
   const reactions = useReactions(userDisplayName);
+  const pipPreview = usePiPPreview();
 
   const webrtc = useWebRTC({
     peerId,
@@ -793,6 +805,49 @@ export function VideolifyFull_v2({
     }
   }, [remotePipVisible]);
 
+  // ✅ Set local screen share video srcObject ONCE when stream changes (avoid flicker on re-render)
+  useEffect(() => {
+    if (screenShareVideoRef.current && screenShare.screenStream) {
+      if (screenShareVideoRef.current.srcObject !== screenShare.screenStream) {
+        screenShareVideoRef.current.srcObject = screenShare.screenStream;
+        console.log('[VideolifyFull_v2] Local screen share video srcObject set');
+      }
+    }
+  }, [screenShare.screenStream]);
+
+  // ✅ Auto-create PiP preview when screen sharing starts (unless manually closed)
+  useEffect(() => {
+    if (screenShare.isSharing && screenShare.screenStream && !pipPreviewManuallyClose) {
+      // Open PiP window with screen share stream
+      pipPreview.createPiPWindow(screenShare.screenStream);
+    } else if (!screenShare.isSharing) {
+      // Close PiP window when screen share stops
+      pipPreview.closePiPWindow();
+      // Reset manual close flag when stop sharing
+      setPipPreviewManuallyClosed(false);
+    }
+  }, [screenShare.isSharing, screenShare.screenStream, pipPreview, pipPreviewManuallyClose]);
+
+  // ✅ Set remote screen share video srcObject ONCE when stream changes (avoid flicker on re-render)
+  useEffect(() => {
+    if (remoteScreenShareVideoRef.current && remoteScreenStream) {
+      if (remoteScreenShareVideoRef.current.srcObject !== remoteScreenStream) {
+        remoteScreenShareVideoRef.current.srcObject = remoteScreenStream;
+        console.log('[VideolifyFull_v2] Remote screen share video srcObject set');
+      }
+    }
+  }, [remoteScreenStream]);
+
+  // ✅ Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsScreenShareFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   const handleToggleVideo = useCallback(() => {
     media.toggleVideo();
     sendControl('video-toggle', { enabled: !media.isVideoEnabled });
@@ -934,7 +989,7 @@ export function VideolifyFull_v2({
 
   return (
     <TooltipProvider>
-      <div className="relative w-full h-screen bg-gray-900 flex flex-col">
+      <div className="relative w-full h-screen bg-gray-900 flex flex-col" data-videocall-container>
         {/* Connection Status Indicator (exact v1 styling) */}
         <div className="absolute top-3 left-3 z-50">
           <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
@@ -945,6 +1000,14 @@ export function VideolifyFull_v2({
               : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
           }`} />
         </div>
+
+        {/* Recording Indicator - Non-flashing, subtle */}
+        {screenRecording.isRecording && (
+          <div className="absolute top-3 left-8 z-50 flex items-center gap-2 bg-red-600/90 text-white px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
+            <div className="w-2 h-2 rounded-full bg-white"></div>
+            <span className="text-xs font-medium">REC {screenRecording.getFormattedDuration()}</span>
+          </div>
+        )}
 
 
         {/* Main Area */}
@@ -980,37 +1043,91 @@ export function VideolifyFull_v2({
 
             {/* Main Content Area - Logo/Screen Share/Whiteboard */}
               <div ref={containerRef} className="relative w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-              {/* Local Screen Share Video (when I'm sharing) */}
+              {/* Local Screen Share - Show actual video (Google Meet style - allow loop but keep it smooth) */}
               {screenShare.isSharing && screenShare.screenStream && (
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900">
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900 z-10 group">
                   <video
-                    ref={(el) => {
-                      if (el && screenShare.screenStream) {
-                        el.srcObject = screenShare.screenStream;
-                      }
-                    }}
+                    ref={screenShareVideoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="w-full h-full object-contain drop-shadow-2xl"
-                    style={{ maxHeight: '100%', maxWidth: '100%' }}
+                    style={{
+                      maxHeight: '100%',
+                      maxWidth: '100%',
+                      willChange: 'transform', // GPU acceleration
+                      transform: 'translateZ(0)', // Force GPU layer
+                    }}
                   />
+                  {/* Toggle PiP Preview button (for local only - to see what you're sharing) */}
+                  {!isScreenShareFullscreen && pipPreview.supportsPiP && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent event bubbling
+                            if (pipPreview.isOpen || !pipPreviewManuallyClose) {
+                              // Close PiP and mark as manually closed
+                              pipPreview.closePiPWindow();
+                              setPipPreviewManuallyClosed(true);
+                            } else {
+                              // Open PiP and clear manual close flag
+                              setPipPreviewManuallyClosed(false);
+                              if (screenShare.screenStream) {
+                                pipPreview.createPiPWindow(screenShare.screenStream);
+                              }
+                            }
+                          }}
+                          className="absolute bottom-28 right-8 opacity-100 hover:opacity-100 transition-all duration-200 bg-white/98 hover:bg-white text-gray-800 border-2 border-gray-300 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-200/30 rounded-lg w-11 h-11 p-0 shadow-lg z-50 hover:scale-110 active:scale-95"
+                          size="icon"
+                        >
+                          {pipPreview.isOpen ? (
+                            <PictureInPicture2 className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
+                          ) : (
+                            <PictureInPicture2 className="w-5 h-5 text-gray-700" strokeWidth={2.5} />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="bg-gray-900 text-white border-gray-700 px-3 py-2">
+                        <p className="text-sm font-medium">{pipPreview.isOpen ? 'Ẩn cửa sổ xem trước' : 'Hiện cửa sổ xem trước'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               )}
 
               {/* Remote Screen Share Video (when peer is sharing) */}
               {!screenShare.isSharing && remoteScreenStream && (
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900">
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-950 to-slate-900 z-10 group">
                   <video
-                    ref={(el) => {
-                      if (el && remoteScreenStream) {
-                        el.srcObject = remoteScreenStream;
-                      }
-                    }}
+                    ref={remoteScreenShareVideoRef}
                     autoPlay
                     playsInline
                     className="w-full h-full object-contain drop-shadow-2xl"
                     style={{ maxHeight: '100%', maxWidth: '100%' }}
                   />
+                  {/* Fullscreen button (for peer only - to see shared screen in detail) */}
+                  {!isScreenShareFullscreen && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent event bubbling
+                            if (remoteScreenShareVideoRef.current) {
+                              remoteScreenShareVideoRef.current.requestFullscreen();
+                            }
+                          }}
+                          className="absolute bottom-28 right-8 opacity-100 hover:opacity-100 transition-all duration-200 bg-white/98 hover:bg-white text-gray-800 border-2 border-gray-300 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-200/30 rounded-lg w-11 h-11 p-0 shadow-lg z-50 hover:scale-110 active:scale-95"
+                          size="icon"
+                        >
+                          <Maximize className="w-5 h-5 text-gray-700" strokeWidth={2.5} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="bg-gray-900 text-white border-gray-700 px-3 py-2">
+                        <p className="text-sm font-medium">Xem toàn màn hình</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               )}
 
@@ -1032,8 +1149,11 @@ export function VideolifyFull_v2({
               bounds="parent"
               position={localPos}
               onStart={() => setLocalDragging(true)}
-              onDrag={(_, d) => setLocalPos({ x: d.x, y: d.y })}
-              onStop={(_, d) => { setLocalPos({ x: d.x, y: d.y }); setLocalDragging(false); setTimeout(() => ensureNoOverlap('local'), 0); }}
+              onStop={(_, d) => {
+                setLocalPos({ x: d.x, y: d.y });
+                setLocalDragging(false);
+                setTimeout(() => ensureNoOverlap('local'), 0);
+              }}
             >
               <div
                 ref={localNodeRef}
@@ -1069,8 +1189,11 @@ export function VideolifyFull_v2({
               bounds="parent"
               position={remotePos}
               onStart={() => setRemoteDragging(true)}
-              onDrag={(_, d) => setRemotePos({ x: d.x, y: d.y })}
-              onStop={(_, d) => { setRemotePos({ x: d.x, y: d.y }); setRemoteDragging(false); setTimeout(() => ensureNoOverlap('remote'), 0); }}
+              onStop={(_, d) => {
+                setRemotePos({ x: d.x, y: d.y });
+                setRemoteDragging(false);
+                setTimeout(() => ensureNoOverlap('remote'), 0);
+              }}
             >
               <div
                 ref={remoteNodeRef}
@@ -1204,8 +1327,8 @@ export function VideolifyFull_v2({
         handRaised={handRaised}
         onToggleHandRaise={toggleHandRaise}
         onSendReaction={handleSendReaction}
-        isRecording={recording.isRecording}
-        onToggleRecording={() => recording.toggleRecording(media.localStream!)}
+        isRecording={screenRecording.isRecording}
+        onToggleRecording={() => screenRecording.toggleRecording()}
         showDebugStats={showDebugStats}
         onToggleDebugStats={() => setShowDebugStats(!showDebugStats)}
         onEndCall={endCall}

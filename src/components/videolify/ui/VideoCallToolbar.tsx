@@ -450,7 +450,7 @@ export function VideoCallToolbar({
               size="sm"
               className={`rounded-full transition-all duration-200 hover:scale-105 h-9 w-9 p-0 ${
                 isRecording
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white animate-pulse'
+                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30'
                   : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white'
               }`}
             >

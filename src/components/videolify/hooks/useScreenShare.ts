@@ -44,7 +44,7 @@ export function useScreenShare(
 
     // ✅ Notify parent that screen share stopped
     onStopped?.();
-    
+
     console.log('[useScreenShare] Stopped');
   }, [peerConnection, onStopped, onNeedRenegotiation]);
 
@@ -63,6 +63,9 @@ export function useScreenShare(
 
       screenStreamRef.current = screenStream;
       const screenTrack = screenStream.getVideoTracks()[0];
+      const settings = screenTrack.getSettings();
+
+      console.log('[useScreenShare] 📺 Screen share started with settings:', settings);
 
       // ✅ Add screen track as ADDITIONAL track (don't replace camera)
       console.log('[useScreenShare] ➕ Adding screen track to PeerConnection...');
@@ -80,9 +83,7 @@ export function useScreenShare(
       }
 
       if (sender) {
-
         // Adaptive encoding - higher quality for text readability
-        const settings = screenTrack.getSettings();
         const { width, height } = settings;
         const params = sender.getParameters();
 
