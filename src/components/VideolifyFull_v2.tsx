@@ -93,6 +93,7 @@ export function VideolifyFull_v2({
   const [localVideoHasFrames, setLocalVideoHasFrames] = useState(false);
   const [isRemoteSharing, setIsRemoteSharing] = useState(false); // Track if remote peer is sharing
   const [whiteboardDrawPermission, setWhiteboardDrawPermission] = useState(false); // For student: whether teacher granted draw permission
+  const [studentRequestingDraw, setStudentRequestingDraw] = useState(false); // For teacher: whether student is requesting permission
   // Speaking detection disabled
   const isLocalSpeaking = false;
   const isRemoteSpeaking = false;
@@ -326,10 +327,11 @@ export function VideolifyFull_v2({
         console.log('[VideolifyFull_v2] Whiteboard draw permission request from:', control.userName);
         // Show toast to teacher that student is requesting permission
         if (role === 'tutor') {
+          setStudentRequestingDraw(true);
           toast({
             title: '✋ Yêu cầu vẽ trên bảng',
-            description: `${control.userName} muốn được vẽ trên bảng trắng`,
-            duration: 5000,
+            description: `${control.userName} muốn được vẽ trên bảng trắng - Nhấn nút "Đang khóa" để cho phép`,
+            duration: 10000, // Longer duration for teacher to see
           });
         }
       }
@@ -1237,6 +1239,12 @@ export function VideolifyFull_v2({
         userName={userDisplayName}
         onSendControl={sendControl}
         drawPermissionGranted={whiteboardDrawPermission}
+        studentRequestingDraw={studentRequestingDraw}
+        onPermissionChange={(allowed) => {
+          // When teacher grants/denies permission, clear the request flag
+          setStudentRequestingDraw(false);
+          sendControl('whiteboard-permission', { allowed });
+        }}
       />
 
       <VirtualBackgroundPanel
