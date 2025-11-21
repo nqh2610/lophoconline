@@ -110,6 +110,9 @@ export function VideolifyFull_v2({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const localNodeRef = useRef<HTMLDivElement | null>(null);
   const remoteNodeRef = useRef<HTMLDivElement | null>(null);
+  // Dragging flags to temporarily disable CSS transitions while dragging
+  const [localDragging, setLocalDragging] = useState(false);
+  const [remoteDragging, setRemoteDragging] = useState(false);
 
   const ensureNoOverlap = useCallback((moved: 'local' | 'remote') => {
     const localEl = localNodeRef.current as HTMLDivElement | null;
@@ -1028,19 +1031,20 @@ export function VideolifyFull_v2({
             <Draggable
               bounds="parent"
               position={localPos}
+              onStart={() => setLocalDragging(true)}
               onDrag={(_, d) => setLocalPos({ x: d.x, y: d.y })}
-              onStop={(_, d) => { setLocalPos({ x: d.x, y: d.y }); setTimeout(() => ensureNoOverlap('local'), 0); }}
+              onStop={(_, d) => { setLocalPos({ x: d.x, y: d.y }); setLocalDragging(false); setTimeout(() => ensureNoOverlap('local'), 0); }}
             >
               <div
                 ref={localNodeRef}
                 style={{ position: 'absolute', top: 12, right: 12, zIndex: 30 }}
-                className={`group transition-all duration-200 ${localPipSize === 'small' ? 'w-32 h-24' : localPipSize === 'medium' ? 'w-48 h-36' : 'w-64 h-48'}`}>
+                className={`group ${localDragging ? 'transition-none' : 'transition-all duration-200'} ${localPipSize === 'small' ? 'w-32 h-24' : localPipSize === 'medium' ? 'w-48 h-36' : 'w-64 h-48'}`}>
                 <video
                   ref={localVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move transition-all duration-200 ${isLocalSpeaking ? 'border-[3px] border-blue-400 shadow-blue-400/50' : 'border-2 border-blue-500/50'} ${media.isVideoEnabled && localVideoHasFrames ? 'block' : 'hidden'}`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move ${localDragging ? 'transition-none' : 'transition-all duration-200'} ${isLocalSpeaking ? 'border-[3px] border-blue-400 shadow-blue-400/50' : 'border-2 border-blue-500/50'} ${media.isVideoEnabled && localVideoHasFrames ? 'block' : 'hidden'}`}
                 />
 
                 {(!media.isVideoEnabled || !localVideoHasFrames) && (
@@ -1064,18 +1068,19 @@ export function VideolifyFull_v2({
             <Draggable
               bounds="parent"
               position={remotePos}
+              onStart={() => setRemoteDragging(true)}
               onDrag={(_, d) => setRemotePos({ x: d.x, y: d.y })}
-              onStop={(_, d) => { setRemotePos({ x: d.x, y: d.y }); setTimeout(() => ensureNoOverlap('remote'), 0); }}
+              onStop={(_, d) => { setRemotePos({ x: d.x, y: d.y }); setRemoteDragging(false); setTimeout(() => ensureNoOverlap('remote'), 0); }}
             >
               <div
                 ref={remoteNodeRef}
                 style={{ position: 'absolute', top: 12, right: 12, zIndex: 29 }}
-                className={`group transition-all duration-200 ${remotePipSize === 'small' ? 'w-32 h-24' : remotePipSize === 'medium' ? 'w-48 h-36' : 'w-64 h-48'}`}>
+                className={`group ${remoteDragging ? 'transition-none' : 'transition-all duration-200'} ${remotePipSize === 'small' ? 'w-32 h-24' : remotePipSize === 'medium' ? 'w-48 h-36' : 'w-64 h-48'}`}>
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move transition-all duration-200 ${isRemoteSpeaking ? 'border-[3px] border-green-400 shadow-green-400/50' : 'border-2 border-green-500/50'} ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames ? 'block' : 'hidden'}`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move ${remoteDragging ? 'transition-none' : 'transition-all duration-200'} ${isRemoteSpeaking ? 'border-[3px] border-green-400 shadow-green-400/50' : 'border-2 border-green-500/50'} ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames ? 'block' : 'hidden'}`}
                 />
 
                 {(!connectionStats.connected || !remoteVideoEnabled || !remoteVideoHasFrames) && (
