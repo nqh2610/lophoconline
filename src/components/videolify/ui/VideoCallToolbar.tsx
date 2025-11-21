@@ -38,6 +38,7 @@ interface VideoCallToolbarProps {
   // Screen share state
   isScreenSharing: boolean;
   onToggleScreenShare: () => void;
+  isRemoteSharing?: boolean; // Track if remote peer is sharing
 
   // Panel toggles
   showChat: boolean;
@@ -80,6 +81,7 @@ export function VideoCallToolbar({
   onToggleAudio,
   isScreenSharing,
   onToggleScreenShare,
+  isRemoteSharing = false,
   showChat,
   showWhiteboard,
   showVbgPanel,
@@ -218,17 +220,26 @@ export function VideoCallToolbar({
               onClick={onToggleScreenShare}
               variant="ghost"
               size="sm"
-              className={`rounded-full transition-all duration-200 hover:scale-105 h-9 w-9 p-0 ${
+              disabled={!isScreenSharing && isRemoteSharing}
+              className={`rounded-full transition-all duration-200 h-9 w-9 p-0 ${
                 isScreenSharing
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/60 ring-2 ring-blue-400/50 border-2 border-blue-300/50'
-                  : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white'
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/60 ring-2 ring-blue-400/50 border-2 border-blue-300/50 hover:scale-105'
+                  : isRemoteSharing
+                  ? 'bg-gray-800/50 text-gray-600 cursor-not-allowed opacity-50'
+                  : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white hover:scale-105'
               }`}
             >
               {isScreenSharing ? <MonitorOff className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p className="text-xs">{isScreenSharing ? 'Dừng chia sẻ màn hình' : 'Chia sẻ màn hình'}</p>
+            <p className="text-xs">
+              {isScreenSharing
+                ? 'Dừng chia sẻ màn hình'
+                : isRemoteSharing
+                ? 'Người kia đang chia sẻ màn hình'
+                : 'Chia sẻ màn hình'}
+            </p>
           </TooltipContent>
         </Tooltip>
 

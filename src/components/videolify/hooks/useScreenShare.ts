@@ -65,13 +65,18 @@ export function useScreenShare(
       const screenTrack = screenStream.getVideoTracks()[0];
 
       // ✅ Add screen track as ADDITIONAL track (don't replace camera)
+      console.log('[useScreenShare] ➕ Adding screen track to PeerConnection...');
       const sender = peerConnection.addTrack(screenTrack, screenStream);
       screenSenderRef.current = sender;
+      console.log('[useScreenShare] ✅ Screen track added successfully, sender:', sender ? 'exists' : 'null');
 
       // ✅ CRITICAL: Trigger renegotiation so peer knows about new track
       if (onNeedRenegotiation) {
         console.log('[useScreenShare] 🔄 Triggering renegotiation after adding screen track');
         await onNeedRenegotiation();
+        console.log('[useScreenShare] ✅ Renegotiation completed');
+      } else {
+        console.warn('[useScreenShare] ⚠️ No onNeedRenegotiation callback provided!');
       }
 
       if (sender) {

@@ -91,6 +91,8 @@ export function VideolifyFull_v2({
   const [remoteUserName, setRemoteUserName] = useState<string>('');
   const [remoteVideoHasFrames, setRemoteVideoHasFrames] = useState(false);
   const [localVideoHasFrames, setLocalVideoHasFrames] = useState(false);
+  const [isRemoteSharing, setIsRemoteSharing] = useState(false); // Track if remote peer is sharing
+  const [whiteboardDrawPermission, setWhiteboardDrawPermission] = useState(false); // For student: whether teacher granted draw permission
   // Speaking detection disabled
   const isLocalSpeaking = false;
   const isRemoteSpeaking = false;
@@ -184,7 +186,7 @@ export function VideolifyFull_v2({
       }
     },
   });
-  const excalidrawSync = useExcalidrawSync(roomId);
+  const excalidrawSync = useExcalidrawSync(roomId, role);
   const fileTransfer = useFileTransfer();
   const vbg = useVirtualBackground();
   const recording = useRecording();
@@ -217,13 +219,15 @@ export function VideolifyFull_v2({
         // Screen share = video only (1 video track, 0 audio tracks)
         // Camera = video + audio (1 video + 1 audio track)
         if (videoTracks.length === 1 && audioTracks.length === 0) {
-          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected');
+          console.log('[VideolifyFull_v2] 📺 SCREEN SHARE detected from remote peer');
           setRemoteScreenStream(stream);
+          setIsRemoteSharing(true); // Mark remote as sharing
 
           // ✅ CRITICAL: Listen for track ended to clear screen share
           event.track.onended = () => {
             console.log('[VideolifyFull_v2] Screen share track ended - clearing display');
             setRemoteScreenStream(null);
+            setIsRemoteSharing(false); // Remote stopped sharing
           };
         } else if (videoTracks.length > 0 || audioTracks.length > 0) {
           console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected');
@@ -302,6 +306,8 @@ export function VideolifyFull_v2({
       else if (control.type === 'audio-toggle') setRemoteAudioEnabled(control.enabled);
       else if (control.type === 'screen-share-toggle') {
         console.log('[VideolifyFull_v2] Screen share toggle received:', control.isSharing);
+        setIsRemoteSharing(control.isSharing); // Update remote sharing state
+
         // Clear remote screen stream when peer stops sharing
         if (!control.isSharing) {
           console.log('[VideolifyFull_v2] ✅ CLEARING remote screen stream');
@@ -316,6 +322,22 @@ export function VideolifyFull_v2({
           toast({ title: '📝 Bảng trắng đã được mở bởi người khác' });
         }
       }
+      else if (control.type === 'whiteboard-draw-request') {
+        console.log('[VideolifyFull_v2] Whiteboard draw permission request from:', control.userName);
+        // Show toast to teacher that student is requesting permission
+        if (role === 'tutor') {
+          toast({
+            title: '✋ Yêu cầu vẽ trên bảng',
+            description: `${control.userName} muốn được vẽ trên bảng trắng`,
+            duration: 5000,
+          });
+        }
+      }
+      else if (control.type === 'whiteboard-permission') {
+        console.log('[VideolifyFull_v2] Whiteboard permission received:', control.allowed);
+        // Update student's draw permission state
+        setWhiteboardDrawPermission(control.allowed);
+      }
       else if (control.type === 'reaction') {
         console.log('[VideolifyFull_v2] Reaction received:', control.reactionType, 'from:', control.userName);
         // Add remote reaction
@@ -327,7 +349,7 @@ export function VideolifyFull_v2({
         });
       }
     };
-  }, [reactions]);
+  }, [reactions, role, toast]);
 
   // ✅ Connection establishment hook - centralized logic for all connection scenarios
   const connection = useConnectionEstablishment({
@@ -354,10 +376,11 @@ export function VideolifyFull_v2({
       // ✅ CRITICAL: Handle screen share stopped (by browser button or programmatically)
       console.log('[VideolifyFull_v2] Screen share stopped - notifying peer');
 
-      // Wait for track removal
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // ✅ Send control message IMMEDIATELY to peer (for instant UI clear)
+      console.log('[VideolifyFull_v2] Sending screen-share-toggle: false IMMEDIATELY');
+      sendControl('screen-share-toggle', { isSharing: false });
 
-      // Renegotiate
+      // ✅ Renegotiate immediately to remove track
       if (webrtc.peerConnection && remotePeerIdRef.current) {
         console.log('[VideolifyFull_v2] Creating new offer after screen share stopped');
         const offer = await webrtc.createOffer();
@@ -365,20 +388,24 @@ export function VideolifyFull_v2({
           await signaling.sendOffer(offer, remotePeerIdRef.current);
         }
       }
-
-      // Send control message to peer
-      console.log('[VideolifyFull_v2] Sending screen-share-toggle: false');
-      sendControl('screen-share-toggle', { isSharing: false });
     },
     async () => {
-      // ✅ CRITICAL: Renegotiate after adding/removing screen track
+      // ✅ CRITICAL: Renegotiate IMMEDIATELY after adding/removing screen track
       if (webrtc.peerConnection && remotePeerIdRef.current) {
-        console.log('[VideolifyFull_v2] Renegotiating after screen share track change');
-        await new Promise(resolve => setTimeout(resolve, 100)); // Wait for track to be added
+        console.log('[VideolifyFull_v2] 🔄 Renegotiating immediately after screen share track change');
+        console.log('[VideolifyFull_v2] PeerConnection state:', webrtc.peerConnection.connectionState);
+        console.log('[VideolifyFull_v2] Signaling state:', webrtc.peerConnection.signalingState);
+
         const offer = await webrtc.createOffer();
         if (offer) {
+          console.log('[VideolifyFull_v2] ✅ Offer created, sending to peer:', remotePeerIdRef.current);
           await signaling.sendOffer(offer, remotePeerIdRef.current);
+          console.log('[VideolifyFull_v2] ✅ Offer sent successfully');
+        } else {
+          console.error('[VideolifyFull_v2] ❌ Failed to create offer!');
         }
+      } else {
+        console.error('[VideolifyFull_v2] ❌ Cannot renegotiate - missing PeerConnection or remotePeerId');
       }
     }
   );
@@ -776,27 +803,24 @@ export function VideolifyFull_v2({
       // Stopping - onStopped callback will handle notification
       await screenShare.stopSharing();
     } else {
-      // Starting screen share
-      await screenShare.startSharing();
-      
-      // Wait for track to be added
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Renegotiate
-      if (webrtc.peerConnection && remotePeerIdRef.current) {
-        console.log('[VideolifyFull_v2] Screen share started - creating new offer');
-        const offer = await webrtc.createOffer();
-        if (offer) {
-          console.log('[VideolifyFull_v2] Sending offer to peer:', remotePeerIdRef.current);
-          await signaling.sendOffer(offer, remotePeerIdRef.current);
-        }
+      // ✅ Check if remote peer is already sharing
+      if (isRemoteSharing) {
+        toast({
+          title: 'Người kia đang chia sẻ màn hình',
+          description: 'Vui lòng đợi họ dừng lại',
+          variant: 'default',
+        });
+        return; // Block screen share
       }
-      
-      // Send control message
+
+      // ✅ Starting screen share - let hook handle everything including renegotiation
+      await screenShare.startSharing();
+
+      // ✅ Send control message to update button state at peer (non-blocking)
       console.log('[VideolifyFull_v2] Sending screen-share-toggle: true');
       sendControl('screen-share-toggle', { isSharing: true });
     }
-  }, [screenShare, webrtc, signaling, sendControl]);
+  }, [screenShare, sendControl, isRemoteSharing, toast]);
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
@@ -1148,6 +1172,7 @@ export function VideolifyFull_v2({
         onToggleAudio={handleToggleAudio}
         isScreenSharing={screenShare.isSharing}
         onToggleScreenShare={handleToggleScreenShare}
+        isRemoteSharing={isRemoteSharing}
         showChat={showChat}
         showWhiteboard={showWhiteboard}
         showVbgPanel={showVbgPanel}
@@ -1208,8 +1233,10 @@ export function VideolifyFull_v2({
           excalidrawSync.setExcalidrawAPI(api);
         }}
         onChange={excalidrawSync.handleChange}
-        role={role as 'teacher' | 'student'}
+        role={role === 'tutor' ? 'teacher' : 'student'}
         userName={userDisplayName}
+        onSendControl={sendControl}
+        drawPermissionGranted={whiteboardDrawPermission}
       />
 
       <VirtualBackgroundPanel

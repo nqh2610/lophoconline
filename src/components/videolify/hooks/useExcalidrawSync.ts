@@ -12,7 +12,7 @@ interface SyncMessage {
   timestamp?: number;
 }
 
-export function useExcalidrawSync(roomId: string) {
+export function useExcalidrawSync(roomId: string, role: 'tutor' | 'student' = 'student') {
   const channelRef = useRef<RTCDataChannel | null>(null);
   const excalidrawApiRef = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
@@ -20,6 +20,7 @@ export function useExcalidrawSync(roomId: string) {
   const lastUpdateRef = useRef<number>(0);
   const rafIdRef = useRef<number | null>(null);
   const pendingUpdateRef = useRef<{ elements: any[], appState: any } | null>(null);
+  const isTeacher = role === 'tutor';
 
   // Setup Excalidraw API reference
   const setExcalidrawAPI = useCallback((api: any) => {
@@ -74,6 +75,7 @@ export function useExcalidrawSync(roomId: string) {
       if (message.type === 'full-sync' && message.elements) {
         // Apply full state from peer
         console.log('[ExcalidrawSync] Applying full sync:', message.elements.length, 'elements');
+        console.log('[ExcalidrawSync] Received appState:', message.appState);
         api.updateScene({
           elements: message.elements as any,
           appState: message.appState as any,
@@ -81,6 +83,11 @@ export function useExcalidrawSync(roomId: string) {
       } else if (message.type === 'incremental-update' && message.elements) {
         // Apply incremental update
         console.log('[ExcalidrawSync] Applying incremental update:', message.elements.length, 'elements');
+        console.log('[ExcalidrawSync] Received appState with viewport:', {
+          zoom: message.appState?.zoom?.value,
+          scrollX: message.appState?.scrollX,
+          scrollY: message.appState?.scrollY,
+        });
         api.updateScene({
           elements: message.elements as any,
           appState: message.appState as any,
@@ -90,22 +97,42 @@ export function useExcalidrawSync(roomId: string) {
         console.log('[ExcalidrawSync] Peer requested sync, sending full state');
         const elements = api.getSceneElements();
         const appState = api.getAppState();
+
+        // ✅ DEBUG: Log full appState to see available properties
+        console.log('[ExcalidrawSync] Full appState keys:', Object.keys(appState));
+        console.log('[ExcalidrawSync] Viewport data:', {
+          zoom: appState.zoom?.value,
+          scrollX: appState.scrollX,
+          scrollY: appState.scrollY,
+        });
+
+        // ✅ Build appState for full sync
+        const appStateToSync: any = {
+          viewBackgroundColor: appState.viewBackgroundColor,
+          currentItemFontFamily: appState.currentItemFontFamily,
+          currentItemStrokeColor: appState.currentItemStrokeColor,
+          currentItemBackgroundColor: appState.currentItemBackgroundColor,
+        };
+
+        // ✅ Only teacher syncs viewport (zoom, pan) to student
+        if (isTeacher) {
+          // ✅ CRITICAL FIX: Excalidraw's zoom is an object with a 'value' property
+          appStateToSync.zoom = { value: appState.zoom?.value || 1 };
+          appStateToSync.scrollX = appState.scrollX;
+          appStateToSync.scrollY = appState.scrollY;
+        }
+
         sendMessage({
           type: 'full-sync',
           elements,
-          appState: {
-            viewBackgroundColor: appState.viewBackgroundColor,
-            currentItemFontFamily: appState.currentItemFontFamily,
-            currentItemStrokeColor: appState.currentItemStrokeColor,
-            currentItemBackgroundColor: appState.currentItemBackgroundColor,
-          },
+          appState: appStateToSync,
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       console.error('[ExcalidrawSync] Error handling message:', error);
     }
-  }, [sendMessage]);
+  }, [sendMessage, isTeacher]);
 
   // Setup RTCDataChannel
   const setupChannel = useCallback((channel: RTCDataChannel) => {
@@ -180,23 +207,42 @@ export function useExcalidrawSync(roomId: string) {
 
       lastUpdateRef.current = now;
 
+      // ✅ Build appState to sync
+      const appStateToSync: any = {
+        viewBackgroundColor: pending.appState.viewBackgroundColor,
+        currentItemFontFamily: pending.appState.currentItemFontFamily,
+        currentItemStrokeColor: pending.appState.currentItemStrokeColor,
+        currentItemBackgroundColor: pending.appState.currentItemBackgroundColor,
+      };
+
+      // ✅ Only teacher syncs viewport (zoom, pan) to student
+      // Student's viewport changes are ignored to prevent conflicts
+      if (isTeacher) {
+        // ✅ CRITICAL FIX: Excalidraw's zoom is an object with a 'value' property
+        appStateToSync.zoom = { value: pending.appState.zoom?.value || 1 };
+        appStateToSync.scrollX = pending.appState.scrollX;
+        appStateToSync.scrollY = pending.appState.scrollY;
+        console.log('[ExcalidrawSync] Teacher syncing viewport:', {
+          zoom: appStateToSync.zoom.value,
+          scrollX: appStateToSync.scrollX,
+          scrollY: appStateToSync.scrollY,
+        });
+      } else {
+        console.log('[ExcalidrawSync] Student - NOT syncing viewport (receiving only)');
+      }
+
       // Send incremental update to peer
       sendMessage({
         type: 'incremental-update',
         elements: pending.elements,
-        appState: {
-          viewBackgroundColor: pending.appState.viewBackgroundColor,
-          currentItemFontFamily: pending.appState.currentItemFontFamily,
-          currentItemStrokeColor: pending.appState.currentItemStrokeColor,
-          currentItemBackgroundColor: pending.appState.currentItemBackgroundColor,
-        },
+        appState: appStateToSync,
         timestamp: now,
       });
 
       pendingUpdateRef.current = null;
       rafIdRef.current = null;
     });
-  }, [sendMessage]);
+  }, [sendMessage, isTeacher]);
 
   return {
     setupChannel,

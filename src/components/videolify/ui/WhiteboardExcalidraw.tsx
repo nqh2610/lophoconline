@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import Draggable from 'react-draggable';
-import { ResizableBox } from 'react-resizable';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  X, Download, Maximize2, Minimize2, Trash2, GripVertical,
+  X, Download, Trash2, GripVertical,
   Lock, Unlock, Hand, Eye, Pencil
 } from 'lucide-react';
 import {
@@ -50,6 +48,8 @@ interface WhiteboardExcalidrawProps {
   onChange: (elements: any, appState: any) => void;
   role?: 'teacher' | 'student'; // Role-based permissions
   userName?: string;
+  onSendControl?: (type: string, data: any) => void; // Send control messages
+  drawPermissionGranted?: boolean; // For students: whether teacher allowed drawing
 }
 
 export function WhiteboardExcalidraw({
@@ -60,17 +60,15 @@ export function WhiteboardExcalidraw({
   onChange,
   role = 'student',
   userName = 'User',
+  onSendControl,
+  drawPermissionGranted = false,
 }: WhiteboardExcalidrawProps) {
   const [cssLoaded, setCssLoaded] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isLocked, setIsLocked] = useState(role === 'student'); // Students start locked
   const [requestingDrawPermission, setRequestingDrawPermission] = useState(false);
-  const [size, setSize] = useState({ width: 800, height: 500 });
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { toast } = useToast();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load Excalidraw CSS dynamically
   useEffect(() => {
@@ -93,24 +91,32 @@ export function WhiteboardExcalidraw({
   // Reset state when panel closes
   useEffect(() => {
     if (!show) {
-      setIsFullscreen(false);
       if (role === 'student') {
         setIsLocked(true);
+        setRequestingDrawPermission(false);
       }
     }
   }, [show, role]);
 
-  // Initialize position (center on screen on first open)
+  // Update lock state when teacher grants/revokes permission
   useEffect(() => {
-    if (show && position.x === 0 && position.y === 0) {
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-      setPosition({
-        x: Math.max(16, (screenWidth - size.width) / 2),
-        y: Math.max(16, (screenHeight - size.height) / 2 - 50),
-      });
+    if (role === 'student' && show) {
+      setIsLocked(!drawPermissionGranted);
+      if (drawPermissionGranted && requestingDrawPermission) {
+        setRequestingDrawPermission(false);
+        toast({
+          title: '✅ Được phép vẽ',
+          description: 'Giáo viên đã cho phép bạn vẽ trên bảng',
+        });
+      } else if (!drawPermissionGranted && !isLocked) {
+        toast({
+          title: '🔒 Bị khóa',
+          description: 'Giáo viên đã thu hồi quyền vẽ',
+          variant: 'destructive',
+        });
+      }
     }
-  }, [show]);
+  }, [drawPermissionGranted, role, show, requestingDrawPermission, toast]);
 
   const handleDownload = useCallback(() => {
     if (!excalidrawAPI) return;
@@ -153,25 +159,6 @@ export function WhiteboardExcalidraw({
     });
   }, [excalidrawAPI, toast]);
 
-  const toggleFullscreen = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (!isFullscreen) {
-      container.requestFullscreen?.().then(() => {
-        setIsFullscreen(true);
-      }).catch((err) => {
-        console.error('[WhiteboardExcalidraw] Fullscreen error:', err);
-      });
-    } else {
-      document.exitFullscreen?.().then(() => {
-        setIsFullscreen(false);
-      }).catch((err) => {
-        console.error('[WhiteboardExcalidraw] Exit fullscreen error:', err);
-      });
-    }
-  }, [isFullscreen]);
-
   const handleRequestDrawPermission = useCallback(() => {
     setRequestingDrawPermission(true);
     toast({
@@ -179,29 +166,30 @@ export function WhiteboardExcalidraw({
       description: 'Chờ giáo viên cho phép bạn vẽ',
     });
 
-    // In real implementation, send message to teacher via control channel
-    // For now, auto-unlock after 2 seconds (demo)
-    setTimeout(() => {
-      setIsLocked(false);
-      setRequestingDrawPermission(false);
-      toast({
-        title: '✅ Được phép vẽ',
-        description: 'Bạn có thể vẽ trên bảng trắng',
-      });
-    }, 2000);
-  }, [toast]);
+    // Send request to teacher via control channel
+    if (onSendControl) {
+      onSendControl('whiteboard-draw-request', { userName });
+    }
+  }, [toast, onSendControl, userName]);
 
   const toggleLock = useCallback(() => {
     if (role === 'teacher') {
-      setIsLocked(!isLocked);
+      const newLockState = !isLocked;
+      setIsLocked(newLockState);
+
+      // Send lock state change to student
+      if (onSendControl) {
+        onSendControl('whiteboard-permission', { allowed: !newLockState });
+      }
+
       toast({
-        title: isLocked ? '🔓 Đã mở khóa' : '🔒 Đã khóa',
-        description: isLocked
-          ? 'Học sinh có thể vẽ trên bảng'
-          : 'Chỉ giáo viên có thể vẽ',
+        title: newLockState ? '🔒 Đã khóa' : '🔓 Đã mở khóa',
+        description: newLockState
+          ? 'Chỉ giáo viên có thể vẽ'
+          : 'Học sinh có thể vẽ trên bảng',
       });
     }
-  }, [role, isLocked, toast]);
+  }, [role, isLocked, toast, onSendControl]);
 
   if (!show) return null;
 
@@ -220,13 +208,8 @@ export function WhiteboardExcalidraw({
 
   const WhiteboardContent = (
     <Card
-      ref={containerRef}
       id="excalidraw-container"
-      className="flex flex-col shadow-2xl overflow-hidden"
-      style={{
-        width: isFullscreen ? '100vw' : size.width,
-        height: isFullscreen ? '100vh' : size.height,
-      }}
+      className="flex flex-col shadow-2xl overflow-hidden w-full h-full"
     >
       {/* Header - Draggable handle */}
       <div
@@ -236,12 +219,7 @@ export function WhiteboardExcalidraw({
           <GripVertical className="w-4 h-4 text-gray-400" />
           <span className="text-sm">🎨 Bảng trắng</span>
 
-          {/* Role badge */}
-          <Badge variant={isTeacher ? 'default' : 'secondary'} className="text-xs">
-            {isTeacher ? '👨‍🏫 Giáo viên' : '👨‍🎓 Học sinh'}
-          </Badge>
-
-          {/* Lock status */}
+          {/* Lock status badge - only show for students */}
           {!isTeacher && (
             <Badge variant={canDraw ? 'default' : 'outline'} className="text-xs">
               {canDraw ? <><Pencil className="w-3 h-3 mr-1" /> Có thể vẽ</> : <><Eye className="w-3 h-3 mr-1" /> Chỉ xem</>}
@@ -299,34 +277,49 @@ export function WhiteboardExcalidraw({
             </Button>
           )}
 
-          {/* Fullscreen */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
-          >
-            {isFullscreen ? (
-              <Minimize2 className="w-4 h-4" />
-            ) : (
-              <Maximize2 className="w-4 h-4" />
-            )}
-          </Button>
-
-          {/* Close */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            title="Đóng"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          {/* Close - Always show close button */}
+          {isTeacher && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              title="Đóng"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Excalidraw Canvas */}
-      <div className="flex-1 overflow-hidden">
+      <div
+        className="flex-1 overflow-hidden relative"
+        onWheelCapture={permissions.viewOnly ? (e) => {
+          // ✅ CRITICAL: Block scroll/zoom for students
+          e.stopPropagation();
+          e.preventDefault();
+        } : undefined}
+      >
+        {/* ✅ Overlay to block all interactions when view-only */}
+        {permissions.viewOnly && (
+          <div
+            className="absolute inset-0 z-50 cursor-not-allowed bg-transparent"
+            style={{ pointerEvents: 'all' }}
+            onWheel={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+          />
+        )}
+
         <Excalidraw
           excalidrawAPI={(api) => {
             if (api) {
@@ -335,10 +328,9 @@ export function WhiteboardExcalidraw({
             }
           }}
           onChange={(elements, appState) => {
-            // Only sync if user has permission and there are changes
-            if (canDraw && (elements.length > 0 || appState)) {
-              onChange(elements, appState);
-            }
+            // ✅ ALWAYS call onChange to allow receiving updates from teacher
+            // The hook itself will decide whether to send (teacher) or just receive (student)
+            onChange(elements, appState);
           }}
           initialData={{
             elements: [],
@@ -368,7 +360,11 @@ export function WhiteboardExcalidraw({
               toggleTheme: false,
             },
           }}
-          viewModeEnabled={permissions.viewOnly}
+          // ✅ CRITICAL FIX: Do NOT use viewModeEnabled - it blocks programmatic viewport updates!
+          // Instead, we use the transparent overlay to block user interactions
+          viewModeEnabled={false}
+          zenModeEnabled={false}
+          gridModeEnabled={false}
           langCode="vi-VN"
         />
       </div>
@@ -389,37 +385,13 @@ export function WhiteboardExcalidraw({
     </Card>
   );
 
-  // Wrap with Draggable and ResizableBox
+  // ✅ SIMPLE SOLUTION: Always fullscreen for both teacher and student
+  // This ensures 100% viewport sync without dealing with window position sync
   return (
     <>
-      {!isFullscreen ? (
-        <Draggable
-          handle=".whiteboard-header"
-          bounds="parent"
-          position={position}
-          onStop={(e, data) => setPosition({ x: data.x, y: data.y })}
-        >
-          <div className="absolute z-50" style={{ left: 0, top: 0 }}>
-            <ResizableBox
-              width={size.width}
-              height={size.height}
-              minConstraints={[400, 300]}
-              maxConstraints={[window.innerWidth - 32, window.innerHeight - 100]}
-              onResize={(e, data) => {
-                setSize({ width: data.size.width, height: data.size.height });
-              }}
-              resizeHandles={['se', 'sw', 'ne', 'nw', 's', 'e', 'w', 'n']}
-              className="react-resizable-custom"
-            >
-              {WhiteboardContent}
-            </ResizableBox>
-          </div>
-        </Draggable>
-      ) : (
-        <div className="fixed inset-0 z-50">
-          {WhiteboardContent}
-        </div>
-      )}
+      <div className="fixed inset-0 z-50 bg-white">
+        {WhiteboardContent}
+      </div>
 
       {/* Clear Canvas Confirmation Dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
