@@ -210,6 +210,16 @@ export function VideolifyFull_v2({
   });
   const excalidrawSync = useExcalidrawSync(roomId, role);
   const fileTransfer = useFileTransfer();
+  // Auto-open file transfer panel when an incoming or outgoing transfer exists
+  useEffect(() => {
+    if (fileTransfer.incomingFile) {
+      console.log('[VideolifyFull_v2] Incoming file offer detected - opening FileTransfer panel');
+      setShowFileTransfer(true);
+    } else if (fileTransfer.outgoingFile) {
+      // Show outgoing transfers as well
+      setShowFileTransfer(true);
+    }
+  }, [fileTransfer.incomingFile, fileTransfer.outgoingFile]);
   const vbg = useVirtualBackground();
   const recording = useRecording();
   const screenRecording = useScreenRecording();
