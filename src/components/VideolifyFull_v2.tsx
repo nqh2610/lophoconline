@@ -162,6 +162,8 @@ export function VideolifyFull_v2({
 
   // Track initial VBG state when opening panel
   const [initialVbgEnabled, setInitialVbgEnabled] = useState(false);
+  // Track a pending VBG selection so closing panel won't cancel it
+  const vbgPendingRef = useRef<{ mode: string; blurAmount?: number; backgroundImage?: string } | null>(null);
 
   // Connection stats
   const [connectionStats, setConnectionStats] = useState({
@@ -1131,45 +1133,52 @@ export function VideolifyFull_v2({
   };
 
   const handleVbgBlur = async () => {
-    // Debounce rapid VBG changes to avoid thrashing the processor and renegotiations
-    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
-    // Mark change in progress immediately so closing the panel won't revert the choice
+    // Start change-in-progress immediately so closing the panel won't cancel the selection.
+    setActivePreset(null); // ✅ Clear active preset when selecting blur
     setVbgChangeInProgress(true);
+    // Mark pending selection so panel close won't revert
+    vbgPendingRef.current = { mode: 'blur', blurAmount: vbg.blurAmount };
+
+    // Optimistically notify peer immediately so remote can start applying VBG using original video + settings
+    signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+
+    // Debounce the heavy enable operation to avoid thrashing the processor
+    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
     vbgDebounceRef.current = window.setTimeout(async () => {
       if (localVideoRef.current && media.localStream) {
-        setActivePreset(null); // ✅ Clear active preset when selecting blur
         try {
-          // Optimistically notify peer so remote can start applying VBG
-          signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
-
           await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'blur');
+        } catch (err) {
+          console.error('[VideolifyFull_v2] VBG blur apply failed', err);
         } finally {
           setVbgChangeInProgress(false);
+          vbgPendingRef.current = null;
         }
       } else {
-        // Nothing to do — clear the flag
+        // Nothing to apply; clear the flag so UI behaves correctly
         setVbgChangeInProgress(false);
+        vbgPendingRef.current = null;
       }
     }, 300) as unknown as number;
   };
 
   const handleVbgNone = async () => {
+    // User explicitly disabled VBG; mark in-progress immediately and notify peer
     if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
-    // Mark change in progress immediately so closing the panel won't race with disabling
+    setActivePreset(null); // ✅ Clear active preset when disabling VBG
     setVbgChangeInProgress(true);
-    vbgDebounceRef.current = window.setTimeout(async () => {
-      if (localVideoRef.current) {
-        setActivePreset(null); // ✅ Clear active preset when disabling VBG
-        try {
-          vbg.disableVirtualBackground(localVideoRef.current);
-          await signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! });
-        } finally {
-          setVbgChangeInProgress(false);
-        }
-      } else {
-        setVbgChangeInProgress(false);
-      }
-    }, 250) as unknown as number;
+    // Clear any pending selection since user explicitly disabled
+    vbgPendingRef.current = null;
+    try {
+      vbg.disableVirtualBackground(localVideoRef.current!);
+      // Notify peer immediately that VBG is disabled
+      signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+    } catch (err) {
+      console.error('[VideolifyFull_v2] VBG disable failed', err);
+    } finally {
+      // small debounce to avoid rapid toggles
+      vbgDebounceRef.current = window.setTimeout(() => setVbgChangeInProgress(false), 250) as unknown as number;
+    }
   };
 
   const handleVbgImage = async (imageUrl: string) => {
@@ -1180,21 +1189,27 @@ export function VideolifyFull_v2({
       img.onerror = () => reject();
       img.src = imageUrl;
     });
-    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
-    // Mark change in progress immediately so closing the panel won't cancel the selection
+    // Start change-in-progress immediately so closing the panel won't cancel the selection.
     setVbgChangeInProgress(true);
+    // Mark pending selection so panel close won't revert
+    vbgPendingRef.current = { mode: 'image', backgroundImage: imageUrl };
+    // Optimistically notify peer immediately so remote can start applying VBG using original video + settings
+    signaling.sendVbgSettings({ enabled: true, mode: 'image', backgroundImage: imageUrl, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+
+    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
     vbgDebounceRef.current = window.setTimeout(async () => {
       if (localVideoRef.current && media.localStream) {
         try {
-          // Optimistically notify peer so remote can start applying VBG
-          signaling.sendVbgSettings({ enabled: true, mode: 'image', backgroundImage: imageUrl, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
-
           await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'image', { backgroundImage: img });
+        } catch (err) {
+          console.error('[VideolifyFull_v2] VBG image apply failed', err);
         } finally {
           setVbgChangeInProgress(false);
+          vbgPendingRef.current = null;
         }
       } else {
         setVbgChangeInProgress(false);
+        vbgPendingRef.current = null;
       }
     }, 300) as unknown as number;
   };
@@ -1608,9 +1623,10 @@ export function VideolifyFull_v2({
         onClose={() => {
           setShowVbgPanel(false);
           // If a VBG change is in progress, don't revert on close. Also only
-          // auto-disable when nothing changed (vbg state equals initial) and
-          // there is no pending change.
-          if (!vbgChangeInProgress && vbg.enabled === initialVbgEnabled) {
+          // auto-disable only when nothing changed (vbg state equals initial),
+          // there is no pending selection, and no change in progress. This
+          // avoids cancelling quick selections when user clicks outside.
+          if (!vbgChangeInProgress && !vbgPendingRef.current && vbg.enabled === initialVbgEnabled) {
             handleVbgNone();
           }
         }}
