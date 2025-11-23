@@ -72,6 +72,8 @@ interface VideoCallToolbarProps {
 
   // End call
   onEndCall: () => void;
+  // Role of current user - hide some controls for students
+  role?: 'tutor' | 'student' | string;
 }
 
 export function VideoCallToolbar({
@@ -99,6 +101,7 @@ export function VideoCallToolbar({
   onToggleDebugStats,
   onEndCall,
   unreadChatCount = 0,
+  role,
 }: VideoCallToolbarProps) {
   const [isReactionMenuOpen, setIsReactionMenuOpen] = React.useState(false);
   const [selectedReaction, setSelectedReaction] = React.useState<'heart' | 'like' | 'clap' | 'fire'>('heart');
@@ -273,26 +276,28 @@ export function VideoCallToolbar({
           </TooltipContent>
         </Tooltip>
 
-        {/* Whiteboard */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={onToggleWhiteboard}
-              variant="ghost"
-              size="sm"
-              className={`rounded-full transition-all duration-200 hover:scale-105 h-9 w-9 p-0 ${
-                showWhiteboard
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/60 ring-2 ring-blue-400/50 border-2 border-blue-300/50'
-                  : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white'
-              }`}
-            >
-              <Pencil className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">Bảng trắng</p>
-          </TooltipContent>
-        </Tooltip>
+        {/* Whiteboard - hide for students */}
+        {role !== 'student' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onToggleWhiteboard}
+                variant="ghost"
+                size="sm"
+                className={`rounded-full transition-all duration-200 hover:scale-105 h-9 w-9 p-0 ${
+                  showWhiteboard
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/60 ring-2 ring-blue-400/50 border-2 border-blue-300/50'
+                    : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white'
+                }`}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="text-xs">Bảng trắng</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {/* File Transfer */}
         <Tooltip>

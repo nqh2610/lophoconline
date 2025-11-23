@@ -1528,21 +1528,7 @@ export function VideolifyFull_v2({
               </div>
             )}
 
-            {/* Remote Muted Badges */}
-            {connectionStats.connected && (
-              <div className="absolute top-4 left-4 z-20 flex gap-2">
-                {!remoteVideoEnabled && (
-                  <Badge className="bg-red-500/90 text-white px-3 py-1">
-                    <VideoOff className="w-3 h-3 mr-1" /> Camera tắt
-                  </Badge>
-                )}
-                {!remoteAudioEnabled && (
-                  <Badge className="bg-red-500/90 text-white px-2 py-1">
-                    <MicOff className="w-4 h-4" />
-                  </Badge>
-                )}
-              </div>
-            )}
+            {/* Remote Muted Badges removed from main area — status shown in PiP only */}
           </div>
         </div>
       </div>
@@ -1567,6 +1553,7 @@ export function VideolifyFull_v2({
         }}
         unreadChatCount={unreadChatCount}
         onToggleWhiteboard={handleToggleWhiteboard}
+        role={role}
         onToggleVbgPanel={() => {
           if (!showVbgPanel) {
             setInitialVbgEnabled(vbg.enabled);
