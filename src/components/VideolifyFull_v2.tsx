@@ -157,6 +157,9 @@ export function VideolifyFull_v2({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
+  // Track when a VBG change is in progress to avoid racey onClose behaviour
+  const [vbgChangeInProgress, setVbgChangeInProgress] = useState(false);
+
   // Track initial VBG state when opening panel
   const [initialVbgEnabled, setInitialVbgEnabled] = useState(false);
 
@@ -179,6 +182,9 @@ export function VideolifyFull_v2({
   const excalidrawAPIRef = useRef<any>(null);
   const remotePeerIdRef = useRef<string | null>(null);
   const controlChannelRef = useRef<RTCDataChannel | null>(null);
+  // Debounce timers to avoid rapid renegotiation from UI actions
+  const vbgDebounceRef = useRef<number | null>(null);
+  const screenShareDebounceRef = useRef<number | null>(null);
 
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [lastMessageTime, setLastMessageTime] = useState<number>(0);
@@ -310,8 +316,120 @@ export function VideolifyFull_v2({
       console.error('[VideolifyFull_v2] ❌ Control channel ERROR:', error);
     };
 
+    // Heartbeat + control message handling
+    // Liveness detection: send ping periodically and expect pong
+    const lastPongRef = { current: Date.now() } as { current: number };
+    const recreateInProgressRef = { current: false } as { current: boolean };
+    let heartbeatInterval: number | null = null;
+    let livenessCheckInterval: number | null = null;
+    let recreateAttempt = 0;
+
+    const startHeartbeat = () => {
+      if (heartbeatInterval) return;
+      heartbeatInterval = window.setInterval(() => {
+        try {
+          if (controlChannelRef.current && controlChannelRef.current.readyState === 'open') {
+            controlChannelRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+          }
+        } catch (e) {
+          // ignore
+        }
+      }, 3000) as unknown as number;
+
+      livenessCheckInterval = window.setInterval(() => {
+        // If no pong within 10s, consider peer dead
+        if (Date.now() - lastPongRef.current > 10000) {
+          console.warn('[VideolifyFull_v2] No pong received in 10s - triggering reconnect');
+          attemptRecreate();
+        }
+      }, 2500) as unknown as number;
+    };
+
+    const stopHeartbeat = () => {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
+      if (livenessCheckInterval) {
+        clearInterval(livenessCheckInterval);
+        livenessCheckInterval = null;
+      }
+    };
+
+    const attemptRecreate = async () => {
+      if (recreateInProgressRef.current) return;
+      if (!remotePeerIdRef.current) return;
+
+      recreateInProgressRef.current = true;
+      recreateAttempt++;
+      const backoff = Math.min(8000, 500 * Math.pow(2, recreateAttempt));
+      console.log('[VideolifyFull_v2] Attempting reconnect in', backoff, 'ms (attempt', recreateAttempt, ')');
+
+      setTimeout(async () => {
+        try {
+          // Use connection.establishConnection to recreate and get offer
+          const offer = await connection.establishConnection(remotePeerIdRef.current!, true, 'reconnect-heartbeat');
+          if (offer) {
+            console.log('[VideolifyFull_v2] Reconnect offer created, ensuring signaling connected');
+
+            // Ensure signaling is connected before sending offer
+            try {
+              if (!signaling.isConnected) {
+                console.warn('[VideolifyFull_v2] Signaling not connected - attempting reconnect before sending offer');
+                await signaling.connect();
+              }
+            } catch (err) {
+              console.error('[VideolifyFull_v2] Signaling reconnect failed, will not send offer:', err);
+              return;
+            }
+
+            try {
+              console.log('[VideolifyFull_v2] Sending reconnect offer to peer');
+              await signaling.sendOffer(offer, remotePeerIdRef.current!);
+
+              // Reset recreate attempt counter on success
+              recreateAttempt = 0;
+            } catch (err) {
+              console.error('[VideolifyFull_v2] Failed to send reconnect offer:', err);
+            }
+          } else {
+            console.warn('[VideolifyFull_v2] Reconnect offer creation returned null');
+          }
+        } catch (err) {
+          console.error('[VideolifyFull_v2] Reconnect attempt failed:', err);
+        } finally {
+          recreateInProgressRef.current = false;
+        }
+      }, backoff);
+    };
+
+    // Start heartbeat when channel opens
+    if (channel.readyState === 'open') startHeartbeat();
+
     channel.onmessage = (e) => {
-      const control = JSON.parse(e.data);
+      let control: any;
+      try {
+        control = JSON.parse(e.data);
+      } catch (err) {
+        console.warn('[VideolifyFull_v2] Invalid control message', e.data);
+        return;
+      }
+
+      // Handle ping/pong first
+      if (control.type === 'ping') {
+        try {
+          channel.send(JSON.stringify({ type: 'pong', ts: control.ts }));
+        } catch (err) {
+          // ignore
+        }
+        return;
+      }
+
+      if (control.type === 'pong') {
+        lastPongRef.current = Date.now();
+        return;
+      }
+
       console.log('[VideolifyFull_v2] 📨 Control message received:', control);
 
       if (control.type === 'hand-raise') {
@@ -365,6 +483,13 @@ export function VideolifyFull_v2({
           userName: control.userName,
         });
       }
+    };
+
+    // Cleanup heartbeat on channel close
+    const origOnClose = channel.onclose;
+    channel.onclose = (ev) => {
+      stopHeartbeat();
+      origOnClose && origOnClose(ev as any);
     };
   }, [reactions, role, toast]);
 
@@ -436,22 +561,50 @@ export function VideolifyFull_v2({
     callbacks: {
       onPeerJoined: async (event) => {
         console.log('[VideolifyFull_v2] 🔔 Peer joined:', event.peerId, 'shouldInitiate:', event.shouldInitiate);
+        // ✅ Ensure local media is ready before attempting connection
+        const waitForLocalStream = async (timeoutMs = 3000) => {
+          const start = Date.now();
+          while (Date.now() - start < timeoutMs) {
+            if (media.localStream && media.localStream.getTracks().length > 0) return true;
+            await new Promise((res) => setTimeout(res, 100));
+          }
+          return false;
+        };
 
-        // ✅ Use centralized connection establishment hook
-        const offer = await connection.establishConnection(
-          event.peerId,
-          event.shouldInitiate,
-          'peer-joined'
-        );
+        const mediaReady = await waitForLocalStream(3000);
+        if (!mediaReady) {
+          console.warn('[VideolifyFull_v2] Local media not ready when peer joined - requesting permissions');
+          try {
+            await media.requestPermissions();
+          } catch (err) {
+            console.warn('[VideolifyFull_v2] Media permission request failed or was denied');
+          }
+          // Give a little time for user to accept
+          await waitForLocalStream(3000);
+        }
 
-        // ✅ Send offer if we're the initiator
+        // ✅ Use centralized connection establishment hook with retries
+        // Sometimes initial establishConnection may return null due to timing; retry a few times with backoff
+        if (!event.shouldInitiate) {
+          console.log('[VideolifyFull_v2] 📥 Not initiator - waiting for offer');
+          return;
+        }
+
+        let offer = null;
+        for (let attempt = 0; attempt < 3 && !offer; attempt++) {
+          console.log('[VideolifyFull_v2] 🔌 Attempting establishConnection (attempt', attempt + 1, ')');
+          offer = await connection.establishConnection(event.peerId, event.shouldInitiate, 'peer-joined');
+          if (offer) break;
+          const backoff = 200 * Math.pow(2, attempt);
+          console.warn('[VideolifyFull_v2] establishConnection returned null, retrying in', backoff, 'ms');
+          await new Promise((res) => setTimeout(res, backoff));
+        }
+
         if (offer) {
           console.log('[VideolifyFull_v2] ✅ Offer created by hook, sending to peer:', event.peerId);
           await signaling.sendOffer(offer, event.peerId);
-        } else if (event.shouldInitiate) {
-          console.error('[VideolifyFull_v2] ❌ Failed to create offer - hook returned null');
         } else {
-          console.log('[VideolifyFull_v2] 📥 Not initiator - waiting for offer');
+          console.error('[VideolifyFull_v2] ❌ Failed to create offer after retries - will wait for further events');
         }
       },
       onOffer: async (event) => {
@@ -479,8 +632,37 @@ export function VideolifyFull_v2({
         await webrtc.addIceCandidate(event.candidate);
       },
       onVbgSettings: async (event) => {
-        if (remoteVideoRef.current && media.localStream) {
-          await vbg.applyRemoteVirtualBackground(media.localStream, remoteVideoRef.current, event);
+        // IMPORTANT: Apply VBG to the remote peer's original camera stream
+        // Use `remoteCameraStreamRef.current` as the input stream for processing.
+        // NOTE: Remote track arrival timing can race with incoming VBG settings.
+        // To avoid missing the setting when stream not yet available, poll briefly
+        // (up to 2s) for the remote stream before giving up.
+        try {
+          if (!remoteVideoRef.current) return;
+
+          // Wait for remote stream if not yet present (race prevention)
+          const waitForRemoteStream = async (timeoutMs = 2000, intervalMs = 100) => {
+            const start = Date.now();
+            while (Date.now() - start < timeoutMs) {
+              const s = remoteCameraStreamRef.current ?? null;
+              if (s) return s;
+              // small delay
+              await new Promise((res) => setTimeout(res, intervalMs));
+            }
+            return null;
+          };
+
+          const inputStream = remoteCameraStreamRef.current ?? await waitForRemoteStream();
+
+          if (!inputStream) {
+            console.warn('[VideolifyFull_v2] onVbgSettings: remote camera stream not available after wait, skipping VBG apply');
+            return;
+          }
+
+          console.log('[VideolifyFull_v2] onVbgSettings: applying VBG to remote stream with settings:', event);
+          await vbg.applyRemoteVirtualBackground(inputStream, remoteVideoRef.current, event);
+        } catch (err) {
+          console.error('[VideolifyFull_v2] Failed to apply remote VBG settings:', err);
         }
       },
       onPeerLeft: (event) => {
@@ -859,27 +1041,38 @@ export function VideolifyFull_v2({
   }, [media, sendControl]);
 
   const handleToggleScreenShare = useCallback(async () => {
-    if (screenShare.isSharing) {
-      // Stopping - onStopped callback will handle notification
-      await screenShare.stopSharing();
-    } else {
-      // ✅ Check if remote peer is already sharing
-      if (isRemoteSharing) {
-        toast({
-          title: 'Người kia đang chia sẻ màn hình',
-          description: 'Vui lòng đợi họ dừng lại',
-          variant: 'default',
-        });
-        return; // Block screen share
+    // Debounce screen-share toggles to avoid repeated renegotiations
+    if (screenShareDebounceRef.current) clearTimeout(screenShareDebounceRef.current);
+    screenShareDebounceRef.current = window.setTimeout(async () => {
+      if (screenShare.isSharing) {
+        // Stopping - onStopped callback will handle notification
+        await screenShare.stopSharing();
+      } else {
+        // ✅ Check if remote peer is already sharing
+        if (isRemoteSharing) {
+          toast({
+            title: 'Người kia đang chia sẻ màn hình',
+            description: 'Vui lòng đợi họ dừng lại',
+            variant: 'default',
+          });
+          return; // Block screen share
+        }
+
+        // ✅ Starting screen share - let hook handle everything including renegotiation
+        await screenShare.startSharing();
+
+        // Only notify peer if sharing actually started (user didn't cancel)
+        if (screenShare.isSharing) {
+          // ✅ Send control message to update button state at peer (non-blocking)
+          console.log('[VideolifyFull_v2] Sending screen-share-toggle: true');
+          sendControl('screen-share-toggle', { isSharing: true });
+        } else {
+          // User likely canceled the browser share picker; inform local user
+          console.log('[VideolifyFull_v2] Screen share was not started (user canceled)');
+          toast({ title: 'Chia sẻ màn hình bị hủy' });
+        }
       }
-
-      // ✅ Starting screen share - let hook handle everything including renegotiation
-      await screenShare.startSharing();
-
-      // ✅ Send control message to update button state at peer (non-blocking)
-      console.log('[VideolifyFull_v2] Sending screen-share-toggle: true');
-      sendControl('screen-share-toggle', { isSharing: true });
-    }
+    }, 250) as unknown as number;
   }, [screenShare, sendControl, isRemoteSharing, toast]);
 
   const handleSendChat = () => {
@@ -938,19 +1131,38 @@ export function VideolifyFull_v2({
   };
 
   const handleVbgBlur = async () => {
-    if (localVideoRef.current && media.localStream) {
-      setActivePreset(null); // ✅ Clear active preset when selecting blur
-      await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'blur');
-      await signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! });
-    }
+    // Debounce rapid VBG changes to avoid thrashing the processor and renegotiations
+    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
+    vbgDebounceRef.current = window.setTimeout(async () => {
+      if (localVideoRef.current && media.localStream) {
+        setActivePreset(null); // ✅ Clear active preset when selecting blur
+        setVbgChangeInProgress(true);
+        try {
+          // Optimistically notify peer so remote can start applying VBG
+          signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+
+          await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'blur');
+        } finally {
+          setVbgChangeInProgress(false);
+        }
+      }
+    }, 300) as unknown as number;
   };
 
   const handleVbgNone = async () => {
-    if (localVideoRef.current) {
-      setActivePreset(null); // ✅ Clear active preset when disabling VBG
-      vbg.disableVirtualBackground(localVideoRef.current);
-      await signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! });
-    }
+    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
+    vbgDebounceRef.current = window.setTimeout(async () => {
+      if (localVideoRef.current) {
+        setActivePreset(null); // ✅ Clear active preset when disabling VBG
+        setVbgChangeInProgress(true);
+        try {
+          vbg.disableVirtualBackground(localVideoRef.current);
+          await signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! });
+        } finally {
+          setVbgChangeInProgress(false);
+        }
+      }
+    }, 250) as unknown as number;
   };
 
   const handleVbgImage = async (imageUrl: string) => {
@@ -961,16 +1173,20 @@ export function VideolifyFull_v2({
       img.onerror = () => reject();
       img.src = imageUrl;
     });
+    if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
+    vbgDebounceRef.current = window.setTimeout(async () => {
+      if (localVideoRef.current && media.localStream) {
+        setVbgChangeInProgress(true);
+        try {
+          // Optimistically notify peer so remote can start applying VBG
+          signaling.sendVbgSettings({ enabled: true, mode: 'image', backgroundImage: imageUrl, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
 
-    if (localVideoRef.current && media.localStream) {
-      await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'image', { backgroundImage: img });
-      await signaling.sendVbgSettings({
-        enabled: true,
-        mode: 'image',
-        backgroundImage: imageUrl,
-        toPeerId: remotePeerIdRef.current!,
-      });
-    }
+          await vbg.enableVirtualBackground(media.localStream, localVideoRef.current, 'image', { backgroundImage: img });
+        } finally {
+          setVbgChangeInProgress(false);
+        }
+      }
+    }, 300) as unknown as number;
   };
 
   const endCall = () => {
@@ -1381,7 +1597,10 @@ export function VideolifyFull_v2({
         show={showVbgPanel}
         onClose={() => {
           setShowVbgPanel(false);
-          if (vbg.enabled === initialVbgEnabled) {
+          // If a VBG change is in progress, don't revert on close. Also only
+          // auto-disable when nothing changed (vbg state equals initial) and
+          // there is no pending change.
+          if (!vbgChangeInProgress && vbg.enabled === initialVbgEnabled) {
             handleVbgNone();
           }
         }}

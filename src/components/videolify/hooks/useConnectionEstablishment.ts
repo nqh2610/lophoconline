@@ -59,6 +59,22 @@ export function useConnectionEstablishment({
       shouldInitiate: boolean,
       context: string = 'unknown'
     ): Promise<RTCSessionDescriptionInit | null> => {
+      // Wait for local media to be ready (small grace period) to avoid offers without tracks
+      const waitForLocalStream = async (timeoutMs = 3000) => {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+          if (media.localStream && media.localStream.getTracks().length > 0) return true;
+          await new Promise((res) => setTimeout(res, 100));
+        }
+        return false;
+      };
+
+      // Ensure local media readiness before continuing (best-effort)
+      try {
+        await waitForLocalStream(2000);
+      } catch (e) {
+        // ignore - best effort only
+      }
       const now = Date.now();
 
       // ✅ CRITICAL: Prevent rapid reconnections (< 500ms apart)
@@ -143,7 +159,22 @@ export function useConnectionEstablishment({
           });
 
           console.log('[useConnectionEstablishment] Step 4: Creating offer');
-          const offer = await webrtc.createOffer();
+
+          // Retry offer creation a few times if it fails (sometimes PC not fully ready)
+          let offer: RTCSessionDescriptionInit | null = null;
+          for (let attempt = 0; attempt < 3 && !offer; attempt++) {
+            try {
+              offer = await webrtc.createOffer();
+            } catch (err) {
+              console.warn('[useConnectionEstablishment] createOffer attempt', attempt + 1, 'failed:', err);
+              offer = null;
+            }
+
+            if (!offer) {
+              const backoff = 150 * Math.pow(2, attempt);
+              await new Promise((res) => setTimeout(res, backoff));
+            }
+          }
 
           if (offer) {
             console.log('[useConnectionEstablishment] ✅ Offer created successfully');
@@ -151,7 +182,7 @@ export function useConnectionEstablishment({
             console.log('[useConnectionEstablishment]    SDP length:', offer.sdp?.length || 0);
             return offer;
           } else {
-            console.error('[useConnectionEstablishment] ❌ Failed to create offer');
+            console.error('[useConnectionEstablishment] ❌ Failed to create offer after retries');
             return null;
           }
         } else {

@@ -17,6 +17,8 @@ export function useVirtualBackground() {
   const remoteProcessorRef = useRef<VirtualBackgroundProcessor | null>(null);
   const originalStreamRef = useRef<MediaStream | null>(null);
   const remoteOriginalStreamRef = useRef<MediaStream | null>(null);
+  const remoteProcessedStreamRef = useRef<MediaStream | null>(null);
+  const remoteApplyingRef = useRef<boolean>(false);
 
   const enableVirtualBackground = useCallback(
     async (
@@ -94,21 +96,84 @@ export function useVirtualBackground() {
       settings: { mode: BackgroundMode; blurAmount?: number; backgroundImage?: string }
     ) => {
       try {
+        // Prevent concurrent applies
+        if (remoteApplyingRef.current) {
+          console.log('[useVirtualBackground] applyRemoteVirtualBackground: concurrent call ignored');
+          return;
+        }
+        remoteApplyingRef.current = true;
+
+        // If original stream not set, store it
         if (!remoteOriginalStreamRef.current) {
           remoteOriginalStreamRef.current = remoteStream;
         }
 
+        // If processor exists and it's already processing the same stream,
+        // update settings instead of restarting to avoid flicker/race.
+        if (remoteProcessorRef.current && remoteOriginalStreamRef.current === remoteStream) {
+          if (settings.mode === 'none') {
+            remoteProcessorRef.current.stopProcessing();
+            remoteProcessedStreamRef.current = null;
+            remoteVideoElement.srcObject = remoteOriginalStreamRef.current;
+            remoteApplyingRef.current = false;
+            return;
+          }
+
+          // If image mode and backgroundImage provided, preload image then update settings
+          let bgImage: HTMLImageElement | undefined;
+          if (settings.mode === 'image' && settings.backgroundImage) {
+            bgImage = new Image();
+            bgImage.crossOrigin = 'anonymous';
+            await new Promise<void>((resolve, reject) => {
+              bgImage!.onload = () => resolve();
+              bgImage!.onerror = () => reject();
+              bgImage!.src = settings.backgroundImage!;
+            });
+          }
+
+          // Update settings in-place (no restart)
+          remoteProcessorRef.current.updateSettings({
+            mode: settings.mode,
+            blurAmount: settings.blurAmount,
+            backgroundImage: bgImage,
+            modelSelection: 1,
+            smoothing: 0.7,
+          } as any);
+
+          // Ensure remote video is showing processed stream
+          if (remoteProcessedStreamRef.current) {
+            remoteVideoElement.srcObject = remoteProcessedStreamRef.current;
+          }
+
+          remoteApplyingRef.current = false;
+          return;
+        }
+
+        // If processor exists but stream changed, stop it first
+        if (remoteProcessorRef.current && remoteOriginalStreamRef.current !== remoteStream) {
+          try {
+            remoteProcessorRef.current.stopProcessing();
+          } catch (err) {
+            console.warn('[useVirtualBackground] stopProcessing failed during stream change:', err);
+          }
+          remoteProcessedStreamRef.current = null;
+          remoteProcessorRef.current = null;
+        }
+
+        // Create processor if missing
         if (!remoteProcessorRef.current) {
           remoteProcessorRef.current = new VirtualBackgroundProcessor();
           await remoteProcessorRef.current.initialize();
         }
 
         if (settings.mode === 'none') {
-          remoteProcessorRef.current.stopProcessing();
+          // nothing to do, just show original
           remoteVideoElement.srcObject = remoteOriginalStreamRef.current;
+          remoteApplyingRef.current = false;
           return;
         }
 
+        // Preload image if needed
         let bgImage: HTMLImageElement | undefined;
         if (settings.mode === 'image' && settings.backgroundImage) {
           bgImage = new Image();
@@ -128,9 +193,12 @@ export function useVirtualBackground() {
           smoothing: 0.7,
         });
 
+        remoteProcessedStreamRef.current = processedStream;
         remoteVideoElement.srcObject = processedStream;
+        remoteApplyingRef.current = false;
       } catch (err) {
         console.error('[useVirtualBackground] Remote apply failed:', err);
+        remoteApplyingRef.current = false;
       }
     },
     []
