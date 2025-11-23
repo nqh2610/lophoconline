@@ -165,7 +165,11 @@ export function VideoCallToolbar({
       >
         {/* Logo */}
         <div className="mr-1">
-          <Logo variant="light" size="sm" />
+          {/* Use logo optimized for dark backgrounds: force svg fills and text to light color */}
+          <Logo
+            size="sm"
+            className="text-white [&_svg]:fill-white [&_path]:fill-white [&_ellipse]:fill-white [&_line]:stroke-white [&_text]:fill-white"
+          />
         </div>
 
         {/* Divider */}
