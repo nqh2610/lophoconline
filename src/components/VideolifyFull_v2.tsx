@@ -1133,10 +1133,11 @@ export function VideolifyFull_v2({
   const handleVbgBlur = async () => {
     // Debounce rapid VBG changes to avoid thrashing the processor and renegotiations
     if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
+    // Mark change in progress immediately so closing the panel won't revert the choice
+    setVbgChangeInProgress(true);
     vbgDebounceRef.current = window.setTimeout(async () => {
       if (localVideoRef.current && media.localStream) {
         setActivePreset(null); // ✅ Clear active preset when selecting blur
-        setVbgChangeInProgress(true);
         try {
           // Optimistically notify peer so remote can start applying VBG
           signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
@@ -1145,22 +1146,28 @@ export function VideolifyFull_v2({
         } finally {
           setVbgChangeInProgress(false);
         }
+      } else {
+        // Nothing to do — clear the flag
+        setVbgChangeInProgress(false);
       }
     }, 300) as unknown as number;
   };
 
   const handleVbgNone = async () => {
     if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
+    // Mark change in progress immediately so closing the panel won't race with disabling
+    setVbgChangeInProgress(true);
     vbgDebounceRef.current = window.setTimeout(async () => {
       if (localVideoRef.current) {
         setActivePreset(null); // ✅ Clear active preset when disabling VBG
-        setVbgChangeInProgress(true);
         try {
           vbg.disableVirtualBackground(localVideoRef.current);
           await signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! });
         } finally {
           setVbgChangeInProgress(false);
         }
+      } else {
+        setVbgChangeInProgress(false);
       }
     }, 250) as unknown as number;
   };
@@ -1174,9 +1181,10 @@ export function VideolifyFull_v2({
       img.src = imageUrl;
     });
     if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
+    // Mark change in progress immediately so closing the panel won't cancel the selection
+    setVbgChangeInProgress(true);
     vbgDebounceRef.current = window.setTimeout(async () => {
       if (localVideoRef.current && media.localStream) {
-        setVbgChangeInProgress(true);
         try {
           // Optimistically notify peer so remote can start applying VBG
           signaling.sendVbgSettings({ enabled: true, mode: 'image', backgroundImage: imageUrl, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
@@ -1185,6 +1193,8 @@ export function VideolifyFull_v2({
         } finally {
           setVbgChangeInProgress(false);
         }
+      } else {
+        setVbgChangeInProgress(false);
       }
     }, 300) as unknown as number;
   };
