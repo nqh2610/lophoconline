@@ -21,6 +21,7 @@ import { useReactions } from './videolify/hooks/useReactions';
 import { usePiPPreview } from './videolify/hooks/usePiPPreview';
 import type { VideolifyFullProps } from './videolify/types';
 import { addLocalTracksToPC, recreatePeerConnection } from '@/utils/webrtc-helpers';
+import { loadPrejoinSettings } from '@/lib/prejoinSettings';
 
 import Draggable from 'react-draggable';
 import { Badge } from './ui/badge';
@@ -777,9 +778,14 @@ export function VideolifyFull_v2({
     (async () => {
       console.log('[VideolifyFull_v2] Initializing...');
 
+      // ✅ Load prejoin settings from localStorage
+      console.log('[VideolifyFull_v2] 📂 Loading prejoin settings...');
+      const prejoinSettings = loadPrejoinSettings();
+      console.log('[VideolifyFull_v2] Prejoin settings loaded:', prejoinSettings);
+
       // ✅ CRITICAL FIX: Check if we already have a valid stream (F5 case)
       let stream: MediaStream | null = media.localStream;
-      
+
       // If no stream or stream is inactive, request new one
       if (!stream || stream.getTracks().every(t => t.readyState === 'ended')) {
         console.log('[VideolifyFull_v2] Requesting media permissions...');
@@ -793,9 +799,74 @@ export function VideolifyFull_v2({
       } else {
         console.log('[VideolifyFull_v2] Reusing existing media stream (F5 case)');
       }
-      
+
       if (stream && localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+      }
+
+      // ✅ Apply prejoin settings: Camera/Mic state
+      if (stream) {
+        console.log('[VideolifyFull_v2] 🎛️ Applying prejoin camera/mic settings...');
+
+        // Apply camera state
+        stream.getVideoTracks().forEach(track => {
+          track.enabled = prejoinSettings.isCameraEnabled;
+          console.log(`[VideolifyFull_v2] Camera track ${track.id} enabled: ${track.enabled}`);
+        });
+
+        // Apply mic state
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = prejoinSettings.isMicEnabled;
+          console.log(`[VideolifyFull_v2] Audio track ${track.id} enabled: ${track.enabled}`);
+        });
+
+        // Update media hook state to match prejoin settings
+        if (!prejoinSettings.isCameraEnabled && media.isVideoEnabled) {
+          media.toggleVideo();
+        }
+        if (!prejoinSettings.isMicEnabled && media.isAudioEnabled) {
+          media.toggleAudio();
+        }
+      }
+
+      // ✅ Apply prejoin settings: Virtual Background
+      if (prejoinSettings.vbgEnabled && stream && localVideoRef.current) {
+        console.log('[VideolifyFull_v2] 🎭 Applying prejoin virtual background...');
+
+        try {
+          if (prejoinSettings.vbgMode === 'blur') {
+            // Apply blur background
+            await vbg.enableVirtualBackground(
+              stream,
+              localVideoRef.current,
+              'blur',
+              prejoinSettings.vbgBlurAmount,
+              null
+            );
+            console.log('[VideolifyFull_v2] ✅ Blur background applied from prejoin settings');
+          } else if (prejoinSettings.vbgMode === 'image' && prejoinSettings.vbgBackgroundImage) {
+            // Load and apply image background
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject(new Error('Failed to load background image'));
+              img.src = prejoinSettings.vbgBackgroundImage!;
+            });
+
+            await vbg.enableVirtualBackground(
+              stream,
+              localVideoRef.current!,
+              'image',
+              prejoinSettings.vbgBlurAmount,
+              img
+            );
+            console.log('[VideolifyFull_v2] ✅ Image background applied from prejoin settings');
+          }
+        } catch (error) {
+          console.error('[VideolifyFull_v2] ❌ Failed to apply prejoin VBG:', error);
+        }
       }
 
       // ✅ Connect to SSE and join room (ALWAYS, even without media)

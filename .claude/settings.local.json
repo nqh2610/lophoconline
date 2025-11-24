@@ -51,7 +51,9 @@
       "Bash(npm install:*)",
       "Bash(E:LopHocTrucTuyenTEST_NOW.md)",
       "Bash(taskkill:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(xargs:*)",
+      "Bash(del \"e:\\LopHocTrucTuyen\\src\\app\\prejoin-videolify-v2\\page.tsx\")"
     ],
     "deny": [],
     "ask": []
