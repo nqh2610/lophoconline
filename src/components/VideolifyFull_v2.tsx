@@ -97,6 +97,11 @@ export function VideolifyFull_v2({
   const [isRemoteSharing, setIsRemoteSharing] = useState(false); // Track if remote peer is sharing
   const [whiteboardDrawPermission, setWhiteboardDrawPermission] = useState(false); // For student: whether teacher granted draw permission
   const [studentRequestingDraw, setStudentRequestingDraw] = useState(false); // For teacher: whether student is requesting permission
+  
+  // ✅ VBG loading state for remote video - show loading while applying VBG for privacy
+  const [remoteVbgLoading, setRemoteVbgLoading] = useState(false);
+  const pendingRemoteVbgRef = useRef<any>(null); // Store VBG settings received before remote stream ready
+  
   // Speaking detection disabled
   const isLocalSpeaking = false;
   const isRemoteSpeaking = false;
@@ -240,7 +245,7 @@ export function VideolifyFull_v2({
 
       // ✅ Detect screen share by checking if stream has ONLY video track (no audio)
       // We need to wait a bit for all tracks to be added to the stream
-      setTimeout(() => {
+      setTimeout(async () => {
         const videoTracks = stream.getVideoTracks();
         const audioTracks = stream.getAudioTracks();
 
@@ -267,8 +272,29 @@ export function VideolifyFull_v2({
         } else if (videoTracks.length > 0 || audioTracks.length > 0) {
           console.log('[VideolifyFull_v2] 🎥 CAMERA stream detected');
           remoteCameraStreamRef.current = stream;
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = stream;
+          
+          // ✅ PRIVACY: Check for pending VBG settings and apply BEFORE showing video
+          if (pendingRemoteVbgRef.current) {
+            console.log('[VideolifyFull_v2] 🎨 Applying pending VBG settings before showing remote video');
+            setRemoteVbgLoading(true);
+            try {
+              await vbg.applyRemoteVirtualBackground(stream, remoteVideoRef.current!, pendingRemoteVbgRef.current);
+              console.log('[VideolifyFull_v2] ✅ Pending VBG applied successfully');
+            } catch (err) {
+              console.error('[VideolifyFull_v2] Failed to apply pending VBG:', err);
+              // Fall back to showing original stream
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = stream;
+              }
+            } finally {
+              setRemoteVbgLoading(false);
+              pendingRemoteVbgRef.current = null;
+            }
+          } else {
+            // No pending VBG, show original stream
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = stream;
+            }
           }
         }
       }, 100);
@@ -317,9 +343,47 @@ export function VideolifyFull_v2({
     console.log('[VideolifyFull_v2] 📡 Setting up control channel, state:', channel.readyState);
     controlChannelRef.current = channel;
 
-    channel.onopen = () => {
-      console.log('[VideolifyFull_v2] ✅ Control channel OPEN');
+    // ✅ Function to broadcast VBG settings
+    const broadcastVbgOnOpen = () => {
+      try {
+        const stored = localStorage.getItem('videolify_prejoin_settings');
+        console.log('[VideolifyFull_v2] 📦 Reading prejoin settings from localStorage:', stored ? 'found' : 'not found');
+        
+        if (stored) {
+          const prejoinSettings = JSON.parse(stored);
+          console.log('[VideolifyFull_v2] 📦 Parsed prejoin settings:', { 
+            vbgEnabled: prejoinSettings.vbgEnabled, 
+            vbgMode: prejoinSettings.vbgMode 
+          });
+          
+          if (prejoinSettings.vbgEnabled) {
+            const vbgSettings = {
+              enabled: true,
+              mode: prejoinSettings.vbgMode || 'blur',
+              blurAmount: prejoinSettings.vbgBlurAmount || 10,
+              backgroundImage: prejoinSettings.vbgBackgroundImage || null
+            };
+            console.log('[VideolifyFull_v2] 🎨 Broadcasting VBG settings on channel open:', vbgSettings);
+            channel.send(JSON.stringify({ type: 'vbg-settings', ...vbgSettings }));
+          } else {
+            console.log('[VideolifyFull_v2] 📦 VBG not enabled in prejoin settings, not broadcasting');
+          }
+        }
+      } catch (err) {
+        console.warn('[VideolifyFull_v2] Failed to send initial VBG settings:', err);
+      }
     };
+
+    channel.onopen = () => {
+      console.log('[VideolifyFull_v2] ✅ Control channel OPEN (via onopen)');
+      broadcastVbgOnOpen();
+    };
+
+    // ✅ If channel is already open when we set up (answerer case), broadcast immediately
+    if (channel.readyState === 'open') {
+      console.log('[VideolifyFull_v2] ✅ Control channel already OPEN, broadcasting now');
+      broadcastVbgOnOpen();
+    }
 
     channel.onclose = () => {
       console.log('[VideolifyFull_v2] ⚠️ Control channel CLOSED');
@@ -329,36 +393,59 @@ export function VideolifyFull_v2({
       console.error('[VideolifyFull_v2] ❌ Control channel ERROR:', error);
     };
 
-    // Heartbeat + control message handling
-    // Liveness detection: send ping periodically and expect pong
+    // ✅ IMPROVED Heartbeat + control message handling
+    // Enhanced liveness detection with adaptive ping intervals and robust reconnect
     const lastPongRef = { current: Date.now() } as { current: number };
+    const lastPingRef = { current: Date.now() } as { current: number };
     const recreateInProgressRef = { current: false } as { current: boolean };
+    const consecutiveFailuresRef = { current: 0 } as { current: number };
     let heartbeatInterval: number | null = null;
     let livenessCheckInterval: number | null = null;
     let recreateAttempt = 0;
+    const MAX_RECREATE_ATTEMPTS = 5;
+    const PING_INTERVAL = 2000; // 2s ping interval for faster detection
+    const LIVENESS_TIMEOUT = 8000; // 8s without pong = dead
+    const LIVENESS_CHECK_INTERVAL = 2000; // Check every 2s
 
     const startHeartbeat = () => {
       if (heartbeatInterval) return;
+      console.log('[VideolifyFull_v2] 💓 Starting heartbeat monitor');
+      
       heartbeatInterval = window.setInterval(() => {
         try {
           if (controlChannelRef.current && controlChannelRef.current.readyState === 'open') {
-            controlChannelRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+            const now = Date.now();
+            controlChannelRef.current.send(JSON.stringify({ type: 'ping', ts: now }));
+            lastPingRef.current = now;
           }
         } catch (e) {
-          // ignore
+          console.warn('[VideolifyFull_v2] Ping send failed:', e);
+          consecutiveFailuresRef.current++;
+          if (consecutiveFailuresRef.current >= 3) {
+            console.warn('[VideolifyFull_v2] Multiple ping failures - triggering reconnect');
+            attemptRecreate();
+          }
         }
-      }, 3000) as unknown as number;
+      }, PING_INTERVAL) as unknown as number;
 
       livenessCheckInterval = window.setInterval(() => {
-        // If no pong within 10s, consider peer dead
-        if (Date.now() - lastPongRef.current > 10000) {
-          console.warn('[VideolifyFull_v2] No pong received in 10s - triggering reconnect');
+        const timeSinceLastPong = Date.now() - lastPongRef.current;
+        
+        // Log heartbeat status periodically
+        if (Date.now() % 30000 < LIVENESS_CHECK_INTERVAL) {
+          console.log('[VideolifyFull_v2] 💓 Heartbeat status - last pong:', timeSinceLastPong, 'ms ago');
+        }
+        
+        // If no pong within LIVENESS_TIMEOUT, consider peer dead
+        if (timeSinceLastPong > LIVENESS_TIMEOUT) {
+          console.warn('[VideolifyFull_v2] ⚠️ No pong received in', timeSinceLastPong, 'ms - triggering reconnect');
           attemptRecreate();
         }
-      }, 2500) as unknown as number;
+      }, LIVENESS_CHECK_INTERVAL) as unknown as number;
     };
 
     const stopHeartbeat = () => {
+      console.log('[VideolifyFull_v2] 💔 Stopping heartbeat monitor');
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
         heartbeatInterval = null;
@@ -372,15 +459,49 @@ export function VideolifyFull_v2({
     const attemptRecreate = async () => {
       if (recreateInProgressRef.current) return;
       if (!remotePeerIdRef.current) return;
+      
+      // ✅ Check max attempts
+      if (recreateAttempt >= MAX_RECREATE_ATTEMPTS) {
+        console.error('[VideolifyFull_v2] ❌ Max reconnect attempts reached - giving up');
+        stopHeartbeat();
+        toast({ title: '⚠️ Mất kết nối với người khác. Hãy thử F5 để kết nối lại.', variant: 'destructive' });
+        return;
+      }
 
       recreateInProgressRef.current = true;
       recreateAttempt++;
+      consecutiveFailuresRef.current = 0; // Reset failures on reconnect attempt
       const backoff = Math.min(8000, 500 * Math.pow(2, recreateAttempt));
-      console.log('[VideolifyFull_v2] Attempting reconnect in', backoff, 'ms (attempt', recreateAttempt, ')');
+      console.log('[VideolifyFull_v2] 🔄 Attempting reconnect in', backoff, 'ms (attempt', recreateAttempt, '/', MAX_RECREATE_ATTEMPTS, ')');
 
       setTimeout(async () => {
         try {
-          // Use connection.establishConnection to recreate and get offer
+          // ✅ First try ICE restart (faster) before full reconnect
+          const pc = webrtc.peerConnection;
+          if (pc && pc.connectionState !== 'closed' && pc.iceConnectionState !== 'closed') {
+            console.log('[VideolifyFull_v2] 🧊 Trying ICE restart first...');
+            const restartOffer = await webrtc.restartIce();
+            if (restartOffer) {
+              try {
+                await signaling.sendOffer(restartOffer, remotePeerIdRef.current!);
+                console.log('[VideolifyFull_v2] ✅ ICE restart offer sent');
+                // Wait and check if connection restored
+                await new Promise((res) => setTimeout(res, 3000));
+                if (pc.connectionState === 'connected') {
+                  console.log('[VideolifyFull_v2] ✅ ICE restart successful!');
+                  recreateAttempt = 0;
+                  lastPongRef.current = Date.now();
+                  recreateInProgressRef.current = false;
+                  return;
+                }
+              } catch (err) {
+                console.warn('[VideolifyFull_v2] ICE restart send failed:', err);
+              }
+            }
+          }
+
+          // ✅ Full reconnect if ICE restart failed
+          console.log('[VideolifyFull_v2] 🔌 Full reconnect - establishing new connection');
           const offer = await connection.establishConnection(remotePeerIdRef.current!, true, 'reconnect-heartbeat');
           if (offer) {
             console.log('[VideolifyFull_v2] Reconnect offer created, ensuring signaling connected');
@@ -400,8 +521,10 @@ export function VideolifyFull_v2({
               console.log('[VideolifyFull_v2] Sending reconnect offer to peer');
               await signaling.sendOffer(offer, remotePeerIdRef.current!);
 
-              // Reset recreate attempt counter on success
+              // Reset counters on success
               recreateAttempt = 0;
+              lastPongRef.current = Date.now();
+              console.log('[VideolifyFull_v2] ✅ Reconnect offer sent successfully');
             } catch (err) {
               console.error('[VideolifyFull_v2] Failed to send reconnect offer:', err);
             }
@@ -428,18 +551,26 @@ export function VideolifyFull_v2({
         return;
       }
 
-      // Handle ping/pong first
+      // Handle ping/pong first - ✅ IMPROVED: track round-trip time
       if (control.type === 'ping') {
         try {
-          channel.send(JSON.stringify({ type: 'pong', ts: control.ts }));
+          channel.send(JSON.stringify({ type: 'pong', ts: control.ts, serverTs: Date.now() }));
         } catch (err) {
-          // ignore
+          console.warn('[VideolifyFull_v2] Failed to send pong:', err);
         }
         return;
       }
 
       if (control.type === 'pong') {
-        lastPongRef.current = Date.now();
+        const now = Date.now();
+        const rtt = now - control.ts;
+        lastPongRef.current = now;
+        consecutiveFailuresRef.current = 0; // Reset failures on successful pong
+        
+        // Log RTT occasionally for debugging
+        if (now % 30000 < LIVENESS_CHECK_INTERVAL) {
+          console.log('[VideolifyFull_v2] 💓 Pong received, RTT:', rtt, 'ms');
+        }
         return;
       }
 
@@ -495,6 +626,11 @@ export function VideolifyFull_v2({
           fromMe: false,
           userName: control.userName,
         });
+      }
+      // ✅ NEW: Handle VBG settings via DataChannel for faster/more reliable delivery
+      else if (control.type === 'vbg-settings') {
+        console.log('[VideolifyFull_v2] 🎨 VBG settings received via DataChannel:', control);
+        handleRemoteVbgSettings(control);
       }
     };
 
@@ -645,38 +781,9 @@ export function VideolifyFull_v2({
         await webrtc.addIceCandidate(event.candidate);
       },
       onVbgSettings: async (event) => {
-        // IMPORTANT: Apply VBG to the remote peer's original camera stream
-        // Use `remoteCameraStreamRef.current` as the input stream for processing.
-        // NOTE: Remote track arrival timing can race with incoming VBG settings.
-        // To avoid missing the setting when stream not yet available, poll briefly
-        // (up to 2s) for the remote stream before giving up.
-        try {
-          if (!remoteVideoRef.current) return;
-
-          // Wait for remote stream if not yet present (race prevention)
-          const waitForRemoteStream = async (timeoutMs = 2000, intervalMs = 100) => {
-            const start = Date.now();
-            while (Date.now() - start < timeoutMs) {
-              const s = remoteCameraStreamRef.current ?? null;
-              if (s) return s;
-              // small delay
-              await new Promise((res) => setTimeout(res, intervalMs));
-            }
-            return null;
-          };
-
-          const inputStream = remoteCameraStreamRef.current ?? await waitForRemoteStream();
-
-          if (!inputStream) {
-            console.warn('[VideolifyFull_v2] onVbgSettings: remote camera stream not available after wait, skipping VBG apply');
-            return;
-          }
-
-          console.log('[VideolifyFull_v2] onVbgSettings: applying VBG to remote stream with settings:', event);
-          await vbg.applyRemoteVirtualBackground(inputStream, remoteVideoRef.current, event);
-        } catch (err) {
-          console.error('[VideolifyFull_v2] Failed to apply remote VBG settings:', err);
-        }
+        // ✅ Delegate to handleRemoteVbgSettings for consistent handling
+        console.log('[VideolifyFull_v2] 🎨 VBG settings received via SSE:', event);
+        handleRemoteVbgSettings(event);
       },
       onPeerLeft: (event) => {
         console.log('[VideolifyFull_v2] Peer left:', event.peerId);
@@ -712,6 +819,53 @@ export function VideolifyFull_v2({
       },
     },
   });
+
+  // ✅ CRITICAL: Centralized handler for remote VBG settings (from SSE or DataChannel)
+  // This ensures VBG is applied BEFORE showing video to protect privacy
+  const handleRemoteVbgSettings = useCallback(async (settings: { 
+    mode: 'none' | 'blur' | 'image';
+    blurAmount?: number;
+    backgroundImage?: string;
+    enabled?: boolean;
+  }) => {
+    console.log('[VideolifyFull_v2] 🎨 handleRemoteVbgSettings called:', settings);
+    
+    // If mode is 'none' or disabled, just show original stream
+    if (settings.mode === 'none' || settings.enabled === false) {
+      console.log('[VideolifyFull_v2] VBG disabled - showing original stream');
+      pendingRemoteVbgRef.current = null;
+      if (remoteCameraStreamRef.current && remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteCameraStreamRef.current;
+      }
+      setRemoteVbgLoading(false);
+      return;
+    }
+
+    // If remote stream not ready yet, store settings for when it arrives
+    if (!remoteCameraStreamRef.current || !remoteVideoRef.current) {
+      console.log('[VideolifyFull_v2] 📥 Storing VBG settings (remote stream not ready)');
+      pendingRemoteVbgRef.current = settings;
+      setRemoteVbgLoading(true); // Show loading state
+      return;
+    }
+
+    // Apply VBG immediately
+    setRemoteVbgLoading(true);
+    try {
+      console.log('[VideolifyFull_v2] 🎨 Applying VBG to remote stream:', settings);
+      await vbg.applyRemoteVirtualBackground(remoteCameraStreamRef.current, remoteVideoRef.current, settings);
+      console.log('[VideolifyFull_v2] ✅ Remote VBG applied successfully');
+    } catch (err) {
+      console.error('[VideolifyFull_v2] Failed to apply remote VBG:', err);
+      // Fallback to original stream on error
+      if (remoteVideoRef.current && remoteCameraStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteCameraStreamRef.current;
+      }
+    } finally {
+      setRemoteVbgLoading(false);
+      pendingRemoteVbgRef.current = null;
+    }
+  }, [vbg]);
 
   const sendControl = useCallback((type: string, data: any) => {
     if (controlChannelRef.current?.readyState === 'open') {
@@ -1235,8 +1389,16 @@ export function VideolifyFull_v2({
     // Mark pending selection so panel close won't revert
     vbgPendingRef.current = { mode: 'blur', blurAmount: vbg.blurAmount };
 
-    // Optimistically notify peer immediately so remote can start applying VBG using original video + settings
-    signaling.sendVbgSettings({ enabled: true, mode: 'blur', blurAmount: vbg.blurAmount, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+    const vbgSettings = { enabled: true, mode: 'blur' as const, blurAmount: vbg.blurAmount };
+    
+    // ✅ Send via DataChannel (faster, more reliable) if available
+    if (controlChannelRef.current?.readyState === 'open') {
+      sendControl('vbg-settings', vbgSettings);
+    }
+    // Also send via SSE as backup
+    if (remotePeerIdRef.current) {
+      signaling.sendVbgSettings({ ...vbgSettings, toPeerId: remotePeerIdRef.current }).catch((e) => console.warn('sendVbgSettings failed:', e));
+    }
 
     // Debounce the heavy enable operation to avoid thrashing the processor
     if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
@@ -1265,10 +1427,18 @@ export function VideolifyFull_v2({
     setVbgChangeInProgress(true);
     // Clear any pending selection since user explicitly disabled
     vbgPendingRef.current = null;
+    
+    const vbgSettings = { enabled: false, mode: 'none' as const };
+    
     try {
       vbg.disableVirtualBackground(localVideoRef.current!);
-      // Notify peer immediately that VBG is disabled
-      signaling.sendVbgSettings({ enabled: false, mode: 'none', toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+      // ✅ Notify peer via DataChannel (faster) and SSE (backup)
+      if (controlChannelRef.current?.readyState === 'open') {
+        sendControl('vbg-settings', vbgSettings);
+      }
+      if (remotePeerIdRef.current) {
+        signaling.sendVbgSettings({ ...vbgSettings, toPeerId: remotePeerIdRef.current }).catch((e) => console.warn('sendVbgSettings failed:', e));
+      }
     } catch (err) {
       console.error('[VideolifyFull_v2] VBG disable failed', err);
     } finally {
@@ -1289,8 +1459,17 @@ export function VideolifyFull_v2({
     setVbgChangeInProgress(true);
     // Mark pending selection so panel close won't revert
     vbgPendingRef.current = { mode: 'image', backgroundImage: imageUrl };
-    // Optimistically notify peer immediately so remote can start applying VBG using original video + settings
-    signaling.sendVbgSettings({ enabled: true, mode: 'image', backgroundImage: imageUrl, toPeerId: remotePeerIdRef.current! }).catch((e) => console.warn('sendVbgSettings failed:', e));
+    
+    const vbgSettings = { enabled: true, mode: 'image' as const, backgroundImage: imageUrl };
+    
+    // ✅ Send via DataChannel (faster, more reliable) if available
+    if (controlChannelRef.current?.readyState === 'open') {
+      sendControl('vbg-settings', vbgSettings);
+    }
+    // Also send via SSE as backup
+    if (remotePeerIdRef.current) {
+      signaling.sendVbgSettings({ ...vbgSettings, toPeerId: remotePeerIdRef.current }).catch((e) => console.warn('sendVbgSettings failed:', e));
+    }
 
     if (vbgDebounceRef.current) clearTimeout(vbgDebounceRef.current);
     vbgDebounceRef.current = window.setTimeout(async () => {
@@ -1540,10 +1719,20 @@ export function VideolifyFull_v2({
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move ${remoteDragging ? 'transition-none' : 'transition-all duration-200'} ${isRemoteSpeaking ? 'border-[3px] border-green-400 shadow-green-400/50' : 'border-2 border-green-500/50'} ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames ? 'block' : 'hidden'}`}
+                  className={`w-full h-full object-cover rounded-lg shadow-lg cursor-move ${remoteDragging ? 'transition-none' : 'transition-all duration-200'} ${isRemoteSpeaking ? 'border-[3px] border-green-400 shadow-green-400/50' : 'border-2 border-green-500/50'} ${connectionStats.connected && remoteVideoEnabled && remoteVideoHasFrames && !remoteVbgLoading ? 'block' : 'hidden'}`}
                 />
 
-                {(!connectionStats.connected || !remoteVideoEnabled || !remoteVideoHasFrames) && (
+                {/* ✅ VBG Loading overlay - show while applying VBG for privacy */}
+                {remoteVbgLoading && connectionStats.connected && (
+                  <div className="absolute inset-0 bg-gray-900 rounded-lg flex items-center justify-center border-2 border-green-500/50">
+                    <div className="text-center text-white">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                      <span className="text-xs">Đang tải nền ảo...</span>
+                    </div>
+                  </div>
+                )}
+
+                {(!connectionStats.connected || !remoteVideoEnabled || (!remoteVideoHasFrames && !remoteVbgLoading)) && (
                   <div className="border-2 border-green-500 shadow-lg rounded-lg">
                     <CameraOffOverlay pipSize={remotePipSize} />
                   </div>
