@@ -183,11 +183,15 @@ export function calculateSessionDuration(
 /**
  * Check if current time is within allowed join window
  * Allow joining 15 minutes before scheduled start and up to scheduled end time
+ * ✅ RELAXED: Also allow joining if we're past scheduled end but within 1 hour grace period
  */
 export function canJoinNow(scheduledStart: Date, scheduledEnd: Date): boolean {
   const now = new Date();
   const joinWindowStart = new Date(scheduledStart.getTime() - 15 * 60 * 1000); // 15 min before
-  return now >= joinWindowStart && now <= scheduledEnd;
+  const graceWindowEnd = new Date(scheduledEnd.getTime() + 60 * 60 * 1000); // 1 hour after end
+  
+  // Allow if within [15min before start, 1 hour after end]
+  return now >= joinWindowStart && now <= graceWindowEnd;
 }
 
 /**

@@ -23,10 +23,12 @@ export default function PrejoinPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const vbgProcessorRef = useRef<VirtualBackgroundProcessor | null>(null);
+  const isTogglingCameraRef = useRef<boolean>(false);
   // Also keep stream in state so we can react when video element mounts
   const [localStreamState, setLocalStreamState] = useState<MediaStream | null>(null);
 
-  // Media state - always start enabled for prejoin
+  // Media state - load from localStorage
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
@@ -34,7 +36,7 @@ export default function PrejoinPage() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Virtual Background state
+  // Virtual Background state - load from localStorage
   const [showVbgPanel, setShowVbgPanel] = useState(false);
   const [vbgEnabled, setVbgEnabled] = useState(false);
   const [vbgMode, setVbgMode] = useState<'none' | 'blur' | 'image'>('none');
@@ -62,23 +64,34 @@ export default function PrejoinPage() {
   // Load saved settings from localStorage on mount
   useEffect(() => {
     const settings = loadPrejoinSettings();
-    // Always start with camera and mic enabled for prejoin
-    setIsCameraEnabled(true);
-    setIsMicEnabled(true);
+    console.log('📂 [Prejoin] Loading saved settings:', settings);
+    
+    // Apply saved settings
+    setIsCameraEnabled(settings.isCameraEnabled);
+    setIsMicEnabled(settings.isMicEnabled);
     setVbgEnabled(settings.vbgEnabled);
     setVbgMode(settings.vbgMode);
     setBlurAmount(settings.vbgBlurAmount);
     setActivePreset(settings.vbgActivePreset);
 
+    // Load background image if saved
     if (settings.vbgBackgroundImage) {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => setBackgroundImage(img);
+      img.onload = () => {
+        console.log('✅ [Prejoin] Background image loaded');
+        setBackgroundImage(img);
+        setSettingsLoaded(true);
+      };
       img.onerror = () => {
-        console.error('[Prejoin] Failed to load saved background image');
+        console.error('❌ [Prejoin] Failed to load saved background image');
         setVbgEnabled(false);
+        setVbgMode('none');
+        setSettingsLoaded(true);
       };
       img.src = settings.vbgBackgroundImage;
+    } else {
+      setSettingsLoaded(true);
     }
   }, []);
 
@@ -149,8 +162,10 @@ export default function PrejoinPage() {
     }
   }
 
-  // Initialize media stream
+  // Initialize media stream (only after settings loaded)
   useEffect(() => {
+    if (!settingsLoaded) return; // Wait for settings to load first
+
     let mounted = true;
 
     async function initMedia() {
@@ -182,30 +197,50 @@ export default function PrejoinPage() {
         }
 
         localStreamRef.current = stream;
-        // store stream in state so an effect can set video.srcObject when the
-        // video element actually mounts. This avoids a race where getUserMedia
-        // resolves before the <video> ref is attached, which makes the preview
-        // not show until another action (like applying VBG) sets srcObject.
         setLocalStreamState(stream);
-        // As soon as we have a stream, mark media as loaded so the video
-        // element is rendered and the effect that attaches the srcObject can
-        // run. Some device enumeration/audio setup may take longer; don't
-        // block showing the preview on those.
-        setIsLoadingMedia(false);
-
+        
         await enumerateDevices();
         initAudioLevel(stream);
 
-        // Always enable tracks on prejoin
+        // Apply saved camera/mic state from localStorage
         stream.getVideoTracks().forEach(track => {
-          track.enabled = true;
+          track.enabled = isCameraEnabled;
           console.log('[Prejoin] Video track enabled:', track.enabled, 'ready:', track.readyState);
         });
         stream.getAudioTracks().forEach(track => {
-          track.enabled = true;
+          track.enabled = isMicEnabled;
         });
 
+        // Mark as loaded first so video element renders
         setIsLoadingMedia(false);
+
+        // Wait for video element to mount and useEffect to set srcObject
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Ensure video element has srcObject (in case useEffect hasn't run yet)
+        if (videoRef.current && !videoRef.current.srcObject) {
+          console.log('[Prejoin] Manually setting srcObject to video element');
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(err => {
+            console.error('[Prejoin] Video play error:', err);
+          });
+        }
+
+        // Apply VBG if enabled in settings
+        if (isCameraEnabled && vbgEnabled && vbgMode !== 'none') {
+          console.log('🎨 [Prejoin] Applying saved VBG during init:', { vbgMode, backgroundImage: !!backgroundImage });
+          
+          try {
+            if (vbgMode === 'blur') {
+              await applyVirtualBackground('blur', null);
+            } else if (vbgMode === 'image' && backgroundImage) {
+              await applyVirtualBackground('image', backgroundImage);
+            }
+          } catch (error) {
+            console.error('❌ [Prejoin] Failed to apply saved VBG:', error);
+          }
+        }
+
         console.log('[Prejoin] Media loading complete');
 
       } catch (error: any) {
@@ -242,7 +277,8 @@ export default function PrejoinPage() {
         audioContextRef.current.close();
       }
     };
-  }, [selectedCamera, selectedMicrophone]);
+  }, [selectedCamera, selectedMicrophone, settingsLoaded]);
+  // ⚠️ DO NOT add isCameraEnabled, isMicEnabled to deps - will cause re-init on toggle!
 
   // Initialize audio level detection
   function initAudioLevel(stream: MediaStream) {
@@ -288,11 +324,22 @@ export default function PrejoinPage() {
 
   // When we obtain a local stream, ensure the video element receives it.
   useEffect(() => {
+    console.log('[Prejoin] useEffect localStreamState triggered', {
+      hasStream: !!localStreamState,
+      hasVideoRef: !!videoRef.current,
+      isToggling: isTogglingCameraRef.current,
+    });
+
     if (!localStreamState) return;
     if (!videoRef.current) return;
+    
+    if (isTogglingCameraRef.current) {
+      console.log('[Prejoin] ⚠️ Skipping srcObject update - camera toggle in progress');
+      return; // Skip if toggling camera manually
+    }
 
     try {
-      console.log('[Prejoin] Attaching stream to video element from state');
+      console.log('[Prejoin] ✅ Attaching stream to video element from state');
       videoRef.current.srcObject = localStreamState;
       videoRef.current.onloadedmetadata = () => {
         console.log('[Prejoin] Video metadata loaded (from state)');
@@ -311,12 +358,70 @@ export default function PrejoinPage() {
   async function toggleCamera() {
     if (!localStreamRef.current) return;
 
+    console.log('[Prejoin] 🎬 Toggle camera START', { 
+      currentState: isCameraEnabled,
+      newState: !isCameraEnabled 
+    });
+
     const newState = !isCameraEnabled;
     setIsCameraEnabled(newState);
 
-    localStreamRef.current.getVideoTracks().forEach(track => {
-      track.enabled = newState;
-    });
+    // Set flag to prevent useEffect from interfering
+    isTogglingCameraRef.current = true;
+    console.log('[Prejoin] 🚩 Flag set to TRUE');
+
+    if (newState) {
+      // BẬT camera
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = true;
+      });
+
+      // Nếu có VBG đang bật → apply lại processor
+      if (vbgEnabled && vbgMode !== 'none') {
+        try {
+          if (vbgMode === 'blur') {
+            await applyVirtualBackground('blur', null);
+          } else if (vbgMode === 'image' && backgroundImage) {
+            await applyVirtualBackground('image', backgroundImage);
+          }
+        } catch (error) {
+          console.error('[Prejoin] Failed to reapply VBG when enabling camera:', error);
+          // Fallback to original stream
+          if (videoRef.current && localStreamRef.current) {
+            videoRef.current.srcObject = localStreamRef.current;
+          }
+        }
+      } else {
+        // Không có VBG → hiện camera gốc
+        if (videoRef.current && localStreamRef.current) {
+          console.log('[Prejoin] Toggle camera ON - setting original stream');
+          videoRef.current.srcObject = localStreamRef.current;
+        }
+      }
+    } else {
+      // TẮT camera
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = false;
+      });
+
+      // Nếu có VBG processor → destroy để tiết kiệm CPU
+      if (vbgProcessorRef.current) {
+        await vbgProcessorRef.current.destroy();
+        vbgProcessorRef.current = null;
+      }
+
+      // Switch về stream gốc (vẫn tắt)
+      if (videoRef.current && localStreamRef.current) {
+        console.log('[Prejoin] Toggle camera OFF - setting original stream (disabled)');
+        videoRef.current.srcObject = localStreamRef.current;
+      }
+    }
+
+    // Reset flag after a longer delay to ensure no interference
+    setTimeout(() => {
+      console.log('[Prejoin] Resetting toggle flag');
+      isTogglingCameraRef.current = false;
+    }, 500);
 
     savePrejoinSettings({ isCameraEnabled: newState });
     announceToScreenReader(newState ? 'Camera đã bật' : 'Camera đã tắt');
@@ -486,11 +591,33 @@ export default function PrejoinPage() {
   }
 
   function handleJoin() {
-    if (accessToken) {
-      router.push(`/video-call-v2/${accessToken}`);
-    } else {
+    if (!accessToken) {
       alert('Không có access token. Vui lòng kiểm tra lại URL.');
+      return;
     }
+
+    // Save final settings before joining
+    savePrejoinSettings({
+      isCameraEnabled,
+      isMicEnabled,
+      vbgEnabled,
+      vbgMode,
+      vbgBlurAmount: blurAmount,
+      vbgActivePreset: activePreset,
+      vbgBackgroundImage: backgroundImage?.src || null,
+    });
+
+    console.log('[Prejoin] Joining video call with settings:', {
+      isCameraEnabled,
+      isMicEnabled,
+      vbgEnabled,
+      vbgMode,
+      vbgBlurAmount: blurAmount,
+      accessToken
+    });
+
+    // VideolifyFull_v2 will load settings from localStorage
+    router.push(`/video-call-v2/${accessToken}`);
   }
 
   function handleExit() {

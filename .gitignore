@@ -7,7 +7,8 @@ out
 dist
 
 # Environment files
-.env
+# .env (tracked for team collaboration - DO NOT put sensitive data here)
+.env.local
 .env*.local
 
 # Debug
@@ -40,35 +41,10 @@ claude
 # Continue AI config with sensitive data
 .continue/
 
-# Test files
-test-*.mjs
-test-*.md
-test-*.txt
-test-*.html
-*.test.js
-*.test.ts
-*.mjs
-
-# Test directories
-test-screenshots/
-test-results/
-tests/
-__tests__/
-
-# Documentation files (temporary/debug)
-*.md
-!README.md
-!CHANGELOG.md
-
-# Text files
-*.txt
-
-# Python scripts
-*.py
-
-# Batch files
-*.bat
-
-# Null files
+# Temp files
 nul
 null
+temp/
+
+# Logs
+*.log

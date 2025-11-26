@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Track Labels</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    video { width: 300px; margin: 10px; border: 2px solid #333; }
+    .log { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Track Label Detection Test</h1>
+  
+  <h2>Camera Stream</h2>
+  <button id="getCameraBtn">Get Camera</button>
+  <video id="cameraVideo" autoplay muted></video>
+  <div id="cameraLog" class="log"></div>
+  
+  <h2>Screen Share Stream</h2>
+  <button id="getScreenBtn">Get Screen Share</button>
+  <video id="screenVideo" autoplay muted></video>
+  <div id="screenLog" class="log"></div>
+
+  <script>
+    document.getElementById('getCameraBtn').addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        document.getElementById('cameraVideo').srcObject = stream;
+        
+        const tracks = stream.getVideoTracks();
+        const log = document.getElementById('cameraLog');
+        log.innerHTML = '<h3>Camera Track Info:</h3>';
+        tracks.forEach((track, i) => {
+          log.innerHTML += `
+            <div>
+              <strong>Track ${i}:</strong><br>
+              - ID: ${track.id}<br>
+              - Label: <strong style="color: red;">${track.label}</strong><br>
+              - Kind: ${track.kind}<br>
+              - Enabled: ${track.enabled}<br>
+              - ReadyState: ${track.readyState}<br>
+              - Contains 'screen': ${track.label?.includes('screen')}<br>
+              - Contains 'camera': ${track.label?.toLowerCase().includes('camera')}<br>
+              - Contains 'webcam': ${track.label?.toLowerCase().includes('webcam')}<br>
+            </div>
+          `;
+        });
+      } catch (err) {
+        document.getElementById('cameraLog').innerHTML = 'Error: ' + err.message;
+      }
+    });
+
+    document.getElementById('getScreenBtn').addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        document.getElementById('screenVideo').srcObject = stream;
+        
+        const tracks = stream.getVideoTracks();
+        const log = document.getElementById('screenLog');
+        log.innerHTML = '<h3>Screen Share Track Info:</h3>';
+        tracks.forEach((track, i) => {
+          log.innerHTML += `
+            <div>
+              <strong>Track ${i}:</strong><br>
+              - ID: ${track.id}<br>
+              - Label: <strong style="color: blue;">${track.label}</strong><br>
+              - Kind: ${track.kind}<br>
+              - Enabled: ${track.enabled}<br>
+              - ReadyState: ${track.readyState}<br>
+              - Contains 'screen': <strong style="color: ${track.label?.includes('screen') ? 'green' : 'red'};">${track.label?.includes('screen')}</strong><br>
+              - Contains 'display': ${track.label?.toLowerCase().includes('display')}<br>
+              - Contains 'monitor': ${track.label?.toLowerCase().includes('monitor')}<br>
+              - Contains 'window': ${track.label?.toLowerCase().includes('window')}<br>
+            </div>
+          `;
+        });
+      } catch (err) {
+        document.getElementById('screenLog').innerHTML = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

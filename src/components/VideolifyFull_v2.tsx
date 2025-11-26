@@ -737,27 +737,23 @@ export function VideolifyFull_v2({
       const timeSinceInit = now - existing.timestamp;
       console.log('[VideolifyFull_v2] ⚠️ Already initialized', timeSinceInit, 'ms ago');
 
-      // ✅ CRITICAL: Only skip if initialization COMPLETED
-      if (existing.completed) {
-        console.log('[VideolifyFull_v2] ⚠️ SKIPPING initialization (StrictMode remount + completed)');
-        console.log('[VideolifyFull_v2] 📊 Debug info:', {
-          roomKey,
-          timeSinceInit,
-          peerId,
-          completed: existing.completed,
-          existingTimestamp: new Date(existing.timestamp).toISOString(),
-          currentTimestamp: new Date(now).toISOString()
-        });
+      // ✅ CRITICAL: Skip both completed AND in-progress initialization
+      // StrictMode will run mount → cleanup → mount within milliseconds
+      // We should NOT run init twice regardless of completion status
+      console.log('[VideolifyFull_v2] ⚠️ SKIPPING initialization (StrictMode remount)');
+      console.log('[VideolifyFull_v2] 📊 Debug info:', {
+        roomKey,
+        timeSinceInit,
+        peerId,
+        completed: existing.completed,
+        existingTimestamp: new Date(existing.timestamp).toISOString(),
+        currentTimestamp: new Date(now).toISOString()
+      });
 
-        // Return cleanup that does nothing
-        return () => {
-          console.log('[VideolifyFull_v2] Cleanup for skipped mount - no action needed');
-        };
-      } else {
-        console.log('[VideolifyFull_v2] ⚠️ Initialization in progress - allowing mount 2 to complete it');
-        // ✅ CRITICAL: Clear handled peers to allow fresh peer-joined events
-        signaling.clearHandledPeers();
-      }
+      // Return cleanup that does nothing
+      return () => {
+        console.log('[VideolifyFull_v2] Cleanup for skipped mount - no action needed');
+      };
     }
 
     // Mark as initialized (for StrictMode detection in cleanup)
@@ -778,60 +774,63 @@ export function VideolifyFull_v2({
     (async () => {
       console.log('[VideolifyFull_v2] Initializing...');
 
-      // ✅ Load prejoin settings from localStorage
-      console.log('[VideolifyFull_v2] 📂 Loading prejoin settings...');
+      // ✅ Load and apply prejoin settings
       const prejoinSettings = loadPrejoinSettings();
-      console.log('[VideolifyFull_v2] Prejoin settings loaded:', prejoinSettings);
+      console.log('[VideolifyFull_v2] Prejoin settings:', {
+        camera: prejoinSettings.isCameraEnabled,
+        mic: prejoinSettings.isMicEnabled,
+        vbg: prejoinSettings.vbgEnabled,
+      });
 
-      // ✅ CRITICAL FIX: Check if we already have a valid stream (F5 case)
+      // ✅ Get media stream
       let stream: MediaStream | null = media.localStream;
-
-      // If no stream or stream is inactive, request new one
       if (!stream || stream.getTracks().every(t => t.readyState === 'ended')) {
-        console.log('[VideolifyFull_v2] Requesting media permissions...');
         try {
           stream = await media.requestPermissions();
-          console.log('[VideolifyFull_v2] Media stream ready:', stream?.getTracks().length || 0, 'tracks');
+          console.log('[VideolifyFull_v2] Media stream ready');
         } catch (err) {
           console.error('[VideolifyFull_v2] Media permission error:', err);
           stream = null;
         }
-      } else {
-        console.log('[VideolifyFull_v2] Reusing existing media stream (F5 case)');
       }
 
-      if (stream && localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // ✅ Apply prejoin settings: Camera/Mic state
+      // ✅ Apply prejoin settings to tracks AND React state (for toolbar icons)
       if (stream) {
-        console.log('[VideolifyFull_v2] 🎛️ Applying prejoin camera/mic settings...');
-
-        // Apply camera state
-        stream.getVideoTracks().forEach(track => {
-          track.enabled = prejoinSettings.isCameraEnabled;
-          console.log(`[VideolifyFull_v2] Camera track ${track.id} enabled: ${track.enabled}`);
+        // Use applyTrackStates to sync both track.enabled AND React state
+        media.applyTrackStates(prejoinSettings.isCameraEnabled, prejoinSettings.isMicEnabled);
+        console.log('[VideolifyFull_v2] ✅ Prejoin track states applied:', {
+          camera: prejoinSettings.isCameraEnabled,
+          mic: prejoinSettings.isMicEnabled
         });
+      }
 
-        // Apply mic state
-        stream.getAudioTracks().forEach(track => {
-          track.enabled = prejoinSettings.isMicEnabled;
-          console.log(`[VideolifyFull_v2] Audio track ${track.id} enabled: ${track.enabled}`);
-        });
-
-        // Update media hook state to match prejoin settings
-        if (!prejoinSettings.isCameraEnabled && media.isVideoEnabled) {
-          media.toggleVideo();
-        }
-        if (!prejoinSettings.isMicEnabled && media.isAudioEnabled) {
-          media.toggleAudio();
-        }
+      // ✅ Set srcObject - wait for video element if not ready
+      if (stream) {
+        const setSrcObject = async () => {
+          // Wait up to 2 seconds for video element to be ready
+          const maxWait = 2000;
+          const startTime = Date.now();
+          while (!localVideoRef.current && Date.now() - startTime < maxWait) {
+            await new Promise(r => setTimeout(r, 50));
+          }
+          
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+            console.log('[VideolifyFull_v2] ✅ srcObject set successfully');
+          } else {
+            console.warn('[VideolifyFull_v2] ⚠️ Video element not available after wait');
+          }
+        };
+        await setSrcObject();
       }
 
       // ✅ Apply prejoin settings: Virtual Background
       if (prejoinSettings.vbgEnabled && stream && localVideoRef.current) {
-        console.log('[VideolifyFull_v2] 🎭 Applying prejoin virtual background...');
+        console.log('[VideolifyFull_v2] 🎭 Applying prejoin virtual background...', {
+          mode: prejoinSettings.vbgMode,
+          blurAmount: prejoinSettings.vbgBlurAmount,
+          hasImage: !!prejoinSettings.vbgBackgroundImage,
+        });
 
         try {
           if (prejoinSettings.vbgMode === 'blur') {
@@ -840,18 +839,25 @@ export function VideolifyFull_v2({
               stream,
               localVideoRef.current,
               'blur',
-              prejoinSettings.vbgBlurAmount,
-              null
+              { blurAmount: prejoinSettings.vbgBlurAmount }
             );
             console.log('[VideolifyFull_v2] ✅ Blur background applied from prejoin settings');
           } else if (prejoinSettings.vbgMode === 'image' && prejoinSettings.vbgBackgroundImage) {
             // Load and apply image background
+            console.log('[VideolifyFull_v2] 🖼️ Loading background image:', prejoinSettings.vbgBackgroundImage.substring(0, 50) + '...');
+            
             const img = new Image();
             img.crossOrigin = 'anonymous';
 
             await new Promise<void>((resolve, reject) => {
-              img.onload = () => resolve();
-              img.onerror = () => reject(new Error('Failed to load background image'));
+              img.onload = () => {
+                console.log('[VideolifyFull_v2] ✅ Background image loaded successfully');
+                resolve();
+              };
+              img.onerror = (e) => {
+                console.error('[VideolifyFull_v2] ❌ Failed to load background image:', e);
+                reject(new Error('Failed to load background image'));
+              };
               img.src = prejoinSettings.vbgBackgroundImage!;
             });
 
@@ -859,10 +865,19 @@ export function VideolifyFull_v2({
               stream,
               localVideoRef.current!,
               'image',
-              prejoinSettings.vbgBlurAmount,
-              img
+              { blurAmount: prejoinSettings.vbgBlurAmount, backgroundImage: img }
             );
             console.log('[VideolifyFull_v2] ✅ Image background applied from prejoin settings');
+          }
+
+          // ✅ CRITICAL: After VBG applies, the srcObject has a new canvas track
+          // We need to set that track's enabled state to match camera setting
+          if (!prejoinSettings.isCameraEnabled && localVideoRef.current.srcObject) {
+            const vbgStream = localVideoRef.current.srcObject as MediaStream;
+            vbgStream.getVideoTracks().forEach(track => {
+              track.enabled = false;
+              console.log('[VideolifyFull_v2] ✅ VBG video track disabled (camera OFF)');
+            });
           }
         } catch (error) {
           console.error('[VideolifyFull_v2] ❌ Failed to apply prejoin VBG:', error);
@@ -1050,12 +1065,12 @@ export function VideolifyFull_v2({
     };
   }, []);
 
-  // ✅ Ensure local video srcObject is set when PiP becomes visible
+  // ✅ Ensure local video srcObject is set when PiP becomes visible or media stream changes
   useEffect(() => {
     if (localPipVisible && localVideoRef.current && media.localStream) {
       if (localVideoRef.current.srcObject !== media.localStream) {
         localVideoRef.current.srcObject = media.localStream;
-        console.log('[VideolifyFull_v2] Restored local video srcObject');
+        console.log('[VideolifyFull_v2] Set local video srcObject');
       }
     }
   }, [localPipVisible, media.localStream]);

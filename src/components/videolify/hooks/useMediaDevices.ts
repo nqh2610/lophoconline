@@ -5,10 +5,15 @@
 
 import { useState, useRef, useCallback } from 'react';
 
-export function useMediaDevices() {
+interface UseMediaDevicesOptions {
+  initialVideoEnabled?: boolean;
+  initialAudioEnabled?: boolean;
+}
+
+export function useMediaDevices(options?: UseMediaDevicesOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(options?.initialVideoEnabled ?? true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(options?.initialAudioEnabled ?? true);
   const [hasPermissions, setHasPermissions] = useState<{
     video: boolean;
     audio: boolean;
@@ -172,6 +177,23 @@ export function useMediaDevices() {
     setLocalStream(null);
   }, []);
 
+  // Apply track states (for prejoin settings)
+  const applyTrackStates = useCallback((videoEnabled: boolean, audioEnabled: boolean) => {
+    if (!streamRef.current) return;
+
+    streamRef.current.getVideoTracks().forEach(track => {
+      track.enabled = videoEnabled;
+    });
+    streamRef.current.getAudioTracks().forEach(track => {
+      track.enabled = audioEnabled;
+    });
+
+    setIsVideoEnabled(videoEnabled);
+    setIsAudioEnabled(audioEnabled);
+    
+    console.log('[useMediaDevices] Applied track states:', { video: videoEnabled, audio: audioEnabled });
+  }, []);
+
   return {
     localStream,
     isVideoEnabled,
@@ -182,5 +204,6 @@ export function useMediaDevices() {
     toggleVideo,
     toggleAudio,
     stopStream,
+    applyTrackStates,
   };
 }

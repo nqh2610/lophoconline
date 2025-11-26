@@ -162,12 +162,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 9. Check join time window (15 minutes before scheduled start, until scheduled end)
+    // 9. Check join time window (15 minutes before scheduled start, until scheduled end + 1 hour grace)
     const scheduledStart = new Date(sessionData.scheduledStartTime);
     const scheduledEnd = new Date(sessionData.scheduledEndTime);
+    const now = new Date();
+
+    // ✅ DEBUG: Log times for troubleshooting
+    console.log('[Join] Time check:', {
+      now: now.toISOString(),
+      nowLocal: now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      scheduledStart: scheduledStart.toISOString(),
+      scheduledStartLocal: scheduledStart.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      scheduledEnd: scheduledEnd.toISOString(),
+      scheduledEndLocal: scheduledEnd.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      rawScheduledStart: sessionData.scheduledStartTime,
+      rawScheduledEnd: sessionData.scheduledEndTime,
+      canJoin: canJoinNow(scheduledStart, scheduledEnd)
+    });
 
     if (!canJoinNow(scheduledStart, scheduledEnd)) {
-      const now = new Date();
       const minutesUntilStart = Math.floor((scheduledStart.getTime() - now.getTime()) / 60000);
       const minutesSinceEnd = Math.floor((now.getTime() - scheduledEnd.getTime()) / 60000);
 
@@ -180,7 +193,7 @@ export async function POST(request: NextRequest) {
           },
           { status: 425 } // Too Early
         );
-      } else if (minutesSinceEnd > 0) {
+      } else if (minutesSinceEnd > 60) { // ✅ Changed from 0 to 60 (1 hour grace)
         return NextResponse.json(
           {
             error: 'Session has ended',
@@ -266,7 +279,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 13. Update session with join information
-    const now = new Date();
     const updateData: any = {
       usedCount: sessionData.usedCount + 1,
       ipAddresses: JSON.stringify(ipAddresses),

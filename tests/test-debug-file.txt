@@ -1,0 +1,118 @@
+🚀 Starting Auto Test...
+
+✅ Server found at port 3000
+
+📋 TEST 1: Initial Join Connection
+============================================================
+
+👨‍🏫 Opening Tutor browser...
+
+🌐 [Tutor] Opening: http://localhost:3000/test-videolify?room=auto-test-1763128597062&name=Tutor&role=tutor
+[Tutor] ✨ [Videolify] New tab detected - will generate new peer ID
+[Tutor] ✨ [Videolify] Generated new peer ID: peer-1763128599546-ffru3xxuj
+[Tutor] 💾 [Videolify] Peer ID saved to session & local storage
+[Tutor] [Videolify] 🚀 Init useEffect starting...
+[Tutor] [Videolify] 🔍 Checking WebRTC support...
+[Tutor] [Videolify] ✅ WebRTC supported
+[Tutor] [Videolify] 📹 Requesting media access...
+[Tutor] [Videolify] 🧪 Test refs + file functions exposed to window
+[Tutor] 🔄 [Videolify] Skipping cleanup - React StrictMode double-render
+[Tutor] [Videolify] 🚀 Init useEffect starting...
+[Tutor] [Videolify] 🔍 Checking WebRTC support...
+[Tutor] [Videolify] ✅ WebRTC supported
+[Tutor] [Videolify] 📹 Requesting media access...
+[Tutor] [Videolify] 🧪 Test refs + file functions exposed to window
+[Tutor] [Videolify] ✅ Local media initialized
+[Tutor] [Videolify] 📡 Connecting SSE and waiting for ready...
+[Tutor] 💾 [Videolify] Session state saved with peerId: peer-1763128599546-ffru3xxuj
+[Tutor] [Videolify] ✅ Local media initialized
+[Tutor] [Videolify] 📡 Connecting SSE and waiting for ready...
+[Tutor] [Videolify] Closing existing SSE connection before creating new one
+[Tutor] 💾 [Videolify] Session state saved with peerId: peer-1763128599546-ffru3xxuj
+[Tutor] ✅ [Videolify] SSE connection opened
+[Tutor] [Videolify] SSE ready, calling onReady callback
+[Tutor] [Videolify] ✅ SSE ready, now checking if we should join...
+[Tutor] [Videolify] 🚪 Joining room...
+[Tutor] [Videolify] Joining room: auto-test-1763128597062 as peer: peer-1763128599546-ffru3xxuj
+[Tutor] [Videolify] ✅ Joined room successfully: JSHandle@object
+[Tutor] [Videolify] 📊 Received 0 existing peers: JSHandle@array
+[Tutor] [Videolify] 🎯 Server says shouldInitiate: undefined
+[Tutor] [Videolify] No existing peers, waiting for someone to join
+[Tutor] [Videolify] ✅ Join room completed
+✅ Tutor joined room
+
+👨‍🎓 Opening Student browser...
+
+🌐 [Student] Opening: http://localhost:3000/test-videolify?room=auto-test-1763128597062&name=Student&role=student
+[Student] ✨ [Videolify] New tab detected - will generate new peer ID
+[Student] ✨ [Videolify] Generated new peer ID: peer-1763128607421-p1g9737dt
+[Student] 💾 [Videolify] Peer ID saved to session & local storage
+[Student] [Videolify] 🚀 Init useEffect starting...
+[Student] [Videolify] 🔍 Checking WebRTC support...
+[Student] [Videolify] ✅ WebRTC supported
+[Student] [Videolify] 📹 Requesting media access...
+[Student] [Videolify] 🧪 Test refs + file functions exposed to window
+[Student] 🔄 [Videolify] Skipping cleanup - React StrictMode double-render
+[Student] [Videolify] 🚀 Init useEffect starting...
+[Student] [Videolify] 🔍 Checking WebRTC support...
+[Student] [Videolify] ✅ WebRTC supported
+[Student] [Videolify] 📹 Requesting media access...
+[Student] [Videolify] 🧪 Test refs + file functions exposed to window
+[Student] [Videolify] ✅ Local media initialized
+[Student] [Videolify] 📡 Connecting SSE and waiting for ready...
+[Student] 💾 [Videolify] Session state saved with peerId: peer-1763128607421-p1g9737dt
+[Student] [Videolify] ✅ Local media initialized
+[Student] [Videolify] 📡 Connecting SSE and waiting for ready...
+[Student] [Videolify] Closing existing SSE connection before creating new one
+[Student] 💾 [Videolify] Session state saved with peerId: peer-1763128607421-p1g9737dt
+[Student] ✅ [Videolify] SSE connection opened
+[Student] [Videolify] SSE ready, calling onReady callback
+[Student] [Videolify] ✅ SSE ready, now checking if we should join...
+[Student] [Videolify] 🚪 Joining room...
+[Student] [Videolify] Joining room: auto-test-1763128597062 as peer: peer-1763128607421-p1g9737dt
+[Student] [Videolify] ✅ Joined room successfully: JSHandle@object
+[Student] [Videolify] 📊 Received 0 existing peers: JSHandle@array
+[Student] [Videolify] 🎯 Server says shouldInitiate: undefined
+[Student] [Videolify] No existing peers, waiting for someone to join
+[Student] [Videolify] ✅ Join room completed
+✅ Student joined room
+
+🔍 Checking if Tutor received peer-joined event...
+❌ Tutor did NOT receive peer-joined event!
+
+📊 Tutor logs related to connection:
+  ✨ [Videolify] New tab detected - will generate new peer ID
+  ✨ [Videolify] Generated new peer ID: peer-1763128599546-ffru3xxuj
+  [Videolify] 📡 Connecting SSE and waiting for ready...
+  💾 [Videolify] Session state saved with peerId: peer-1763128599546-ffru3xxuj
+  [Videolify] 📡 Connecting SSE and waiting for ready...
+  [Videolify] Closing existing SSE connection before creating new one
+  💾 [Videolify] Session state saved with peerId: peer-1763128599546-ffru3xxuj
+  ✅ [Videolify] SSE connection opened
+  [Videolify] SSE ready, calling onReady callback
+  [Videolify] ✅ SSE ready, now checking if we should join...
+  [Videolify] Joining room: auto-test-1763128597062 as peer: peer-1763128599546-ffru3xxuj
+  [Videolify] ✅ Joined room successfully: JSHandle@object
+  [Videolify] 📊 Received 0 existing peers: JSHandle@array
+  [Videolify] No existing peers, waiting for someone to join
+
+📊 Student logs related to connection:
+  ✨ [Videolify] New tab detected - will generate new peer ID
+  ✨ [Videolify] Generated new peer ID: peer-1763128607421-p1g9737dt
+  [Videolify] 📡 Connecting SSE and waiting for ready...
+  💾 [Videolify] Session state saved with peerId: peer-1763128607421-p1g9737dt
+  [Videolify] 📡 Connecting SSE and waiting for ready...
+  [Videolify] Closing existing SSE connection before creating new one
+  💾 [Videolify] Session state saved with peerId: peer-1763128607421-p1g9737dt
+  ✅ [Videolify] SSE connection opened
+  [Videolify] SSE ready, calling onReady callback
+  [Videolify] ✅ SSE ready, now checking if we should join...
+  [Videolify] Joining room: auto-test-1763128597062 as peer: peer-1763128607421-p1g9737dt
+  [Videolify] ✅ Joined room successfully: JSHandle@object
+  [Videolify] 📊 Received 0 existing peers: JSHandle@array
+  [Videolify] No existing peers, waiting for someone to join
+
+❌ TEST FAILED: Peer-joined event not received
+
+📊 Error Details: Error: Peer-joined event not received
+    at test (file:///e:/LopHocTrucTuyen/test-connection-auto.mjs:119:13)

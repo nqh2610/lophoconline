@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { JitsiMeeting } from '@/components/JitsiMeeting';
 import { VideolifyFull_v2 } from '@/components/videolify';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -13,7 +12,6 @@ interface VideoCallData {
   roomName: string;
   userName: string;
   role: 'tutor' | 'student';
-  provider: 'jitsi' | 'videolify';
   error?: string;
 }
 
@@ -69,7 +67,6 @@ export default function VideoCallV2Page() {
           roomName,
           userName: data.userName,
           role: data.role,
-          provider: data.provider || 'jitsi', // Default to jitsi if not specified
         });
 
       } catch (err) {
@@ -100,7 +97,7 @@ export default function VideoCallV2Page() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
         <div className="text-center space-y-4 p-8">
           <Loader2 className="h-16 w-16 animate-spin text-blue-500 mx-auto" />
-          <p className="text-white text-xl font-semibold">Đang xác thực và kết nối... (v2)</p>
+          <p className="text-white text-xl font-semibold">Đang kết nối lớp học...</p>
           <p className="text-gray-400 text-sm">Vui lòng đợi trong giây lát</p>
         </div>
       </div>
@@ -139,25 +136,14 @@ export default function VideoCallV2Page() {
     return null;
   }
 
-  // Render Videolify v2 or Jitsi based on provider
-  if (callData.provider === 'videolify') {
-    return (
-      <VideolifyFull_v2
-        accessToken={accessToken as string}
-        roomId={callData.roomName}
-        userDisplayName={callData.userName}
-        role={callData.role}
-        onCallEnd={handleMeetingEnd}
-      />
-    );
-  }
-
-  // Default to Jitsi
+  // ✅ ALWAYS render VideolifyFull_v2 (this is video-call-v2 page)
   return (
-    <JitsiMeeting
-      roomName={callData.roomName}
-      userName={callData.userName}
-      onMeetingEnd={handleMeetingEnd}
+    <VideolifyFull_v2
+      accessToken={accessToken as string}
+      roomId={callData.roomName}
+      userDisplayName={callData.userName}
+      role={callData.role}
+      onCallEnd={handleMeetingEnd}
     />
   );
 }

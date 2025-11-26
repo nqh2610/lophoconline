@@ -14,7 +14,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   // Routes that should NOT have Navbar/Footer (fullscreen video calls)
-  const isFullscreenRoute = pathname?.startsWith('/video-call/') || pathname?.startsWith('/test-videolify');
+  const isFullscreenRoute = pathname?.startsWith('/video-call/') || 
+                            pathname?.startsWith('/video-call-v2/') || 
+                            pathname?.startsWith('/test-videolify');
   
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {

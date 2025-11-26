@@ -14,6 +14,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 // ✅ PERFORMANCE: Optimized connection pool settings
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
+  // ✅ CRITICAL: Force UTC timezone for all connections
+  timezone: '+00:00',
   // Connection pool settings (scaled for production)
   connectionLimit: isProduction ? 20 : 10, // More connections in production
   waitForConnections: true,
