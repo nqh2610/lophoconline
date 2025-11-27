@@ -855,6 +855,9 @@ export function VideolifyFull_v2({
       console.log('[VideolifyFull_v2] 🎨 Applying VBG to remote stream:', settings);
       await vbg.applyRemoteVirtualBackground(remoteCameraStreamRef.current, remoteVideoRef.current, settings);
       console.log('[VideolifyFull_v2] ✅ Remote VBG applied successfully');
+      // ✅ Force frames check to true after successful VBG apply
+      // The processed stream is valid, just needs time to render first frame
+      setRemoteVideoHasFrames(true);
     } catch (err) {
       console.error('[VideolifyFull_v2] Failed to apply remote VBG:', err);
       // Fallback to original stream on error
@@ -1110,6 +1113,12 @@ export function VideolifyFull_v2({
   }, [roomId, peerId]);
 
   // ✅ Monitor remote video element for frames
+  // Store remoteVbgLoading in a ref so checkVideoFrames can access current value
+  const remoteVbgLoadingRef = useRef(remoteVbgLoading);
+  useEffect(() => {
+    remoteVbgLoadingRef.current = remoteVbgLoading;
+  }, [remoteVbgLoading]);
+
   useEffect(() => {
     const videoElement = remoteVideoRef.current;
     if (!videoElement) return;
@@ -1117,6 +1126,12 @@ export function VideolifyFull_v2({
     let frameCheckInterval: number | null = null;
 
     const checkVideoFrames = () => {
+      // ✅ CRITICAL: Don't set hasFrames to false while VBG is loading
+      // This prevents flicker when switching VBG modes on remote stream
+      if (remoteVbgLoadingRef.current) {
+        return; // Keep current hasFrames state while VBG is being applied
+      }
+
       if (!videoElement.srcObject) {
         setRemoteVideoHasFrames(false);
         return;

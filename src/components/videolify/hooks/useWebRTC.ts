@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
-import { ICE_SERVERS } from '../types';
+import { ICE_SERVERS } from '../types/index';
 
 interface UseWebRTCOptions {
   peerId: string;
@@ -25,6 +25,9 @@ export function useWebRTC(options: UseWebRTCOptions) {
   const makingOfferRef = useRef(false);
   const ignoreOfferRef = useRef(false);
   const isPoliteRef = useRef(false);
+  
+  // ✅ Queue ICE candidates that arrive before remote description is set
+  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
 
   // Create peer connection
   const createPeerConnection = useCallback(() => {
@@ -206,6 +209,19 @@ export function useWebRTC(options: UseWebRTCOptions) {
     try {
       await pc.setRemoteDescription(answer);
       console.log('[useWebRTC] Answer set');
+      
+      // ✅ Process any queued ICE candidates now that remote description is set
+      if (pendingIceCandidatesRef.current.length > 0) {
+        console.log(`[useWebRTC] Processing ${pendingIceCandidatesRef.current.length} queued ICE candidates`);
+        for (const candidate of pendingIceCandidatesRef.current) {
+          try {
+            await pc.addIceCandidate(candidate);
+          } catch (err) {
+            // Ignore errors for queued candidates
+          }
+        }
+        pendingIceCandidatesRef.current = [];
+      }
     } catch (err) {
       console.error('[useWebRTC] Handle answer failed:', err);
     }
@@ -215,6 +231,12 @@ export function useWebRTC(options: UseWebRTCOptions) {
   const addIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
     const pc = pcRef.current;
     if (!pc) return;
+
+    // ✅ If remote description not set yet, queue the candidate
+    if (!pc.remoteDescription) {
+      pendingIceCandidatesRef.current.push(candidate);
+      return;
+    }
 
     try {
       await pc.addIceCandidate(candidate);
@@ -292,6 +314,7 @@ export function useWebRTC(options: UseWebRTCOptions) {
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
+      pendingIceCandidatesRef.current = []; // ✅ Clear pending candidates
       console.log('[useWebRTC] Connection closed');
     }
   }, []);

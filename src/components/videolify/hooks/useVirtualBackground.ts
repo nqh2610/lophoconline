@@ -96,10 +96,15 @@ export function useVirtualBackground() {
       settings: { mode: BackgroundMode; blurAmount?: number; backgroundImage?: string }
     ) => {
       try {
-        // Prevent concurrent applies
+        // Prevent concurrent applies - but log and allow retry after a short delay
         if (remoteApplyingRef.current) {
-          console.log('[useVirtualBackground] applyRemoteVirtualBackground: concurrent call ignored');
-          return;
+          console.log('[useVirtualBackground] applyRemoteVirtualBackground: concurrent call, will retry');
+          // Don't block forever - allow this call to proceed after a short delay
+          await new Promise(resolve => setTimeout(resolve, 100));
+          if (remoteApplyingRef.current) {
+            console.log('[useVirtualBackground] applyRemoteVirtualBackground: still busy, ignoring');
+            return;
+          }
         }
         remoteApplyingRef.current = true;
 
@@ -124,17 +129,24 @@ export function useVirtualBackground() {
           if (settings.mode === 'image' && settings.backgroundImage) {
             bgImage = new Image();
             bgImage.crossOrigin = 'anonymous';
-            await new Promise<void>((resolve, reject) => {
-              bgImage!.onload = () => resolve();
-              bgImage!.onerror = () => reject();
-              bgImage!.src = settings.backgroundImage!;
-            });
+            try {
+              await new Promise<void>((resolve, reject) => {
+                bgImage!.onload = () => resolve();
+                bgImage!.onerror = () => reject(new Error('Image load failed'));
+                bgImage!.src = settings.backgroundImage!;
+              });
+            } catch (imgErr) {
+              console.warn('[useVirtualBackground] Background image failed to load, falling back to blur:', imgErr);
+              // Fallback to blur mode if image fails
+              settings = { ...settings, mode: 'blur' };
+              bgImage = undefined;
+            }
           }
 
           // Update settings in-place (no restart)
           remoteProcessorRef.current.updateSettings({
             mode: settings.mode,
-            blurAmount: settings.blurAmount,
+            blurAmount: settings.blurAmount || 10,
             backgroundImage: bgImage,
             modelSelection: 1,
             smoothing: 0.7,
@@ -143,6 +155,10 @@ export function useVirtualBackground() {
           // Ensure remote video is showing processed stream
           if (remoteProcessedStreamRef.current) {
             remoteVideoElement.srcObject = remoteProcessedStreamRef.current;
+          } else {
+            // If no processed stream yet, show original
+            console.warn('[useVirtualBackground] No processed stream available, showing original');
+            remoteVideoElement.srcObject = remoteOriginalStreamRef.current;
           }
 
           remoteApplyingRef.current = false;
@@ -178,11 +194,18 @@ export function useVirtualBackground() {
         if (settings.mode === 'image' && settings.backgroundImage) {
           bgImage = new Image();
           bgImage.crossOrigin = 'anonymous';
-          await new Promise<void>((resolve, reject) => {
-            bgImage!.onload = () => resolve();
-            bgImage!.onerror = () => reject();
-            bgImage!.src = settings.backgroundImage!;
-          });
+          try {
+            await new Promise<void>((resolve, reject) => {
+              bgImage!.onload = () => resolve();
+              bgImage!.onerror = () => reject(new Error('Image load failed'));
+              bgImage!.src = settings.backgroundImage!;
+            });
+          } catch (imgErr) {
+            console.warn('[useVirtualBackground] Background image failed to load, falling back to blur:', imgErr);
+            // Fallback to blur mode if image fails
+            settings = { ...settings, mode: 'blur' };
+            bgImage = undefined;
+          }
         }
 
         const processedStream = await remoteProcessorRef.current.startProcessing(remoteOriginalStreamRef.current, {
@@ -198,6 +221,11 @@ export function useVirtualBackground() {
         remoteApplyingRef.current = false;
       } catch (err) {
         console.error('[useVirtualBackground] Remote apply failed:', err);
+        // ✅ CRITICAL: Restore original stream on error to prevent blank video
+        if (remoteOriginalStreamRef.current && remoteVideoElement) {
+          console.log('[useVirtualBackground] Restoring original stream after error');
+          remoteVideoElement.srcObject = remoteOriginalStreamRef.current;
+        }
         remoteApplyingRef.current = false;
       }
     },
