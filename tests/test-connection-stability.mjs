@@ -103,9 +103,18 @@ async function checkConnection(page) {
     let remoteActive = false;
     
     videos.forEach(v => {
-      if (v.srcObject?.active) {
-        if (v.muted) localActive = true;
-        else remoteActive = true;
+      try {
+        // Check if video has rendered frames
+        const hasFrames = v.videoWidth && v.videoWidth > 0;
+        const hasData = v.readyState >= 2; // HAVE_CURRENT_DATA
+        
+        if (hasFrames || hasData) {
+          // muted video is likely local, unmuted is remote
+          if (v.muted) localActive = true;
+          else remoteActive = true;
+        }
+      } catch (e) {
+        // ignore
       }
     });
     

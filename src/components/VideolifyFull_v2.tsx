@@ -324,6 +324,15 @@ export function VideolifyFull_v2({
       }
     },
     onIceCandidate: (candidate) => {
+      // Check if this is an ICE restart offer (special case)
+      if ((candidate as any)?.type === 'ice-restart') {
+        console.log('[VideolifyFull_v2] 🔄 Sending ICE restart offer');
+        if (remotePeerIdRef.current) {
+          signaling.sendOffer({ type: 'offer', sdp: (candidate as any).sdp }, remotePeerIdRef.current);
+        }
+        return;
+      }
+      
       console.log('[VideolifyFull_v2] Sending ICE candidate');
       if (remotePeerIdRef.current) {
         signaling.sendIceCandidate(candidate, remotePeerIdRef.current);
