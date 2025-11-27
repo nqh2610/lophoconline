@@ -352,8 +352,8 @@ export function VideolifyFull_v2({
     console.log('[VideolifyFull_v2] 📡 Setting up control channel, state:', channel.readyState);
     controlChannelRef.current = channel;
 
-    // ✅ Function to broadcast VBG settings
-    const broadcastVbgOnOpen = () => {
+    // ✅ Function to broadcast initial settings (VBG + camera/mic state)
+    const broadcastInitialStateOnOpen = () => {
       try {
         const stored = localStorage.getItem('videolify_prejoin_settings');
         console.log('[VideolifyFull_v2] 📦 Reading prejoin settings from localStorage:', stored ? 'found' : 'not found');
@@ -362,9 +362,21 @@ export function VideolifyFull_v2({
           const prejoinSettings = JSON.parse(stored);
           console.log('[VideolifyFull_v2] 📦 Parsed prejoin settings:', { 
             vbgEnabled: prejoinSettings.vbgEnabled, 
-            vbgMode: prejoinSettings.vbgMode 
+            vbgMode: prejoinSettings.vbgMode,
+            isCameraEnabled: prejoinSettings.isCameraEnabled,
+            isMicEnabled: prejoinSettings.isMicEnabled
           });
           
+          // ✅ Broadcast camera/mic state from prejoin settings
+          // This ensures peer sees correct initial state when joining
+          const cameraEnabled = prejoinSettings.isCameraEnabled !== false; // default true
+          const micEnabled = prejoinSettings.isMicEnabled !== false; // default true
+          
+          console.log('[VideolifyFull_v2] 📡 Broadcasting initial camera/mic state:', { cameraEnabled, micEnabled });
+          channel.send(JSON.stringify({ type: 'video-toggle', enabled: cameraEnabled }));
+          channel.send(JSON.stringify({ type: 'audio-toggle', enabled: micEnabled }));
+          
+          // ✅ Broadcast VBG settings if enabled
           if (prejoinSettings.vbgEnabled) {
             const vbgSettings = {
               enabled: true,
@@ -379,19 +391,19 @@ export function VideolifyFull_v2({
           }
         }
       } catch (err) {
-        console.warn('[VideolifyFull_v2] Failed to send initial VBG settings:', err);
+        console.warn('[VideolifyFull_v2] Failed to send initial settings:', err);
       }
     };
 
     channel.onopen = () => {
       console.log('[VideolifyFull_v2] ✅ Control channel OPEN (via onopen)');
-      broadcastVbgOnOpen();
+      broadcastInitialStateOnOpen();
     };
 
     // ✅ If channel is already open when we set up (answerer case), broadcast immediately
     if (channel.readyState === 'open') {
       console.log('[VideolifyFull_v2] ✅ Control channel already OPEN, broadcasting now');
-      broadcastVbgOnOpen();
+      broadcastInitialStateOnOpen();
     }
 
     channel.onclose = () => {
@@ -1756,7 +1768,12 @@ export function VideolifyFull_v2({
                   </div>
                 )}
 
-                {(!connectionStats.connected || !remoteVideoEnabled || (!remoteVideoHasFrames && !remoteVbgLoading)) && (
+                {/* ✅ Show CameraOffOverlay when:
+                    - Not connected, OR
+                    - Remote explicitly disabled camera, OR
+                    - No video frames available (regardless of broadcast state)
+                    This ensures no blank/broken video display */}
+                {(!connectionStats.connected || !remoteVideoEnabled || !remoteVideoHasFrames) && !remoteVbgLoading && (
                   <div className="border-2 border-green-500 shadow-lg rounded-lg">
                     <CameraOffOverlay pipSize={remotePipSize} />
                   </div>
