@@ -120,10 +120,10 @@ export default function VideoCallV2Page() {
                 Thử lại
               </button>
               <button
-                onClick={() => router.push(callData?.role === 'tutor' ? '/tutor/dashboard' : '/student/dashboard')}
+                onClick={() => router.push('/login')}
                 className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm font-medium"
               >
-                Quay lại
+                Đăng nhập
               </button>
             </div>
           </AlertDescription>

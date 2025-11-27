@@ -450,26 +450,28 @@ export function VideoCallToolbar({
           </div>
         )}
 
-        {/* Recording */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={onToggleRecording}
-              variant="ghost"
-              size="sm"
-              className={`rounded-full transition-all duration-200 hover:scale-105 h-9 w-9 p-0 ${
-                isRecording
-                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30'
-                  : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white'
-              }`}
-            >
-              <Circle className={`w-4 h-4 ${isRecording ? 'fill-white' : ''}`} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">{isRecording ? 'Dừng quay' : 'Quay video'}</p>
-          </TooltipContent>
-        </Tooltip>
+        {/* Recording - Tutor only */}
+        {role === 'tutor' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onToggleRecording}
+                variant="ghost"
+                size="sm"
+                className={`rounded-full transition-all duration-200 hover:scale-105 h-9 w-9 p-0 ${
+                  isRecording
+                    ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30'
+                    : 'bg-gray-700/80 hover:bg-gray-600/90 text-gray-300 hover:text-white'
+                }`}
+              >
+                <Circle className={`w-4 h-4 ${isRecording ? 'fill-white' : ''}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="text-xs">{isRecording ? 'Dừng quay' : 'Quay video'}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Debug Stats */}
         <Tooltip>

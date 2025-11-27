@@ -115,10 +115,14 @@ async function isConnected(page) {
       }
     }
     
-    // Method 2: Check connection indicator color
+    // Method 2: Check connection indicator color (green OR orange = connected)
     const indicator = document.querySelector('.absolute.top-3.left-3 > div');
-    if (indicator && indicator.className.includes('bg-green')) {
-      return true;
+    if (indicator) {
+      const className = indicator.className || '';
+      // Both green and orange indicate connection established
+      if (className.includes('bg-green') || className.includes('bg-orange')) {
+        return true;
+      }
     }
     
     // Method 3: Check if we have multiple video streams

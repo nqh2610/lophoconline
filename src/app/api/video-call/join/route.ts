@@ -52,73 +52,31 @@ export async function POST(request: NextRequest) {
 
     const sessionData = videoSession[0];
 
-    // 3. For Videolify provider, authentication is optional (accessToken is sufficient)
-    // For Jitsi provider, require authentication
-    let userId: number | null = null;
-    let userRole: string | null = null;
-    let userName = 'Anonymous User';
-
-    if (sessionData.provider === 'videolify') {
-      // Videolify: accessToken is enough, no login required
-      // We'll use a mock user based on session data
-      const session = await getServerSession(authOptions);
-      if (session?.user?.id) {
-        userId = parseInt(session.user.id);
-        userRole = session.user.role;
-      } else {
-        // No session - allow anonymous join for videolify
-        // Auto-detect role based on existing joins or use tutor as default
-        userId = null; // Will be set below
-      }
-    } else {
-      // Jitsi: require authentication
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.id) {
-        return NextResponse.json(
-          { error: 'Unauthorized - Please login first (Jitsi requires authentication)' },
-          { status: 401 }
-        );
-      }
-      userId = parseInt(session.user.id);
-      userRole = session.user.role;
+    // 3. Authentication is ALWAYS required now
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Vui lòng đăng nhập để tham gia lớp học' },
+        { status: 401 }
+      );
     }
+    
+    const userId = parseInt(session.user.id);
+    const userRole = session.user.role;
+    let userName = 'User';
 
-    // 4. Determine user role for videolify (if not authenticated)
-    let isTutor = false;
-    let isStudent = false;
+    // 4. Check if user is tutor or student of this session
+    // Use Number() to handle BigInt comparison
+    const isTutor = userId === Number(sessionData.tutorId);
+    const isStudent = userId === Number(sessionData.studentId);
 
-    if (userId === null && sessionData.provider === 'videolify') {
-      // Auto-assign role based on who hasn't joined yet
-      if (!sessionData.tutorJoinedAt) {
-        isTutor = true;
-        userId = sessionData.tutorId;
-        userName = 'Tutor';
-      } else if (!sessionData.studentJoinedAt) {
-        isStudent = true;
-        userId = sessionData.studentId;
-        userName = 'Student';
-      } else {
-        // Both joined - allow as observer or assign to less recent joiner
-        isTutor = true;
-        userId = sessionData.tutorId;
-        userName = 'Tutor (Rejoin)';
-      }
-    } else if (userId !== null) {
-      // Authenticated user - check authorization
-      isTutor = userId === sessionData.tutorId;
-      isStudent = userId === sessionData.studentId;
+    console.log('[Join] Auth check:', { userId, tutorId: sessionData.tutorId, studentId: sessionData.studentId, isTutor, isStudent });
 
-      if (!isTutor && !isStudent && sessionData.provider !== 'videolify') {
-        return NextResponse.json(
-          { error: 'Access denied - You are not a participant of this session' },
-          { status: 403 }
-        );
-      }
-    }
-
-    // For Videolify, if still no role assigned, default to tutor
-    if (!isTutor && !isStudent && sessionData.provider === 'videolify') {
-      isTutor = true;
+    if (!isTutor && !isStudent) {
+      return NextResponse.json(
+        { error: 'Bạn không phải là thành viên của lớp học này' },
+        { status: 403 }
+      );
     }
 
     // 5. Check session expiry
@@ -205,20 +163,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 10. Get user full name (needed for both first join and rejoin)
-    if (userId && userName === 'Anonymous User') {
-      const userData = await db
-        .select({
-          fullName: users.fullName,
-          username: users.username,
-        })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+    // ALWAYS fetch user data since userName starts as 'User'
+    const userData = await db
+      .select({
+        fullName: users.fullName,
+        username: users.username,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
-      userName = userData[0]?.fullName || userData[0]?.username || (isTutor ? 'Tutor' : 'Student');
-    }
+    // Priority: fullName (if not empty) -> username -> fallback
+    const fullName = userData[0]?.fullName?.trim();
+    const username = userData[0]?.username;
+    userName = fullName || username || (isTutor ? 'Tutor' : 'Student');
     
-    console.log('👤 [Video Call Join] userName:', userName, 'userId:', userId, 'isTutor:', isTutor);
+    console.log('👤 [Video Call Join] userName:', userName, 'fullName:', fullName, 'username:', username, 'userId:', userId, 'isTutor:', isTutor);
 
     // 11. Check for duplicate join (prevent copy-paste of link)
     // If user already joined once, don't allow again

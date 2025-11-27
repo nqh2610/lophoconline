@@ -55,6 +55,23 @@ export function useWebRTC(options: UseWebRTCOptions) {
       console.log('[useWebRTC] Connection state:', state);
       setConnectionState(state);
       onConnectionStateChange?.(state);
+      
+      // ✅ Also trigger reconnect on connection state failed
+      if (state === 'failed') {
+        console.warn('[useWebRTC] Connection FAILED - triggering ICE restart');
+        setTimeout(async () => {
+          if (pc.connectionState === 'failed') {
+            try {
+              const offer = await pc.createOffer({ iceRestart: true });
+              await pc.setLocalDescription(offer);
+              onIceCandidate?.({ type: 'ice-restart', sdp: offer.sdp } as any);
+              console.log('[useWebRTC] ICE restart offer sent (from connection failed)');
+            } catch (err) {
+              console.error('[useWebRTC] ICE restart failed:', err);
+            }
+          }
+        }, 1000);
+      }
     };
 
     pc.oniceconnectionstatechange = async () => {
@@ -62,9 +79,10 @@ export function useWebRTC(options: UseWebRTCOptions) {
       console.log('[useWebRTC] ICE state:', state);
       setIceState(state);
 
-      // ✅ CRITICAL: Auto ICE restart on failed/disconnected
+      // ✅ CRITICAL: Auto ICE restart on failed/disconnected - faster recovery
       if (state === 'disconnected' || state === 'failed') {
-        console.warn('[useWebRTC] ICE', state, '- will attempt restart in 2s');
+        const delay = state === 'failed' ? 500 : 1500; // Faster for failed
+        console.warn('[useWebRTC] ICE', state, '- will attempt restart in', delay, 'ms');
         setTimeout(async () => {
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
             console.log('[useWebRTC] 🔄 Auto ICE restart triggered');
@@ -77,7 +95,7 @@ export function useWebRTC(options: UseWebRTCOptions) {
               console.error('[useWebRTC] ICE restart failed:', err);
             }
           }
-        }, 2000);
+        }, delay);
       }
     };
 

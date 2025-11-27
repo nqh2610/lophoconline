@@ -13,11 +13,30 @@ import { CameraOffOverlay } from '@/components/videolify/ui/CameraOffOverlay';
 import { VirtualBackgroundProcessor } from '@/lib/virtualBackground';
 import { savePrejoinSettings, loadPrejoinSettings } from '@/lib/prejoinSettings';
 
+// Auth validation state
+interface AuthState {
+  isValidating: boolean;
+  isAuthorized: boolean;
+  error: string | null;
+  sessionInfo: {
+    userName: string;
+    role: 'tutor' | 'student';
+  } | null;
+}
+
 export default function PrejoinPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const accessToken = searchParams.get('accessToken') || '';
+
+  // Auth state
+  const [authState, setAuthState] = useState<AuthState>({
+    isValidating: true,
+    isAuthorized: false,
+    error: null,
+    sessionInfo: null
+  });
 
   // Video refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -60,6 +79,69 @@ export default function PrejoinPage() {
   const [selectedCamera, setSelectedCamera] = useState<string>('');
   const [selectedMicrophone, setSelectedMicrophone] = useState<string>('');
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
+
+  // Validate access token and user authorization on mount
+  useEffect(() => {
+    const validateAccess = async () => {
+      if (!accessToken) {
+        setAuthState({
+          isValidating: false,
+          isAuthorized: false,
+          error: 'Link không hợp lệ',
+          sessionInfo: null
+        });
+        router.push('/login');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/video-call/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken })
+        });
+
+        const data = await response.json();
+
+        if (!data.valid || !data.authorized) {
+          setAuthState({
+            isValidating: false,
+            isAuthorized: false,
+            error: data.error || 'Không có quyền truy cập',
+            sessionInfo: null
+          });
+          // Redirect after short delay so user can see error
+          setTimeout(() => {
+            router.push(data.redirectTo || '/login');
+          }, 2000);
+          return;
+        }
+
+        setAuthState({
+          isValidating: false,
+          isAuthorized: true,
+          error: null,
+          sessionInfo: {
+            userName: data.sessionInfo.userName,
+            role: data.sessionInfo.role
+          }
+        });
+      } catch (error) {
+        console.error('[Prejoin] Validation error:', error);
+        setAuthState({
+          isValidating: false,
+          isAuthorized: false,
+          error: 'Không thể xác thực, vui lòng thử lại',
+          sessionInfo: null
+        });
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      }
+    };
+
+    validateAccess();
+  }, [accessToken, router]);
 
   // Load saved settings from localStorage on mount
   useEffect(() => {
@@ -323,6 +405,7 @@ export default function PrejoinPage() {
   }, []);
 
   // When we obtain a local stream, ensure the video element receives it.
+  // This may run before video element is mounted, so we also handle in a separate effect
   useEffect(() => {
     console.log('[Prejoin] useEffect localStreamState triggered', {
       hasStream: !!localStreamState,
@@ -331,28 +414,71 @@ export default function PrejoinPage() {
     });
 
     if (!localStreamState) return;
-    if (!videoRef.current) return;
+    if (!videoRef.current) {
+      console.log('[Prejoin] ⚠️ Video element not ready yet, will retry when mounted');
+      return;
+    }
     
     if (isTogglingCameraRef.current) {
       console.log('[Prejoin] ⚠️ Skipping srcObject update - camera toggle in progress');
       return; // Skip if toggling camera manually
     }
 
+    attachStreamToVideo(localStreamState);
+  }, [localStreamState]);
+
+  // Helper function to attach stream to video element
+  function attachStreamToVideo(stream: MediaStream) {
+    if (!videoRef.current) return;
+    
+    // Check if already attached
+    if (videoRef.current.srcObject === stream) {
+      console.log('[Prejoin] Stream already attached to video element');
+      return;
+    }
+
     try {
-      console.log('[Prejoin] ✅ Attaching stream to video element from state');
-      videoRef.current.srcObject = localStreamState;
+      console.log('[Prejoin] ✅ Attaching stream to video element');
+      videoRef.current.srcObject = stream;
       videoRef.current.onloadedmetadata = () => {
-        console.log('[Prejoin] Video metadata loaded (from state)');
+        console.log('[Prejoin] Video metadata loaded');
       };
       videoRef.current.play().then(() => {
-        console.log('[Prejoin] Video playing (from state)');
+        console.log('[Prejoin] Video playing successfully');
       }).catch(err => {
-        console.error('[Prejoin] Video play error (from state):', err);
+        console.error('[Prejoin] Video play error:', err);
+        // Retry play on user interaction
+        const retryPlay = () => {
+          videoRef.current?.play().catch(() => {});
+          document.removeEventListener('click', retryPlay);
+        };
+        document.addEventListener('click', retryPlay, { once: true });
       });
     } catch (error) {
       console.error('[Prejoin] Error attaching stream to video:', error);
     }
-  }, [localStreamState]);
+  }
+
+  // Watch for video element mounting - important for incognito mode permission prompt
+  // When user accepts permission, video element may not be mounted yet
+  useEffect(() => {
+    // This effect runs when isLoadingMedia changes to false (video element becomes visible)
+    if (isLoadingMedia) return;
+    if (!localStreamState) return;
+    if (!videoRef.current) return;
+    if (isTogglingCameraRef.current) return;
+
+    console.log('[Prejoin] Video element mounted after loading complete, attaching stream');
+    
+    // Small delay to ensure DOM is fully updated
+    const timer = setTimeout(() => {
+      if (videoRef.current && localStreamState && !isTogglingCameraRef.current) {
+        attachStreamToVideo(localStreamState);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [isLoadingMedia, localStreamState]);
 
   // Toggle camera
   async function toggleCamera() {
@@ -641,6 +767,35 @@ export default function PrejoinPage() {
     announcement.textContent = message;
     document.body.appendChild(announcement);
     setTimeout(() => document.body.removeChild(announcement), 1000);
+  }
+
+  // Show loading while validating auth
+  if (authState.isValidating) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-16 w-16 animate-spin text-blue-500 mx-auto" />
+          <p className="text-white text-xl font-semibold">Đang xác thực...</p>
+          <p className="text-gray-400 text-sm">Vui lòng đợi trong giây lát</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if not authorized
+  if (!authState.isAuthorized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-2xl p-8 max-w-md text-center shadow-xl border border-gray-700">
+          <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-white text-xl font-semibold mb-2">Không thể truy cập</h2>
+          <p className="text-gray-400 mb-6">{authState.error}</p>
+          <p className="text-gray-500 text-sm">Đang chuyển hướng...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -318,7 +318,12 @@ export function VideolifyFull_v2({
         setIsConnecting(false);
         toast({ title: '✅ Đã kết nối thành công' });
       } else if (state === 'failed') {
-        toast({ title: '❌ Mất kết nối', variant: 'destructive' });
+        setIsConnecting(true); // Show connecting state while recovering
+        toast({ title: '⚠️ Đang kết nối lại...', variant: 'destructive' });
+      } else if (state === 'disconnected') {
+        // ✅ Show warning but keep trying
+        setIsConnecting(true);
+        console.log('[VideolifyFull_v2] Connection disconnected - auto-recovery will handle');
       } else if (state === 'connecting') {
         setIsConnecting(true);
       }
@@ -352,9 +357,13 @@ export function VideolifyFull_v2({
     console.log('[VideolifyFull_v2] 📡 Setting up control channel, state:', channel.readyState);
     controlChannelRef.current = channel;
 
-    // ✅ Function to broadcast initial settings (VBG + camera/mic state)
+    // ✅ Function to broadcast initial settings (VBG + camera/mic state + user info)
     const broadcastInitialStateOnOpen = () => {
       try {
+        // ✅ ALWAYS broadcast user info so peer knows our name
+        console.log('[VideolifyFull_v2] 👤 Broadcasting user info:', userDisplayName);
+        channel.send(JSON.stringify({ type: 'user-info', userName: userDisplayName, role }));
+        
         const stored = localStorage.getItem('videolify_prejoin_settings');
         console.log('[VideolifyFull_v2] 📦 Reading prejoin settings from localStorage:', stored ? 'found' : 'not found');
         
@@ -376,19 +385,15 @@ export function VideolifyFull_v2({
           channel.send(JSON.stringify({ type: 'video-toggle', enabled: cameraEnabled }));
           channel.send(JSON.stringify({ type: 'audio-toggle', enabled: micEnabled }));
           
-          // ✅ Broadcast VBG settings if enabled
-          if (prejoinSettings.vbgEnabled) {
-            const vbgSettings = {
-              enabled: true,
-              mode: prejoinSettings.vbgMode || 'blur',
-              blurAmount: prejoinSettings.vbgBlurAmount || 10,
-              backgroundImage: prejoinSettings.vbgBackgroundImage || null
-            };
-            console.log('[VideolifyFull_v2] 🎨 Broadcasting VBG settings on channel open:', vbgSettings);
-            channel.send(JSON.stringify({ type: 'vbg-settings', ...vbgSettings }));
-          } else {
-            console.log('[VideolifyFull_v2] 📦 VBG not enabled in prejoin settings, not broadcasting');
-          }
+          // ✅ ALWAYS broadcast VBG settings (even if disabled) so peer knows to clear loading state
+          const vbgSettings = {
+            enabled: !!prejoinSettings.vbgEnabled,
+            mode: prejoinSettings.vbgMode || 'none',
+            blurAmount: prejoinSettings.vbgBlurAmount || 10,
+            backgroundImage: prejoinSettings.vbgBackgroundImage || null
+          };
+          console.log('[VideolifyFull_v2] 🎨 Broadcasting VBG settings on channel open:', vbgSettings);
+          channel.send(JSON.stringify({ type: 'vbg-settings', ...vbgSettings }));
         }
       } catch (err) {
         console.warn('[VideolifyFull_v2] Failed to send initial settings:', err);
@@ -406,14 +411,6 @@ export function VideolifyFull_v2({
       broadcastInitialStateOnOpen();
     }
 
-    channel.onclose = () => {
-      console.log('[VideolifyFull_v2] ⚠️ Control channel CLOSED');
-    };
-
-    channel.onerror = (error) => {
-      console.error('[VideolifyFull_v2] ❌ Control channel ERROR:', error);
-    };
-
     // ✅ IMPROVED Heartbeat + control message handling
     // Enhanced liveness detection with adaptive ping intervals and robust reconnect
     const lastPongRef = { current: Date.now() } as { current: number };
@@ -423,10 +420,31 @@ export function VideolifyFull_v2({
     let heartbeatInterval: number | null = null;
     let livenessCheckInterval: number | null = null;
     let recreateAttempt = 0;
-    const MAX_RECREATE_ATTEMPTS = 5;
-    const PING_INTERVAL = 2000; // 2s ping interval for faster detection
-    const LIVENESS_TIMEOUT = 8000; // 8s without pong = dead
-    const LIVENESS_CHECK_INTERVAL = 2000; // Check every 2s
+    const MAX_RECREATE_ATTEMPTS = 10; // ✅ More attempts before giving up
+    const PING_INTERVAL = 1500; // ✅ 1.5s ping interval for faster detection
+    const LIVENESS_TIMEOUT = 6000; // ✅ 6s without pong = trigger reconnect
+    const LIVENESS_CHECK_INTERVAL = 1500; // ✅ Check every 1.5s
+
+    // ✅ Forward declare attemptRecreate so we can use it in onclose
+    let attemptRecreate: () => Promise<void>;
+
+    channel.onclose = () => {
+      console.log('[VideolifyFull_v2] ⚠️ Control channel CLOSED - triggering reconnect');
+      // ✅ Immediately mark as disconnected and trigger reconnect
+      setConnectionStats((prev) => ({ ...prev, connected: false }));
+      setIsConnecting(true);
+      toast({ title: '⚠️ Mất kết nối với người khác, đang kết nối lại...', variant: 'destructive' });
+      // ✅ Trigger reconnect immediately
+      if (attemptRecreate) attemptRecreate();
+    };
+
+    channel.onerror = (error) => {
+      console.error('[VideolifyFull_v2] ❌ Control channel ERROR:', error);
+      // ✅ Also trigger reconnect on error
+      setConnectionStats((prev) => ({ ...prev, connected: false }));
+      setIsConnecting(true);
+      if (attemptRecreate) attemptRecreate();
+    };
 
     const startHeartbeat = () => {
       if (heartbeatInterval) return;
@@ -434,18 +452,25 @@ export function VideolifyFull_v2({
       
       heartbeatInterval = window.setInterval(() => {
         try {
-          if (controlChannelRef.current && controlChannelRef.current.readyState === 'open') {
-            const now = Date.now();
-            controlChannelRef.current.send(JSON.stringify({ type: 'ping', ts: now }));
-            lastPingRef.current = now;
+          // ✅ Check channel state first - if not open, trigger reconnect immediately
+          if (!controlChannelRef.current || controlChannelRef.current.readyState !== 'open') {
+            console.warn('[VideolifyFull_v2] ⚠️ Control channel not open, triggering reconnect');
+            setConnectionStats((prev) => ({ ...prev, connected: false }));
+            setIsConnecting(true);
+            attemptRecreate();
+            return;
           }
+          const now = Date.now();
+          controlChannelRef.current.send(JSON.stringify({ type: 'ping', ts: now }));
+          lastPingRef.current = now;
         } catch (e) {
           console.warn('[VideolifyFull_v2] Ping send failed:', e);
           consecutiveFailuresRef.current++;
-          if (consecutiveFailuresRef.current >= 3) {
-            console.warn('[VideolifyFull_v2] Multiple ping failures - triggering reconnect');
-            attemptRecreate();
-          }
+          // ✅ Trigger immediately on first failure since it usually means channel is dead
+          console.warn('[VideolifyFull_v2] Ping failure - triggering reconnect');
+          setConnectionStats((prev) => ({ ...prev, connected: false }));
+          setIsConnecting(true);
+          attemptRecreate();
         }
       }, PING_INTERVAL) as unknown as number;
 
@@ -460,6 +485,8 @@ export function VideolifyFull_v2({
         // If no pong within LIVENESS_TIMEOUT, consider peer dead
         if (timeSinceLastPong > LIVENESS_TIMEOUT) {
           console.warn('[VideolifyFull_v2] ⚠️ No pong received in', timeSinceLastPong, 'ms - triggering reconnect');
+          setConnectionStats((prev) => ({ ...prev, connected: false }));
+          setIsConnecting(true);
           attemptRecreate();
         }
       }, LIVENESS_CHECK_INTERVAL) as unknown as number;
@@ -477,7 +504,8 @@ export function VideolifyFull_v2({
       }
     };
 
-    const attemptRecreate = async () => {
+    // ✅ Assign to the forward-declared variable
+    attemptRecreate = async () => {
       if (recreateInProgressRef.current) return;
       if (!remotePeerIdRef.current) return;
       
@@ -492,7 +520,8 @@ export function VideolifyFull_v2({
       recreateInProgressRef.current = true;
       recreateAttempt++;
       consecutiveFailuresRef.current = 0; // Reset failures on reconnect attempt
-      const backoff = Math.min(8000, 500 * Math.pow(2, recreateAttempt));
+      // ✅ Faster backoff: 300ms, 600ms, 1200ms, 2400ms, max 4000ms
+      const backoff = Math.min(4000, 300 * Math.pow(2, recreateAttempt - 1));
       console.log('[VideolifyFull_v2] 🔄 Attempting reconnect in', backoff, 'ms (attempt', recreateAttempt, '/', MAX_RECREATE_ATTEMPTS, ')');
 
       setTimeout(async () => {
@@ -506,8 +535,8 @@ export function VideolifyFull_v2({
               try {
                 await signaling.sendOffer(restartOffer, remotePeerIdRef.current!);
                 console.log('[VideolifyFull_v2] ✅ ICE restart offer sent');
-                // Wait and check if connection restored
-                await new Promise((res) => setTimeout(res, 3000));
+                // ✅ Wait shorter and check if connection restored
+                await new Promise((res) => setTimeout(res, 2000));
                 if (pc.connectionState === 'connected') {
                   console.log('[VideolifyFull_v2] ✅ ICE restart successful!');
                   recreateAttempt = 0;
@@ -597,12 +626,23 @@ export function VideolifyFull_v2({
 
       console.log('[VideolifyFull_v2] 📨 Control message received:', control);
 
-      if (control.type === 'hand-raise') {
+      // ✅ Handle user info message - set remote user name
+      if (control.type === 'user-info') {
+        console.log('[VideolifyFull_v2] 👤 User info received:', control.userName, control.role);
+        if (control.userName) setRemoteUserName(control.userName);
+      }
+      else if (control.type === 'hand-raise') {
         setRemoteHandRaised(control.raised);
         if (control.userName) setRemoteUserName(control.userName);
       }
-      else if (control.type === 'video-toggle') setRemoteVideoEnabled(control.enabled);
-      else if (control.type === 'audio-toggle') setRemoteAudioEnabled(control.enabled);
+      else if (control.type === 'video-toggle') {
+        console.log('[VideolifyFull_v2] 📹 Remote video toggle received:', control.enabled);
+        setRemoteVideoEnabled(control.enabled);
+      }
+      else if (control.type === 'audio-toggle') {
+        console.log('[VideolifyFull_v2] 🎤 Remote audio toggle received:', control.enabled);
+        setRemoteAudioEnabled(control.enabled);
+      }
       else if (control.type === 'screen-share-toggle') {
         console.log('[VideolifyFull_v2] Screen share toggle received:', control.isSharing);
         setIsRemoteSharing(control.isSharing); // Update remote sharing state
@@ -867,6 +907,15 @@ export function VideolifyFull_v2({
       console.log('[VideolifyFull_v2] 📥 Storing VBG settings (remote stream not ready)');
       pendingRemoteVbgRef.current = settings;
       setRemoteVbgLoading(true); // Show loading state
+      
+      // ✅ Timeout to prevent stuck loading state
+      setTimeout(() => {
+        if (pendingRemoteVbgRef.current === settings) {
+          console.warn('[VideolifyFull_v2] ⚠️ VBG loading timeout - clearing pending state');
+          pendingRemoteVbgRef.current = null;
+          setRemoteVbgLoading(false);
+        }
+      }, 10000); // 10 second timeout
       return;
     }
 
@@ -1319,13 +1368,19 @@ export function VideolifyFull_v2({
   }, []);
 
   const handleToggleVideo = useCallback(() => {
+    const newState = !media.isVideoEnabled;
     media.toggleVideo();
-    sendControl('video-toggle', { enabled: !media.isVideoEnabled });
+    // ✅ Send the NEW state after toggle
+    sendControl('video-toggle', { enabled: newState });
+    console.log('[VideolifyFull_v2] 📡 Video toggled, broadcasting new state:', newState);
   }, [media, sendControl]);
 
   const handleToggleAudio = useCallback(() => {
+    const newState = !media.isAudioEnabled;
     media.toggleAudio();
-    sendControl('audio-toggle', { enabled: !media.isAudioEnabled });
+    // ✅ Send the NEW state after toggle
+    sendControl('audio-toggle', { enabled: newState });
+    console.log('[VideolifyFull_v2] 📡 Audio toggled, broadcasting new state:', newState);
   }, [media, sendControl]);
 
   const handleToggleScreenShare = useCallback(async () => {
@@ -1731,6 +1786,9 @@ export function VideolifyFull_v2({
                   </div>
                 )}
 
+                {/* Name badge for local video */}
+                <NameBadge userName={userDisplayName.replace(/\s*\(.*?\)\s*/g, '')} pipSize={localPipSize} />
+
                 <PiPControlBar pipSize={localPipSize} onResize={toggleLocalPipSize} onHide={() => setLocalPipVisible(false)} />
               </div>
             </Draggable>
@@ -1784,6 +1842,12 @@ export function VideolifyFull_v2({
                     <MicOff className="w-4 h-4" />
                   </div>
                 )}
+
+                {/* Name badge for remote video */}
+                <NameBadge 
+                  userName={remoteUserName || 'Người dùng'} 
+                  pipSize={remotePipSize} 
+                />
 
                 <PiPControlBar pipSize={remotePipSize} onResize={toggleRemotePipSize} onHide={() => setRemotePipVisible(false)} />
               </div>
