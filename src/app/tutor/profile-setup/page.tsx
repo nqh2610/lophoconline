@@ -103,7 +103,7 @@ export default function TutorProfileSetup() {
             </Button>
           </Link>
           <h1 className="text-3xl font-bold" data-testid="heading-profile-setup">
-            Tạo hồ sơ gia sư
+            Tạo hồ sơ giáo viên
           </h1>
           <p className="text-muted-foreground mt-2">
             Hoàn thiện hồ sơ để học sinh có thể tìm thấy bạn

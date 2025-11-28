@@ -282,7 +282,7 @@ export function TutorRegistrationForm() {
 
         toast({
           title: "Tạo tài khoản thành công!",
-          description: "Đang tiếp tục đăng ký hồ sơ gia sư...",
+          description: "Đang tiếp tục đăng ký hồ sơ giáo viên...",
         });
       }
 
@@ -290,7 +290,7 @@ export function TutorRegistrationForm() {
       if (!userId) {
         toast({
           title: "Chưa đăng nhập",
-          description: "Vui lòng đăng nhập hoặc tạo tài khoản mới để đăng ký làm gia sư.",
+          description: "Vui lòng đăng nhập hoặc tạo tài khoản mới để đăng ký làm giáo viên.",
           variant: "destructive",
         });
         return;
@@ -865,7 +865,7 @@ export function TutorRegistrationForm() {
                           <SelectContent>
                             <SelectItem value="teacher">Giáo viên</SelectItem>
                             <SelectItem value="student">Sinh viên</SelectItem>
-                            <SelectItem value="tutor">Gia sư</SelectItem>
+                            <SelectItem value="tutor">Giáo viên tự do</SelectItem>
                             <SelectItem value="other">Khác</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1236,7 +1236,7 @@ export function TutorRegistrationForm() {
                 disabled={isSubmitting}
                 data-testid="button-submit-registration"
               >
-                {isSubmitting ? "Đang xử lý..." : "Đăng ký làm gia sư"}
+                {isSubmitting ? "Đang xử lý..." : "Đăng ký làm giáo viên"}
               </Button>
             )}
           </div>

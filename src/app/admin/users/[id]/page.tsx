@@ -92,7 +92,7 @@ export default function AdminUserDetailPage() {
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
       admin: { label: "Quản trị viên", variant: "destructive" },
-      tutor: { label: "Gia sư", variant: "default" },
+      tutor: { label: "Giáo viên", variant: "default" },
       student: { label: "Học viên", variant: "secondary" },
     };
 
@@ -218,7 +218,7 @@ export default function AdminUserDetailPage() {
                   >
                     <LayoutDashboard className="h-8 w-8" />
                     <div className="text-center">
-                      <p className="font-semibold">Dashboard {user.role === "admin" ? "Admin" : user.role === "tutor" ? "Gia sư" : "Học viên"}</p>
+                      <p className="font-semibold">Dashboard {user.role === "admin" ? "Admin" : user.role === "tutor" ? "Giáo viên" : "Học viên"}</p>
                       <p className="text-xs text-muted-foreground">Xem với quyền {user.role}</p>
                     </div>
                   </Button>
@@ -237,7 +237,7 @@ export default function AdminUserDetailPage() {
                   >
                     <ExternalLink className="h-8 w-8" />
                     <div className="text-center">
-                      <p className="font-semibold">Hồ sơ gia sư</p>
+                      <p className="font-semibold">Hồ sơ giáo viên</p>
                       <p className="text-xs text-muted-foreground">Xem trang chi tiết</p>
                     </div>
                   </Button>
@@ -251,7 +251,7 @@ export default function AdminUserDetailPage() {
         {user.profileData && (
           <Card>
             <CardHeader>
-              <CardTitle>Thông tin {user.role === "tutor" ? "gia sư" : "học viên"}</CardTitle>
+              <CardTitle>Thông tin {user.role === "tutor" ? "giáo viên" : "học viên"}</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="text-sm bg-muted p-4 rounded-lg overflow-auto">

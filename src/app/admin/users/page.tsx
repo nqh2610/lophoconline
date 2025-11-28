@@ -298,7 +298,7 @@ export default function AdminUsers() {
     };
     const labels: any = {
       admin: "Quản trị viên",
-      tutor: "Gia sư",
+      tutor: "Giáo viên",
       student: "Học viên",
     };
     return (
@@ -361,7 +361,7 @@ export default function AdminUsers() {
               <SelectContent>
                 <SelectItem value="all">Tất cả vai trò</SelectItem>
                 <SelectItem value="admin">Quản trị viên</SelectItem>
-                <SelectItem value="tutor">Gia sư</SelectItem>
+                <SelectItem value="tutor">Giáo viên</SelectItem>
                 <SelectItem value="student">Học viên</SelectItem>
               </SelectContent>
             </Select>
@@ -600,7 +600,7 @@ export default function AdminUsers() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="student">Học viên</SelectItem>
-                  <SelectItem value="tutor">Gia sư</SelectItem>
+                  <SelectItem value="tutor">Giáo viên</SelectItem>
                   <SelectItem value="admin">Quản trị viên</SelectItem>
                 </SelectContent>
               </Select>
@@ -704,7 +704,7 @@ export default function AdminUsers() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="student">Học viên</SelectItem>
-                  <SelectItem value="tutor">Gia sư</SelectItem>
+                  <SelectItem value="tutor">Giáo viên</SelectItem>
                   <SelectItem value="admin">Quản trị viên</SelectItem>
                 </SelectContent>
               </Select>

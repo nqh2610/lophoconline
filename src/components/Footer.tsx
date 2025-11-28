@@ -12,7 +12,7 @@ export function Footer() {
               <Logo size="sm" />
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Nền tảng kết nối gia sư và học viên trực tuyến hàng đầu Việt Nam
+              Nền tảng kết nối giáo viên và học viên trực tuyến hàng đầu Việt Nam
             </p>
             <div className="flex gap-2">
               <a href="#" className="h-9 w-9 flex items-center justify-center rounded-md hover-elevate bg-muted" data-testid="link-facebook">
@@ -40,7 +40,7 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-4">Dành cho</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/for-tutors" className="text-muted-foreground hover:text-foreground">Gia sư</Link></li>
+              <li><Link href="/for-tutors" className="text-muted-foreground hover:text-foreground">Giáo viên</Link></li>
               <li><Link href="/for-students" className="text-muted-foreground hover:text-foreground">Học viên</Link></li>
               <li><Link href="/for-parents" className="text-muted-foreground hover:text-foreground">Phụ huynh</Link></li>
             </ul>

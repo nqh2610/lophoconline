@@ -355,7 +355,7 @@ export function BookingDialog({
       toast({
         variant: "destructive",
         title: "Thiếu thông tin",
-        description: "Vui lòng nhập số điện thoại để gia sư liên lạc",
+        description: "Vui lòng nhập số điện thoại để giáo viên liên lạc",
       });
       return;
     }
@@ -401,7 +401,7 @@ export function BookingDialog({
       toast({
         variant: "destructive",
         title: "Lỗi",
-        description: "Gia sư chưa có lịch trống. Vui lòng chọn gia sư khác hoặc liên hệ trực tiếp.",
+        description: "Giáo viên chưa có lịch trống. Vui lòng chọn giáo viên khác hoặc liên hệ trực tiếp.",
       });
       return;
     }
@@ -503,8 +503,8 @@ export function BookingDialog({
       toast({
         title: "Đặt lịch thành công! 🎉",
         description: isTrial 
-          ? "Yêu cầu học thử đã được gửi đến gia sư. Bạn sẽ nhận được thông báo khi gia sư xác nhận."
-          : `Yêu cầu đăng ký ${pkg?.label} (${totalSessions} buổi) đã được gửi đến gia sư. Bạn sẽ nhận được thông báo khi gia sư xác nhận và số tiền cần thanh toán.`,
+          ? "Yêu cầu học thử đã được gửi đến giáo viên. Bạn sẽ nhận được thông báo khi giáo viên xác nhận."
+          : `Yêu cầu đăng ký ${pkg?.label} (${totalSessions} buổi) đã được gửi đến giáo viên. Bạn sẽ nhận được thông báo khi giáo viên xác nhận và số tiền cần thanh toán.`,
       });
 
       onOpenChange(false);
@@ -532,7 +532,7 @@ export function BookingDialog({
             Đặt lịch học với {tutorName}
           </DialogTitle>
           <DialogDescription>
-            Chọn ca học và gói buổi học phù hợp. Sau khi gia sư xác nhận, bạn sẽ nhận được thông báo về số tiền cần thanh toán.
+            Chọn ca học và gói buổi học phù hợp. Sau khi giáo viên xác nhận, bạn sẽ nhận được thông báo về số tiền cần thanh toán.
           </DialogDescription>
           {/* ✅ PHASE 3: Display user name */}
           {isLoadingProfile ? (
@@ -622,7 +622,7 @@ export function BookingDialog({
               <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200">
                 <AlertCircle className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
-                  Bạn đã đặt lịch với gia sư này trước đó. 
+                  Bạn đã đặt lịch với giáo viên này trước đó. 
                   <a href="/student/bookings" className="underline ml-1 font-medium">
                     Xem lịch sử →
                   </a>
@@ -652,7 +652,7 @@ export function BookingDialog({
                   />
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Gia sư sẽ gọi tên này khi liên lạc
+                  Giáo viên sẽ gọi tên này khi liên lạc
                 </p>
               </div>
 
@@ -677,7 +677,7 @@ export function BookingDialog({
                   />
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Gia sư sẽ liên hệ qua số này để sắp xếp lịch học
+                  Giáo viên sẽ liên hệ qua số này để sắp xếp lịch học
                 </p>
               </div>
             </div>
@@ -744,7 +744,7 @@ export function BookingDialog({
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Lưu ý học thử:</strong> Sau khi gia sư xác nhận, bạn sẽ nhận được thông báo về lịch học thử cụ thể. Buổi học thử sẽ diễn ra theo ca học mà gia sư đã đăng ký.
+                <strong>Lưu ý học thử:</strong> Sau khi giáo viên xác nhận, bạn sẽ nhận được thông báo về lịch học thử cụ thể. Buổi học thử sẽ diễn ra theo ca học mà giáo viên đã đăng ký.
               </AlertDescription>
             </Alert>
           )}
@@ -827,7 +827,7 @@ export function BookingDialog({
               </select>
             )}
             <p className="text-xs text-muted-foreground mt-1">
-              Thông tin này giúp gia sư chuẩn bị bài giảng phù hợp
+              Thông tin này giúp giáo viên chuẩn bị bài giảng phù hợp
             </p>
           </div>
 
@@ -835,7 +835,7 @@ export function BookingDialog({
           <div>
             <Label htmlFor="additionalNotes" className="text-base font-semibold mb-2 flex items-center gap-2">
               <BookOpen className="h-5 w-5" />
-              Ghi chú / Yêu cầu cho gia sư
+              Ghi chú / Yêu cầu cho giáo viên
               <span className="text-xs font-normal text-muted-foreground">(Không bắt buộc)</span>
             </Label>
             <Textarea
@@ -847,7 +847,7 @@ export function BookingDialog({
               maxLength={500}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Mô tả thêm những yêu cầu, mục tiêu học tập hoặc thông tin hữu ích cho gia sư ({additionalNotes.length}/500 ký tự)
+              Mô tả thêm những yêu cầu, mục tiêu học tập hoặc thông tin hữu ích cho giáo viên ({additionalNotes.length}/500 ký tự)
             </p>
           </div>
 
@@ -873,7 +873,7 @@ export function BookingDialog({
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Gia sư chưa đăng ký ca học nào. Vui lòng liên hệ gia sư để biết thêm chi tiết.
+                    Giáo viên chưa đăng ký ca học nào. Vui lòng liên hệ giáo viên để biết thêm chi tiết.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -1007,7 +1007,7 @@ export function BookingDialog({
                   {/* Thông tin cơ bản */}
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between items-start">
-                      <span className="text-sm text-foreground/70">Gia sư</span>
+                      <span className="text-sm text-foreground/70">Giáo viên</span>
                       <span className="font-semibold text-right">{tutorName}</span>
                     </div>
                     
@@ -1091,7 +1091,7 @@ export function BookingDialog({
                   <Alert className="mt-4 bg-background/50">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="text-xs">
-                      Sau khi gia sư xác nhận, bạn sẽ nhận thông báo về ngày bắt đầu học và hướng dẫn thanh toán.
+                      Sau khi giáo viên xác nhận, bạn sẽ nhận thông báo về ngày bắt đầu học và hướng dẫn thanh toán.
                     </AlertDescription>
                   </Alert>
                 </div>

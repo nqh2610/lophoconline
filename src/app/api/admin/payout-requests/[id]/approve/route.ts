@@ -1,8 +1,8 @@
 /**
- * API: Admin duyệt yêu cầu rút tiền của gia sư
+ * API: Admin duyệt yêu cầu rút tiền của giáo viên
  * POST /api/admin/payout-requests/[id]/approve
  *
- * Admin xác nhận đã chuyển tiền cho gia sư
+ * Admin xác nhận đã chuyển tiền cho giáo viên
  * Cập nhật wallet, tạo transaction, đánh dấu payout request completed
  */
 

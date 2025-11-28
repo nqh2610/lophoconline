@@ -150,7 +150,7 @@ export default function StudentTimetable() {
               </p>
               <Link href="/tutors">
                 <Button data-testid="button-find-tutors">
-                  Tìm gia sư
+                  Tìm giáo viên
                 </Button>
               </Link>
             </CardContent>
@@ -198,7 +198,7 @@ export default function StudentTimetable() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4" />
-                                  <span>Gia sư ID: {lesson.tutorId}</span>
+                                  <span>Giáo viên ID: {lesson.tutorId}</span>
                                 </div>
                               </div>
                               {lesson.notes && (

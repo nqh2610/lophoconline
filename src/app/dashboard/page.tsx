@@ -90,7 +90,7 @@ export default function Dashboard() {
             testId="stat-spending"
           />
           <StatsCard
-            title="Gia sư đang học"
+            title="Giáo viên đang học"
             value="3"
             icon={Users}
             testId="stat-tutors"

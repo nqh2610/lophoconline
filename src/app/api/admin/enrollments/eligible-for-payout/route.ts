@@ -13,7 +13,7 @@ import { eq, sql, inArray } from 'drizzle-orm';
  * Điều kiện thanh toán:
  * 1. Lớp đã học đủ 1 tháng (30 ngày kể từ buổi học đầu tiên)
  * 2. Lớp đã kết thúc (status = 'completed')
- * 3. Lớp có yêu cầu thanh toán từ gia sư (tutor_requested_payout = 1)
+ * 3. Lớp có yêu cầu thanh toán từ giáo viên (tutor_requested_payout = 1)
  * 4. Học sinh yêu cầu nghỉ → tính theo số buổi học thực tế
  *
  * Trả về:
@@ -21,7 +21,7 @@ import { eq, sql, inArray } from 'drizzle-orm';
  * - Số buổi đã học thực tế
  * - Số tiền phải trả (dựa trên số buổi thực tế)
  * - Phí nền tảng
- * - Số tiền gia sư nhận
+ * - Số tiền giáo viên nhận
  */
 
 export async function GET(request: NextRequest) {
@@ -99,11 +99,11 @@ export async function GET(request: NextRequest) {
         reason = 'Lớp đã kết thúc';
       }
 
-      // Điều kiện 3: Gia sư yêu cầu thanh toán
+      // Điều kiện 3: Giáo viên yêu cầu thanh toán
       // TODO: Add field tutor_requested_payout to enrollment
       // if (enrollment.tutorRequestedPayout === 1) {
       //   eligible = true;
-      //   reason = 'Gia sư yêu cầu thanh toán';
+      //   reason = 'Giáo viên yêu cầu thanh toán';
       // }
 
       // Điều kiện 4: Học sinh yêu cầu nghỉ

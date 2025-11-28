@@ -83,7 +83,7 @@ export default function StudentDashboard() {
               <Link href="/tutors">
                 <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4">
                   <Search className="h-6 w-6" />
-                  <span className="text-xs">Tìm gia sư</span>
+                  <span className="text-xs">Tìm giáo viên</span>
                 </Button>
               </Link>
               <Link href="/student/booking">
@@ -142,7 +142,7 @@ export default function StudentDashboard() {
                   <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium">{lesson.subject}</p>
-                      <p className="text-sm text-muted-foreground">Gia sư: {lesson.tutor}</p>
+                      <p className="text-sm text-muted-foreground">Giáo viên: {lesson.tutor}</p>
                       <p className="text-sm text-muted-foreground">{lesson.day}, {lesson.time}</p>
                     </div>
                     <Button size="sm" variant="outline">Chi tiết</Button>
@@ -200,7 +200,7 @@ export default function StudentDashboard() {
               {[
                 { action: "Hoàn thành buổi học Toán", time: "2 giờ trước", type: "success", icon: BookOpen },
                 { action: "Thanh toán học phí tháng 10", time: "1 ngày trước", type: "info", icon: CreditCard },
-                { action: "Đánh giá gia sư Nguyễn Văn A - 5 sao", time: "2 ngày trước", type: "success", icon: Star },
+                { action: "Đánh giá giáo viên Nguyễn Văn A - 5 sao", time: "2 ngày trước", type: "success", icon: Star },
                 { action: "Đăng ký lớp Vật lý mới", time: "3 ngày trước", type: "info", icon: Calendar },
               ].map((activity, idx) => {
                 const Icon = activity.icon;

@@ -176,7 +176,7 @@ export class DatabaseStorage {
       ...result[0].tutor,
       occupation: result[0].occupation || undefined,
       avatar: result[0].user?.avatar || null, // ✅ From users
-      fullName: result[0].user?.fullName || result[0].user?.username || 'Gia sư', // ✅ From users
+      fullName: result[0].user?.fullName || result[0].user?.username || 'Giáo viên', // ✅ From users
       phone: result[0].user?.phone || null, // ✅ From users
     } as any;
   }
@@ -206,7 +206,7 @@ export class DatabaseStorage {
       ...result[0].tutor,
       occupation: result[0].occupation || undefined,
       avatar: result[0].user?.avatar || null, // ✅ From users
-      fullName: result[0].user?.fullName || result[0].user?.username || 'Gia sư', // ✅ From users
+      fullName: result[0].user?.fullName || result[0].user?.username || 'Giáo viên', // ✅ From users
       phone: result[0].user?.phone || null, // ✅ From users
     } as any;
   }
@@ -466,7 +466,7 @@ export class DatabaseStorage {
       occupation: r.occupation || undefined,
       // ✅ Add avatar and fullName from users table
       avatar: r.user?.avatar || null,
-      fullName: r.user?.fullName || r.user?.username || 'Gia sư',
+      fullName: r.user?.fullName || r.user?.username || 'Giáo viên',
     }));
   }
 
@@ -1649,7 +1649,7 @@ export class DatabaseStorage {
       if (hasTrial) {
         return {
           valid: false,
-          error: "Bạn đã có buổi học thử với gia sư này rồi",
+          error: "Bạn đã có buổi học thử với giáo viên này rồi",
           trialCount,
         };
       }
@@ -2114,7 +2114,7 @@ export class DatabaseStorage {
     const jwtExpiresIn = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
 
     // Generate REAL Jitsi JWT tokens for tutor and student
-    const tutorFullName = tutorUser.fullName || tutorUser.username || 'Gia sư';
+    const tutorFullName = tutorUser.fullName || tutorUser.username || 'Giáo viên';
     const studentFullName = studentUser.fullName || studentUser.username || 'Học sinh';
 
     const tutorToken = await generateJitsiToken({
@@ -2174,7 +2174,7 @@ export class DatabaseStorage {
         userId: student.userId,
         type: 'confirmation',
         title: '✅ Lịch học thử đã được xác nhận',
-        message: `Gia sư ${tutorFullName} đã xác nhận buổi học thử vào ${new Date(date).toLocaleDateString('vi-VN')} lúc ${startTime} - ${endTime}. Link học sẽ có sẵn trong dashboard của bạn.`,
+        message: `Giáo viên ${tutorFullName} đã xác nhận buổi học thử vào ${new Date(date).toLocaleDateString('vi-VN')} lúc ${startTime} - ${endTime}. Link học sẽ có sẵn trong dashboard của bạn.`,
         link: `/student/lessons/${lessonId}`,
         isRead: 0,
       }),

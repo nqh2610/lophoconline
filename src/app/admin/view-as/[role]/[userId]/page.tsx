@@ -85,7 +85,7 @@ export default function AdminViewAsPage() {
             <Alert className="mb-0 py-2 bg-yellow-100 border-yellow-300">
               <AlertCircle className="h-4 w-4 text-yellow-800" />
               <AlertDescription className="text-yellow-800 text-sm">
-                Bạn đang xem dashboard với vai trò: <strong>{role === "admin" ? "Quản trị viên" : role === "tutor" ? "Gia sư" : "Học viên"}</strong> (User ID: {userId})
+                Bạn đang xem dashboard với vai trò: <strong>{role === "admin" ? "Quản trị viên" : role === "tutor" ? "Giáo viên" : "Học viên"}</strong> (User ID: {userId})
               </AlertDescription>
             </Alert>
           </div>

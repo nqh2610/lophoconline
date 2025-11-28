@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
         const tutor = await storage.getTutorById(lesson.tutorId);
         if (tutor) {
           const tutorUser = await storage.getUserById(tutor.userId);
-          lesson.tutorName = tutorUser?.fullName || tutorUser?.username || 'Gia sư';
+          lesson.tutorName = tutorUser?.fullName || tutorUser?.username || 'Giáo viên';
           lesson.tutorEmail = tutorUser?.email;
           lesson.tutorAvatar = tutorUser?.avatar;
           lesson.tutorRating = tutor.rating;

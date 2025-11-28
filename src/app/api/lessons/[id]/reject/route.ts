@@ -78,7 +78,7 @@ export async function POST(
         userId: student.userId,
         type: 'cancellation',
         title: 'Lịch học đã bị từ chối',
-        message: `Gia sư ${tutor.fullName} đã từ chối lịch học vào ${new Date(lesson.date).toLocaleDateString('vi-VN')}. Lý do: ${reason}. ${transaction ? 'Học phí sẽ được hoàn lại trong 3-5 ngày làm việc.' : ''}`,
+        message: `Giáo viên ${tutor.fullName} đã từ chối lịch học vào ${new Date(lesson.date).toLocaleDateString('vi-VN')}. Lý do: ${reason}. ${transaction ? 'Học phí sẽ được hoàn lại trong 3-5 ngày làm việc.' : ''}`,
         link: `/dashboard`,
         isRead: 0,
       });

@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 
 /**
- * API: Gia sư tạo yêu cầu rút tiền
+ * API: Giáo viên tạo yêu cầu rút tiền
  * POST /api/payouts/request
  *
  * Flow:
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (!tutor) {
       return NextResponse.json(
-        { error: 'Chỉ gia sư mới có thể rút tiền' },
+        { error: 'Chỉ giáo viên mới có thể rút tiền' },
         { status: 403 }
       );
     }

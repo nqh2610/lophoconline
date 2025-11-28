@@ -11,7 +11,7 @@ export default function AdminDashboard() {
     {
       id: 1,
       type: 'tutor_registered',
-      message: 'Gia sư mới đăng ký: Nguyễn Văn A',
+      message: 'Giáo viên mới đăng ký: Nguyễn Văn A',
       time: '5 phút trước',
       icon: GraduationCap,
       color: 'text-blue-500',
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     {
       id: 5,
       type: 'review_posted',
-      message: 'Đánh giá mới: 5 sao cho gia sư Lê Văn C',
+      message: 'Đánh giá mới: 5 sao cho giáo viên Lê Văn C',
       time: '2 giờ trước',
       icon: BookOpen,
       color: 'text-yellow-500',
@@ -95,7 +95,7 @@ export default function AdminDashboard() {
             testId="stat-total-users"
           />
           <StatsCard
-            title="Gia sư chờ duyệt"
+            title="Giáo viên chờ duyệt"
             value="45"
             icon={Clock}
             trend="Cần xem xét"
@@ -140,7 +140,7 @@ export default function AdminDashboard() {
               <Link href="/admin/tutors">
                 <Button variant="outline" className="w-full h-auto flex flex-col gap-2 py-4">
                   <GraduationCap className="h-6 w-6" />
-                  <span className="text-xs">Gia sư</span>
+                  <span className="text-xs">Giáo viên</span>
                 </Button>
               </Link>
               <Link href="/admin/transactions">
@@ -171,10 +171,10 @@ export default function AdminDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
-                Gia sư chờ phê duyệt
+                Giáo viên chờ phê duyệt
               </CardTitle>
               <CardDescription>
-                {pendingTutors.length} gia sư đang chờ xét duyệt
+                {pendingTutors.length} giáo viên đang chờ xét duyệt
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
               </div>
               <Link href="/admin/tutors">
                 <Button className="w-full mt-4" variant="outline">
-                  Xem tất cả gia sư
+                  Xem tất cả giáo viên
                 </Button>
               </Link>
             </CardContent>
@@ -253,7 +253,7 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Gia sư hoạt động</p>
+                  <p className="text-sm text-muted-foreground">Giáo viên hoạt động</p>
                   <p className="text-2xl font-bold">342</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />

@@ -160,7 +160,7 @@ export function TutorRegistrationForm({ mode: initialMode = 'create', tutorId: i
     if (status === 'unauthenticated') {
       toast({
         title: "Yêu cầu đăng nhập",
-        description: "Vui lòng đăng nhập trước khi đăng ký làm gia sư. Nếu chưa có tài khoản, hãy đăng ký tài khoản trước.",
+        description: "Vui lòng đăng nhập trước khi đăng ký làm giáo viên. Nếu chưa có tài khoản, hãy đăng ký tài khoản trước.",
         variant: "destructive",
       });
       router.push('/login?redirectTo=/tutor-registration');
@@ -298,7 +298,7 @@ export function TutorRegistrationForm({ mode: initialMode = 'create', tutorId: i
         if (!response.ok) {
           toast({
             title: "Lỗi",
-            description: "Không thể tải thông tin gia sư",
+            description: "Không thể tải thông tin giáo viên",
             variant: "destructive",
           });
           router.push('/tutor/dashboard');
@@ -400,7 +400,7 @@ export function TutorRegistrationForm({ mode: initialMode = 'create', tutorId: i
         console.error('Error loading tutor data:', error);
         toast({
           title: "Lỗi",
-          description: "Không thể tải thông tin gia sư",
+          description: "Không thể tải thông tin giáo viên",
           variant: "destructive",
         });
       } finally {
@@ -716,7 +716,7 @@ export function TutorRegistrationForm({ mode: initialMode = 'create', tutorId: i
       if (!userId) {
         toast({
           title: "Chưa đăng nhập",
-          description: "Vui lòng đăng nhập để đăng ký làm gia sư.",
+          description: "Vui lòng đăng nhập để đăng ký làm giáo viên.",
           variant: "destructive",
         });
         router.push('/login?redirectTo=/tutor-registration');
@@ -988,7 +988,7 @@ export function TutorRegistrationForm({ mode: initialMode = 'create', tutorId: i
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải thông tin gia sư...</p>
+          <p className="text-gray-600">Đang tải thông tin giáo viên...</p>
         </div>
       </div>
     );
@@ -2437,7 +2437,7 @@ export function TutorRegistrationForm({ mode: initialMode = 'create', tutorId: i
                     ? "Đang xử lý..."
                     : mode === 'edit'
                       ? "Lưu tất cả & Hoàn tất"
-                      : "Đăng ký làm gia sư"}
+                      : "Đăng ký làm giáo viên"}
                 </Button>
               )}
             </div>

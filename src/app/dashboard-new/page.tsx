@@ -169,7 +169,7 @@ export default function StudentDashboardNew() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Gia sư</CardTitle>
+                <CardTitle className="text-sm font-medium">Giáo viên</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -199,7 +199,7 @@ export default function StudentDashboardNew() {
               <CardContent className="space-y-3">
                 <Button className="w-full" onClick={() => router.push('/tutors')}>
                   <BookOpen className="h-4 w-4 mr-2" />
-                  Tìm gia sư
+                  Tìm giáo viên
                 </Button>
                 <Button variant="outline" className="w-full" onClick={() => router.push('/notifications')}>
                   <Bell className="h-4 w-4 mr-2" />
@@ -233,7 +233,7 @@ export default function StudentDashboardNew() {
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
-                  <p>Đánh giá gia sư sau mỗi buổi học để giúp cộng đồng</p>
+                  <p>Đánh giá giáo viên sau mỗi buổi học để giúp cộng đồng</p>
                 </div>
               </CardContent>
             </Card>

@@ -103,7 +103,7 @@ export default function TutorRegistration() {
           <CardHeader>
             <CardTitle>Yêu cầu đăng nhập</CardTitle>
             <CardDescription>
-              Bạn cần đăng nhập để đăng ký làm gia sư
+              Bạn cần đăng nhập để đăng ký làm giáo viên
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -131,13 +131,13 @@ export default function TutorRegistration() {
             </Button>
           </Link>
           <h1 className="text-3xl font-bold" data-testid="heading-tutor-registration">
-            {hasExistingProfile ? 'Chỉnh sửa hồ sơ gia sư' : 'Đăng ký làm gia sư'}
+            {hasExistingProfile ? 'Chỉnh sửa hồ sơ giáo viên' : 'Đăng ký làm giáo viên'}
           </h1>
           <p className="text-muted-foreground mt-2">
             Xin chào <span className="font-semibold">{session.user?.name || session.user?.email}</span>! 
             {hasExistingProfile 
-              ? ' Bạn đã có hồ sơ gia sư. Cập nhật thông tin bên dưới.'
-              : ' Điền thông tin bên dưới để trở thành gia sư trên LopHoc.Online'
+              ? ' Bạn đã có hồ sơ giáo viên. Cập nhật thông tin bên dưới.'
+              : ' Điền thông tin bên dưới để trở thành giáo viên trên LopHoc.Online'
             }
           </p>
         </div>
@@ -152,7 +152,7 @@ export default function TutorRegistration() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-blue-900 mb-1">
-                    Bạn đã có hồ sơ gia sư
+                    Bạn đã có hồ sơ giáo viên
                   </h3>
                   <p className="text-blue-700 text-sm mb-3">
                     Bạn có thể chỉnh sửa thông tin hồ sơ của mình bên dưới, hoặc quay lại dashboard để quản lý lớp học.

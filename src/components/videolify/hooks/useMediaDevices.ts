@@ -18,6 +18,8 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
     video: boolean;
     audio: boolean;
   }>({ video: false, audio: false });
+  // ✅ Track if using dummy tracks (permissions blocked) - reactive state for UI
+  const [usingDummy, setUsingDummy] = useState({ video: false, audio: false });
 
   const streamRef = useRef<MediaStream | null>(null);
   const usingDummyRef = useRef({ video: false, audio: false });
@@ -52,6 +54,7 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
   const requestPermissions = useCallback(async () => {
     const tracks: MediaStreamTrack[] = [];
     const permissions = { video: false, audio: false };
+    const dummy = { video: false, audio: false };
 
     // Try video
     try {
@@ -61,10 +64,12 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
       tracks.push(...videoStream.getVideoTracks());
       permissions.video = true;
       usingDummyRef.current.video = false;
+      dummy.video = false;
     } catch (e) {
       console.warn('[useMediaDevices] Video denied, using dummy');
       tracks.push(createDummyVideo());
       usingDummyRef.current.video = true;
+      dummy.video = true;
     }
 
     // Try audio
@@ -79,17 +84,25 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
       tracks.push(...audioStream.getAudioTracks());
       permissions.audio = true;
       usingDummyRef.current.audio = false;
+      dummy.audio = false;
     } catch (e) {
       console.warn('[useMediaDevices] Audio denied, using dummy');
       tracks.push(createDummyAudio());
       usingDummyRef.current.audio = true;
+      dummy.audio = true;
     }
 
     const stream = new MediaStream(tracks);
     streamRef.current = stream;
     setLocalStream(stream);
     setHasPermissions(permissions);
-    console.log('[useMediaDevices] Stream ready:', permissions);
+    setUsingDummy(dummy);
+    
+    // ✅ CRITICAL: When using dummy, set enabled states to FALSE so UI shows correct icons
+    setIsVideoEnabled(!dummy.video);
+    setIsAudioEnabled(!dummy.audio);
+    
+    console.log('[useMediaDevices] Stream ready:', { permissions, dummy, videoEnabled: !dummy.video, audioEnabled: !dummy.audio });
 
     return stream;
   }, [createDummyAudio, createDummyVideo]);
@@ -115,6 +128,7 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
         setLocalStream(new MediaStream(streamRef.current.getTracks()));
 
         usingDummyRef.current.video = false;
+        setUsingDummy(prev => ({ ...prev, video: false }));
         setHasPermissions((p) => ({ ...p, video: true }));
         setIsVideoEnabled(true);
         console.log('[useMediaDevices] Upgraded to real camera');
@@ -155,6 +169,7 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
         setLocalStream(new MediaStream(streamRef.current.getTracks()));
 
         usingDummyRef.current.audio = false;
+        setUsingDummy(prev => ({ ...prev, audio: false }));
         setHasPermissions((p) => ({ ...p, audio: true }));
         setIsAudioEnabled(true);
         console.log('[useMediaDevices] Upgraded to real mic');
@@ -178,20 +193,30 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
   }, []);
 
   // Apply track states (for prejoin settings)
+  // ✅ CRITICAL: Don't enable tracks if using dummy (permissions blocked)
   const applyTrackStates = useCallback((videoEnabled: boolean, audioEnabled: boolean) => {
     if (!streamRef.current) return;
 
+    // ✅ If using dummy tracks, force enabled to false
+    const effectiveVideoEnabled = usingDummyRef.current.video ? false : videoEnabled;
+    const effectiveAudioEnabled = usingDummyRef.current.audio ? false : audioEnabled;
+
     streamRef.current.getVideoTracks().forEach(track => {
-      track.enabled = videoEnabled;
+      track.enabled = effectiveVideoEnabled;
     });
     streamRef.current.getAudioTracks().forEach(track => {
-      track.enabled = audioEnabled;
+      track.enabled = effectiveAudioEnabled;
     });
 
-    setIsVideoEnabled(videoEnabled);
-    setIsAudioEnabled(audioEnabled);
+    // ✅ Set React state based on effective values (respecting dummy state)
+    setIsVideoEnabled(effectiveVideoEnabled);
+    setIsAudioEnabled(effectiveAudioEnabled);
     
-    console.log('[useMediaDevices] Applied track states:', { video: videoEnabled, audio: audioEnabled });
+    console.log('[useMediaDevices] Applied track states:', { 
+      requested: { video: videoEnabled, audio: audioEnabled },
+      effective: { video: effectiveVideoEnabled, audio: effectiveAudioEnabled },
+      usingDummy: usingDummyRef.current
+    });
   }, []);
 
   return {
@@ -199,7 +224,8 @@ export function useMediaDevices(options?: UseMediaDevicesOptions) {
     isVideoEnabled,
     isAudioEnabled,
     hasPermissions,
-    usingDummy: usingDummyRef.current,
+    usingDummy,  // ✅ Reactive state for UI
+    usingDummyRef: usingDummyRef.current,  // ✅ Ref for immediate access
     requestPermissions,
     toggleVideo,
     toggleAudio,

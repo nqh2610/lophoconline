@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
         roomName: sessionData.roomName,
         userName, // ✅ ADDED
         role: 'tutor',
-        provider: sessionData.provider || 'jitsi', // ✅ Add provider
+        provider: sessionData.provider || 'videolify', // ✅ Add provider
         moderator: true,
         joinedAt: sessionData.tutorJoinedAt,
       });
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
         roomName: sessionData.roomName,
         userName, // ✅ ADDED
         role: 'student',
-        provider: sessionData.provider || 'jitsi', // ✅ Add provider
+        provider: sessionData.provider || 'videolify', // ✅ Add provider
         moderator: false,
         joinedAt: sessionData.studentJoinedAt,
       });
@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
       roomName: sessionData.roomName,
       userName, // ✅ Add userName for iframe API
       role: isTutor ? 'tutor' : 'student',
-      provider: sessionData.provider || 'jitsi', // ✅ Add provider
+      provider: sessionData.provider || 'videolify', // ✅ Add provider
       moderator: isTutor,
       joinedAt: now.toISOString(),
       scheduledEndTime: scheduledEnd.toISOString(),

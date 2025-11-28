@@ -319,7 +319,7 @@ export type GradeLevel = typeof gradeLevels.$inferSelect;
 // Occupations table (nghề nghiệp)
 export const occupations = mysqlTable("occupations", {
   id: serial("id").primaryKey(),
-  label: varchar("label", { length: 50 }).notNull(), // "Giáo viên", "Sinh viên", "Gia sư", "Chuyên gia"
+  label: varchar("label", { length: 50 }).notNull(), // "Giáo viên", "Sinh viên", "Giáo viên tự do", "Chuyên gia"
   sortOrder: int("sort_order").notNull().default(0),
   isActive: int("is_active").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -360,7 +360,7 @@ export type TutorSubject = typeof tutorSubjects.$inferSelect;
 
 // ==================== TIME MANAGEMENT SYSTEM ====================
 
-// Tutor Availability (Thời gian rảnh định kỳ của gia sư)
+// Tutor Availability (Thời gian rảnh định kỳ của giáo viên)
 export const tutorAvailability = mysqlTable("tutor_availability", {
   id: serial("id").primaryKey(),
   tutorId: int("tutor_id").notNull(),
@@ -574,7 +574,7 @@ export const selectTransactionSchema = createSelectSchema(transactions);
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 
-// Tutor Documents (tài liệu xác thực gia sư)
+// Tutor Documents (tài liệu xác thực giáo viên)
 export const tutorDocuments = mysqlTable("tutor_documents", {
   id: serial("id").primaryKey(),
   tutorId: int("tutor_id").notNull(), // FK → tutors.id
@@ -705,7 +705,7 @@ export const escrowPayments = mysqlTable("escrow_payments", {
   paymentId: int("payment_id").notNull().unique(), // FK → payments.id (1-1 relationship)
   enrollmentId: int("enrollment_id").notNull(), // FK → class_enrollments.id
   totalAmount: int("total_amount").notNull(), // Tổng tiền giữ (VND)
-  releasedAmount: int("released_amount").notNull().default(0), // Tiền đã giải ngân cho gia sư
+  releasedAmount: int("released_amount").notNull().default(0), // Tiền đã giải ngân cho giáo viên
   platformFee: int("platform_fee").notNull().default(0), // Tổng phí nền tảng đã thu
   commissionRate: int("commission_rate").notNull().default(15), // % phí nền tảng (15% mặc định)
   status: varchar("status", { length: 20 }).notNull().default("holding"), // holding, in_progress, completed, refunded
@@ -748,7 +748,7 @@ export const sessionRecords = mysqlTable("session_records", {
   status: varchar("status", { length: 20 }).notNull().default("scheduled"), // scheduled, completed, cancelled, missed
   tutorAttended: int("tutor_attended").notNull().default(0), // 0=chưa điểm danh, 1=có mặt
   studentAttended: int("student_attended").notNull().default(0), // 0=chưa điểm danh, 1=có mặt
-  tutorNotes: text("tutor_notes"), // Ghi chú của gia sư
+  tutorNotes: text("tutor_notes"), // Ghi chú của giáo viên
   completedAt: timestamp("completed_at"), // Thời điểm hoàn thành buổi học
   releasedAmount: int("released_amount"), // Số tiền đã giải ngân cho buổi này
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -779,7 +779,7 @@ export const selectSessionRecordSchema = createSelectSchema(sessionRecords);
 export type InsertSessionRecord = z.infer<typeof insertSessionRecordSchema>;
 export type SessionRecord = typeof sessionRecords.$inferSelect;
 
-// Wallets (ví tiền của gia sư và nền tảng)
+// Wallets (ví tiền của giáo viên và nền tảng)
 export const wallets = mysqlTable("wallets", {
   id: serial("id").primaryKey(),
   ownerId: int("owner_id").notNull(), // user_id (tutor) hoặc 0 (platform)
@@ -847,7 +847,7 @@ export const selectWalletTransactionSchema = createSelectSchema(walletTransactio
 export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
 export type WalletTransaction = typeof walletTransactions.$inferSelect;
 
-// Payout Requests (yêu cầu rút tiền của gia sư)
+// Payout Requests (yêu cầu rút tiền của giáo viên)
 export const payoutRequests = mysqlTable("payout_requests", {
   id: serial("id").primaryKey(),
   tutorId: int("tutor_id").notNull(), // FK → tutors.id
@@ -857,7 +857,7 @@ export const payoutRequests = mysqlTable("payout_requests", {
   bankAccount: varchar("bank_account", { length: 50 }).notNull(),
   bankAccountName: varchar("bank_account_name", { length: 255 }).notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, approved, rejected, completed
-  requestNote: text("request_note"), // Ghi chú từ gia sư
+  requestNote: text("request_note"), // Ghi chú từ giáo viên
   adminNote: text("admin_note"), // Ghi chú từ admin
   reviewedBy: int("reviewed_by"), // Admin user_id
   reviewedAt: timestamp("reviewed_at"),
@@ -925,7 +925,7 @@ export const selectAuditLogSchema = createSelectSchema(auditLogs);
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
-// Favorite Tutors (gia sư yêu thích của học sinh)
+// Favorite Tutors (giáo viên yêu thích của học sinh)
 export const favoriteTutors = mysqlTable("favorite_tutors", {
   id: serial("id").primaryKey(),
   studentId: int("student_id").notNull(), // FK → users.id
@@ -957,7 +957,7 @@ export const studentCredits = mysqlTable("student_credits", {
   status: varchar("status", { length: 20 }).notNull().default("active"), // active, used, expired
   expiresAt: timestamp("expires_at"), // Thời hạn sử dụng (VD: 6 tháng từ ngày tạo)
   usedForEnrollmentId: int("used_for_enrollment_id"), // FK → class_enrollments.id - lớp mới sử dụng credit
-  reason: text("reason"), // Lý do hoàn tiền (gia sư dạy không tốt, gia sư hủy, v.v.)
+  reason: text("reason"), // Lý do hoàn tiền (giáo viên dạy không tốt, giáo viên hủy, v.v.)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
 });
@@ -1011,7 +1011,7 @@ export const videoCallSessions = mysqlTable("video_call_sessions", {
   ipAddresses: text("ip_addresses"), // JSON array of IP addresses that accessed this session
   recordingUrl: varchar("recording_url", { length: 500 }), // Optional: recording URL if enabled
   notes: text("notes"), // Admin or system notes
-  provider: varchar("provider", { length: 20 }).notNull().default("jitsi"), // videolify, jitsi (for group or fallback)
+  provider: varchar("provider", { length: 20 }).notNull().default("videolify"), // videolify (default), jitsi (for group or fallback)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
 });

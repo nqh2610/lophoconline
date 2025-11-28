@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
           await storage.updateLesson(lesson.id, {
             status: 'cancelled',
             cancelledBy: 0, // 0 represents system
-            cancellationReason: 'Gia sư không phản hồi trong vòng 24 giờ. Hệ thống tự động hủy và hoàn tiền.',
+            cancellationReason: 'Giáo viên không phản hồi trong vòng 24 giờ. Hệ thống tự động hủy và hoàn tiền.',
           });
 
           // Get transaction for refund (if exists)
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
               userId: student.userId,
               type: 'cancellation',
               title: 'Lịch học đã bị hủy tự động',
-              message: `Lịch học vào ${new Date(lesson.date).toLocaleDateString('vi-VN')} đã bị hủy do gia sư không phản hồi trong 24 giờ. ${transaction ? 'Học phí sẽ được hoàn lại trong 3-5 ngày làm việc.' : ''}`,
+              message: `Lịch học vào ${new Date(lesson.date).toLocaleDateString('vi-VN')} đã bị hủy do giáo viên không phản hồi trong 24 giờ. ${transaction ? 'Học phí sẽ được hoàn lại trong 3-5 ngày làm việc.' : ''}`,
               link: `/dashboard`,
               isRead: 0,
             });

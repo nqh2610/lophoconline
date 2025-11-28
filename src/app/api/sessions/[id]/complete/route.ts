@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth';
  * POST /api/sessions/[id]/complete
  *
  * QUAN TRỌNG:
- * - Chỉ gia sư mới có thể complete session
+ * - Chỉ giáo viên mới có thể complete session
  * - CHỈ GHI NHẬN buổi học, KHÔNG tự động release escrow
  * - Admin sẽ duyệt thanh toán sau khi đủ điều kiện
  *
@@ -39,7 +39,7 @@ export async function POST(
 
     if (!tutorProfile) {
       return NextResponse.json(
-        { error: 'Chỉ gia sư mới có thể hoàn thành buổi học' },
+        { error: 'Chỉ giáo viên mới có thể hoàn thành buổi học' },
         { status: 403 }
       );
     }
@@ -120,7 +120,7 @@ export async function POST(
         userId: student.userId,
         type: 'review_request',
         title: 'Buổi học đã hoàn thành',
-        message: `Buổi học #${sessionRecord.sessionNumber} với gia sư ${tutorProfile.fullName} đã hoàn thành. ${
+        message: `Buổi học #${sessionRecord.sessionNumber} với giáo viên ${tutorProfile.fullName} đã hoàn thành. ${
           studentAttended
             ? 'Hãy đánh giá buổi học để giúp cộng đồng!'
             : 'Bạn đã vắng mặt buổi học này.'

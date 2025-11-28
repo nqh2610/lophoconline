@@ -77,7 +77,7 @@ export default function AdminTutors() {
         console.error('Error fetching tutors:', error);
         toast({
           title: 'Lỗi',
-          description: 'Không thể tải danh sách gia sư',
+          description: 'Không thể tải danh sách giáo viên',
           variant: 'destructive',
         });
       } finally {
@@ -122,7 +122,7 @@ export default function AdminTutors() {
 
       toast({
         title: "Đã phê duyệt",
-        description: `Gia sư ${tutorName} đã được phê duyệt thành công.`,
+        description: `Giáo viên ${tutorName} đã được phê duyệt thành công.`,
       });
 
       // Refresh tutors list
@@ -133,7 +133,7 @@ export default function AdminTutors() {
       console.error('Error approving tutor:', error);
       toast({
         title: 'Lỗi',
-        description: error instanceof Error ? error.message : 'Không thể phê duyệt gia sư',
+        description: error instanceof Error ? error.message : 'Không thể phê duyệt giáo viên',
         variant: 'destructive',
       });
     } finally {
@@ -178,7 +178,7 @@ export default function AdminTutors() {
 
       toast({
         title: "Đã từ chối",
-        description: `Đã từ chối hồ sơ gia sư ${rejectDialog.tutorName}.`,
+        description: `Đã từ chối hồ sơ giáo viên ${rejectDialog.tutorName}.`,
         variant: "destructive",
       });
 
@@ -194,7 +194,7 @@ export default function AdminTutors() {
       console.error('Error rejecting tutor:', error);
       toast({
         title: 'Lỗi',
-        description: error instanceof Error ? error.message : 'Không thể từ chối gia sư',
+        description: error instanceof Error ? error.message : 'Không thể từ chối giáo viên',
         variant: 'destructive',
       });
     } finally {
@@ -207,7 +207,7 @@ export default function AdminTutors() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Đang tải danh sách gia sư...</p>
+          <p className="text-muted-foreground">Đang tải danh sách giáo viên...</p>
         </div>
       </div>
     );
@@ -219,9 +219,9 @@ export default function AdminTutors() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-destructive" data-testid="text-admin-tutors-title">
-            Quản lý Gia sư
+            Quản lý Giáo viên
           </h1>
-          <p className="text-muted-foreground">Xem và quản lý tất cả gia sư trong hệ thống</p>
+          <p className="text-muted-foreground">Xem và quản lý tất cả giáo viên trong hệ thống</p>
         </div>
 
         {/* Search */}
@@ -229,7 +229,7 @@ export default function AdminTutors() {
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm gia sư..."
+              placeholder="Tìm kiếm giáo viên..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -257,7 +257,7 @@ export default function AdminTutors() {
             {pendingTutors.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Không có gia sư nào đang chờ phê duyệt
+                  Không có giáo viên nào đang chờ phê duyệt
                 </CardContent>
               </Card>
             ) : (
@@ -331,7 +331,7 @@ export default function AdminTutors() {
             {approvedTutors.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Chưa có gia sư nào được phê duyệt
+                  Chưa có giáo viên nào được phê duyệt
                 </CardContent>
               </Card>
             ) : (
@@ -387,7 +387,7 @@ export default function AdminTutors() {
             {rejectedTutors.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Không có gia sư nào bị từ chối
+                  Không có giáo viên nào bị từ chối
                 </CardContent>
               </Card>
             ) : (
@@ -442,7 +442,7 @@ export default function AdminTutors() {
         }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Từ chối hồ sơ gia sư</DialogTitle>
+              <DialogTitle>Từ chối hồ sơ giáo viên</DialogTitle>
               <DialogDescription>
                 Bạn đang từ chối hồ sơ của <strong>{rejectDialog.tutorName}</strong>.
                 Vui lòng nhập lý do từ chối (tối thiểu 10 ký tự).

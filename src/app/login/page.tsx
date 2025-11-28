@@ -119,7 +119,7 @@ export default function LoginPage() {
           {isFromTutorRegistration && (
             <Alert className="mt-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
               <AlertDescription className="text-blue-800 dark:text-blue-200">
-                <strong>Đăng ký làm gia sư:</strong> Vui lòng đăng nhập trước. Nếu chưa có tài khoản, hãy{" "}
+                <strong>Đăng ký làm giáo viên:</strong> Vui lòng đăng nhập trước. Nếu chưa có tài khoản, hãy{" "}
                 <Link href={`/signup?redirectTo=/tutor-registration`} className="underline font-semibold">
                   đăng ký tại đây
                 </Link>.

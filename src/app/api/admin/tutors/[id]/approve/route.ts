@@ -72,7 +72,7 @@ export async function POST(
     // TODO: Send email notification to tutor
     // await sendEmail({
     //   to: tutor.email,
-    //   subject: 'Hồ sơ gia sư đã được phê duyệt',
+    //   subject: 'Hồ sơ giáo viên đã được phê duyệt',
     //   body: 'Chúc mừng! Hồ sơ của bạn đã được phê duyệt...',
     // });
 

@@ -150,7 +150,7 @@ export function SearchBar() {
       'Giáo viên': 'Giáo viên',
       'Chuyên gia': 'Chuyên gia',
     };
-    return labels[occupation] || 'Gia sư';
+    return labels[occupation] || 'Giáo viên';
   };
 
   return (
@@ -165,7 +165,7 @@ export function SearchBar() {
           <Input
             ref={inputRef}
             type="search"
-            placeholder="Tìm gia sư theo tên, môn học..."
+            placeholder="Tìm giáo viên theo tên, môn học..."
             className="pl-9 pr-4"
             data-testid="input-search"
             value={searchText}
@@ -184,7 +184,7 @@ export function SearchBar() {
         <div className="absolute top-full mt-2 w-full bg-popover border rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
           <div className="p-2">
             <div className="text-xs text-muted-foreground px-2 py-1 mb-1">
-              Gợi ý gia sư
+              Gợi ý giáo viên
             </div>
             {suggestions.map((tutor, index) => (
               <button

@@ -60,7 +60,7 @@ export default function PaymentSuccessPage() {
                   Bước tiếp theo:
                 </p>
                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                  <li>Gia sư sẽ xác nhận lịch học trong vòng 24h</li>
+                  <li>Giáo viên sẽ xác nhận lịch học trong vòng 24h</li>
                   <li>Bạn sẽ nhận được thông báo qua email</li>
                   <li>Link học online sẽ được gửi trước giờ học 1 tiếng</li>
                 </ul>

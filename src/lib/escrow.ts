@@ -96,7 +96,7 @@ export async function createEscrow(params: {
 
 /**
  * Giải ngân tiền sau buổi học
- * Tự động chia: tiền gia sư + phí nền tảng
+ * Tự động chia: tiền giáo viên + phí nền tảng
  */
 export async function releaseEscrow(params: {
   sessionId: number;
@@ -206,7 +206,7 @@ export async function releaseEscrow(params: {
         })
         .where(eq(sessionRecords.id, sessionId));
 
-      // 5.3. Cập nhật wallet gia sư (pending balance)
+      // 5.3. Cập nhật wallet giáo viên (pending balance)
       const tutorWallet = await getOrCreateWallet(enrollmentData.tutorId, 'tutor');
 
       await tx

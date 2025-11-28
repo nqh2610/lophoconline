@@ -85,7 +85,7 @@ export async function POST(
           userId: student.userId,
           type: 'review_request',
           title: '✅ Buổi học thử đã hoàn thành',
-          message: `Buổi học thử với gia sư ${tutorFullName} đã hoàn thành. Bạn có muốn đăng ký học chính thức với gia sư này không?`,
+          message: `Buổi học thử với giáo viên ${tutorFullName} đã hoàn thành. Bạn có muốn đăng ký học chính thức với giáo viên này không?`,
           link: `/tutor/${tutor.id}?enroll=true`,
           isRead: 0,
         });
@@ -95,7 +95,7 @@ export async function POST(
           userId: student.userId,
           type: 'review_request',
           title: 'Buổi học đã hoàn thành',
-          message: `Buổi học với gia sư ${tutorFullName} đã hoàn thành. Hãy đánh giá để giúp các học sinh khác!`,
+          message: `Buổi học với giáo viên ${tutorFullName} đã hoàn thành. Hãy đánh giá để giúp các học sinh khác!`,
           link: `/tutor/${tutor.id}?review=true`,
           isRead: 0,
         });

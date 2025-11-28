@@ -59,8 +59,8 @@ export async function POST(
         type: 'confirmation',
         title: action === 'approve' ? 'Hồ sơ đã được phê duyệt' : 'Hồ sơ bị từ chối',
         message: action === 'approve'
-          ? 'Chúc mừng! Hồ sơ gia sư của bạn đã được phê duyệt. Bạn có thể bắt đầu nhận học sinh.'
-          : `Hồ sơ gia sư của bạn bị từ chối. Lý do: ${reason || 'Không đủ điều kiện'}. Vui lòng cập nhật thông tin và đăng ký lại.`,
+          ? 'Chúc mừng! Hồ sơ giáo viên của bạn đã được phê duyệt. Bạn có thể bắt đầu nhận học sinh.'
+          : `Hồ sơ giáo viên của bạn bị từ chối. Lý do: ${reason || 'Không đủ điều kiện'}. Vui lòng cập nhật thông tin và đăng ký lại.`,
         link: action === 'approve' ? '/tutor/dashboard' : '/tutor/profile-setup',
         isRead: 0
       });
@@ -68,7 +68,7 @@ export async function POST(
 
     return NextResponse.json({
       tutor: updatedTutor,
-      message: action === 'approve' ? 'Đã phê duyệt gia sư' : 'Đã từ chối gia sư'
+      message: action === 'approve' ? 'Đã phê duyệt giáo viên' : 'Đã từ chối giáo viên'
     }, { status: 200 });
   } catch (error) {
     console.error('Error verifying tutor:', error);

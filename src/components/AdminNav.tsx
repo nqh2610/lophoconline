@@ -23,7 +23,7 @@ const navItems = [
     icon: UserCircle,
   },
   {
-    title: "Gia sư",
+    title: "Giáo viên",
     href: "/admin/tutors",
     icon: GraduationCap,
   },

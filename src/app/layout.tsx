@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LopHoc.Online - Nền tảng kết nối gia sư",
-  description: "Kết nối gia sư và học viên chất lượng cao",
+  title: "LopHoc.Online - Nền tảng kết nối giáo viên",
+  description: "Kết nối giáo viên và học viên chất lượng cao",
 };
 
 export default function RootLayout({

@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     // In a real scenario, we would check DB for existing active payments
     // For now, we skip this check and rely on enrollment status
 
-    // 5. Lấy thông tin gia sư và môn học để tạo order info
+    // 5. Lấy thông tin giáo viên và môn học để tạo order info
     const [tutor, subject] = await Promise.all([
       storage.getTutorById(enrollment.tutorId),
       storage.getSubjectById(enrollment.subjectId),

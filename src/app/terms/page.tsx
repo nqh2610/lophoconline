@@ -31,7 +31,7 @@ export default function Terms() {
             <h2 className="text-2xl font-semibold mt-8">3. Quy định cho học viên</h2>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Đúng giờ tham gia lớp học đã đặt</li>
-              <li>Tôn trọng gia sư và các học viên khác</li>
+              <li>Tôn trọng giáo viên và các học viên khác</li>
               <li>Không ghi âm, ghi hình buổi học mà không được phép</li>
               <li>Thanh toán đầy đủ và đúng hạn</li>
               <li>Hủy lịch học trước 24 giờ nếu có việc bận</li>
@@ -39,7 +39,7 @@ export default function Terms() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold mt-8">4. Quy định cho gia sư</h2>
+            <h2 className="text-2xl font-semibold mt-8">4. Quy định cho giáo viên</h2>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Cung cấp thông tin bằng cấp và kinh nghiệm chính xác</li>
               <li>Đúng giờ và chuẩn bị kỹ lưỡng cho mỗi buổi học</li>
@@ -57,7 +57,7 @@ export default function Terms() {
               <li>Thanh toán qua QR code ngân hàng hoặc ví điện tử</li>
               <li>Hoàn tiền 100% nếu hủy trước 24 giờ</li>
               <li>Hoàn tiền 50% nếu hủy trong vòng 24 giờ</li>
-              <li>Hoàn tiền 100% nếu gia sư không tham gia buổi học</li>
+              <li>Hoàn tiền 100% nếu giáo viên không tham gia buổi học</li>
               <li>Không hoàn tiền nếu học viên vắng mặt không báo trước</li>
             </ul>
           </section>
@@ -91,9 +91,9 @@ export default function Terms() {
               LopHoc.Online là nền tảng kết nối. Chúng tôi không chịu trách nhiệm về:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Chất lượng giảng dạy của gia sư (tuy nhiên chúng tôi có chính sách đảm bảo)</li>
+              <li>Chất lượng giảng dạy của giáo viên (tuy nhiên chúng tôi có chính sách đảm bảo)</li>
               <li>Kết quả học tập của học viên</li>
-              <li>Tranh chấp giữa gia sư và học viên (chúng tôi sẽ hỗ trợ hòa giải)</li>
+              <li>Tranh chấp giữa giáo viên và học viên (chúng tôi sẽ hỗ trợ hòa giải)</li>
               <li>Sự cố kỹ thuật ngoài tầm kiểm soát</li>
             </ul>
           </section>

@@ -243,7 +243,7 @@ export default function TutorDetail() {
 
     return {
       id: data.id.toString(),
-      name: data.fullName || 'Gia sư', // ✅ Provide fallback for null/undefined
+      name: data.fullName || 'Giáo viên', // ✅ Provide fallback for null/undefined
       avatar: data.avatar || tutor1Avatar,
       subjects,
       rating: (data.rating || 0) / 10,
@@ -294,7 +294,7 @@ export default function TutorDetail() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg text-muted-foreground">Đang tải thông tin gia sư...</p>
+            <p className="text-lg text-muted-foreground">Đang tải thông tin giáo viên...</p>
           </div>
         </div>
       </div>
@@ -308,10 +308,10 @@ export default function TutorDetail() {
           <Card className="p-8">
             <div className="flex flex-col items-center justify-center py-12">
               <AlertCircle className="h-16 w-16 text-destructive mb-4" />
-              <h2 className="text-2xl font-bold mb-2">Không tìm thấy gia sư</h2>
-              <p className="text-muted-foreground mb-6">{error || 'Gia sư này không tồn tại hoặc đã bị xóa.'}</p>
+              <h2 className="text-2xl font-bold mb-2">Không tìm thấy giáo viên</h2>
+              <p className="text-muted-foreground mb-6">{error || 'Giáo viên này không tồn tại hoặc đã bị xóa.'}</p>
               <Button onClick={() => window.location.href = '/tutors'}>
-                Quay lại danh sách gia sư
+                Quay lại danh sách giáo viên
               </Button>
             </div>
           </Card>
@@ -345,7 +345,7 @@ export default function TutorDetail() {
                     : tutor.occupation === 'student' ? 'Sinh viên'
                     : tutor.occupation === 'teacher' ? 'Giáo viên'
                     : tutor.occupation === 'professional' ? 'Chuyên gia'
-                    : 'Gia sư'}
+                    : 'Giáo viên'}
                 </Badge>
               </div>
 
@@ -605,7 +605,7 @@ export default function TutorDetail() {
                             {isBusy && (
                               <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                                 <AlertCircle className="h-3 w-3" />
-                                Ca này đã có học viên đăng ký. Bạn có thể chọn ca khác hoặc liên hệ gia sư để đề xuất thời gian mới.
+                                Ca này đã có học viên đăng ký. Bạn có thể chọn ca khác hoặc liên hệ giáo viên để đề xuất thời gian mới.
                               </p>
                             )}
                           </div>
@@ -644,8 +644,8 @@ export default function TutorDetail() {
                   {tutor.availableSlotDetails.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
                       <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p className="font-medium mb-1">Gia sư chưa đăng ký ca dạy nào</p>
-                      <p className="text-sm">Vui lòng liên hệ trực tiếp với gia sư để sắp xếp lịch học</p>
+                      <p className="font-medium mb-1">Giáo viên chưa đăng ký ca dạy nào</p>
+                      <p className="text-sm">Vui lòng liên hệ trực tiếp với giáo viên để sắp xếp lịch học</p>
                     </div>
                   )}
                 </div>
@@ -670,7 +670,7 @@ export default function TutorDetail() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-green-600 mt-0.5">•</span>
-                      <span>Bạn có thể đề xuất thời gian khác qua tin nhắn với gia sư nếu các ca hiện tại không phù hợp</span>
+                      <span>Bạn có thể đề xuất thời gian khác qua tin nhắn với giáo viên nếu các ca hiện tại không phù hợp</span>
                     </li>
                   </ul>
                 </div>

@@ -104,7 +104,7 @@ export default function TutorDashboardNew() {
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Không tìm thấy hồ sơ gia sư. Vui lòng hoàn thành đăng ký gia sư.
+            Không tìm thấy hồ sơ giáo viên. Vui lòng hoàn thành đăng ký giáo viên.
           </AlertDescription>
         </Alert>
       </div>
@@ -116,7 +116,7 @@ export default function TutorDashboardNew() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard Gia Sư</h1>
+          <h1 className="text-3xl font-bold mb-2">Dashboard Giáo Viên</h1>
           <p className="text-muted-foreground">
             Chào mừng trở lại, {tutor.fullName}
           </p>

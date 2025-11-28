@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Dashboard tài chính của gia sư
+ * Dashboard tài chính của giáo viên
  * Hiển thị:
  * - Tổng quan: Số dư ví, doanh thu, pending
  * - Danh sách lớp với thông tin buổi học và tiền

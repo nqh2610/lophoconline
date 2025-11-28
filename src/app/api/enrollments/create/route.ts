@@ -9,7 +9,7 @@ import { z } from 'zod';
  * POST /api/enrollments/create
  *
  * Flow:
- * 1. Student chọn gia sư, môn học, số buổi
+ * 1. Student chọn giáo viên, môn học, số buổi
  * 2. Tạo enrollment (status = 'pending')
  * 3. Redirect sang payment gateway
  * 4. Sau khi thanh toán thành công → status = 'active'
@@ -57,14 +57,14 @@ export async function POST(request: NextRequest) {
 
     if (!tutor) {
       return NextResponse.json(
-        { error: 'Gia sư không tồn tại' },
+        { error: 'Giáo viên không tồn tại' },
         { status: 404 }
       );
     }
 
     if (tutor.verificationStatus !== 'verified') {
       return NextResponse.json(
-        { error: 'Gia sư chưa được xác minh' },
+        { error: 'Giáo viên chưa được xác minh' },
         { status: 400 }
       );
     }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       notes: validatedData.notes || null,
     });
 
-    // 9. Tạo notification cho gia sư
+    // 9. Tạo notification cho giáo viên
     await storage.createNotification({
       userId: tutor.userId,
       type: 'booking',

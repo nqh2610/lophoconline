@@ -182,7 +182,7 @@ export function TutorCard({
                         : occupation === 'student' ? 'Sinh viên'
                         : occupation === 'teacher' ? 'Giáo viên'
                         : occupation === 'professional' ? 'Chuyên gia'
-                        : 'Gia sư'}
+                        : 'Giáo viên'}
                     </span>
                   </Badge>
                 )}

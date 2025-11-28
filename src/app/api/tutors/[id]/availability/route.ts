@@ -15,7 +15,7 @@ export async function GET(
       );
     }
 
-    // Get tutor time slots from storage (ca dạy gia sư đã tạo)
+    // Get tutor time slots from storage (ca dạy giáo viên đã tạo)
     const timeSlots = await storage.getTutorTimeSlots(parseInt(tutorId));
 
     // Filter only available time slots

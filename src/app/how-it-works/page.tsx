@@ -4,18 +4,18 @@ export default function HowItWorks() {
   const steps = [
     {
       icon: Search,
-      title: "1. Tìm kiếm gia sư",
-      description: "Sử dụng bộ lọc để tìm gia sư phù hợp với môn học, cấp lớp và ngân sách của bạn. Xem hồ sơ chi tiết, đánh giá và video giới thiệu của gia sư."
+      title: "1. Tìm kiếm giáo viên",
+      description: "Sử dụng bộ lọc để tìm giáo viên phù hợp với môn học, cấp lớp và ngân sách của bạn. Xem hồ sơ chi tiết, đánh giá và video giới thiệu của giáo viên."
     },
     {
       icon: UserCheck,
       title: "2. Đặt lịch học thử",
-      description: "Chọn thời gian phù hợp và đặt buổi học thử miễn phí 30 phút. Trò chuyện với gia sư để hiểu rõ phương pháp giảng dạy và đánh giá sự phù hợp."
+      description: "Chọn thời gian phù hợp và đặt buổi học thử miễn phí 30 phút. Trò chuyện với giáo viên để hiểu rõ phương pháp giảng dạy và đánh giá sự phù hợp."
     },
     {
       icon: Video,
       title: "3. Bắt đầu học",
-      description: "Tham gia lớp học trực tuyến qua video call chất lượng cao. Tương tác trực tiếp với gia sư, chia sẻ màn hình và tài liệu học tập."
+      description: "Tham gia lớp học trực tuyến qua video call chất lượng cao. Tương tác trực tiếp với giáo viên, chia sẻ màn hình và tài liệu học tập."
     },
     {
       icon: CreditCard,
@@ -30,7 +30,7 @@ export default function HowItWorks() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Cách thức hoạt động</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Chỉ 4 bước đơn giản để bắt đầu học với gia sư chất lượng cao
+            Chỉ 4 bước đơn giản để bắt đầu học với giáo viên chất lượng cao
           </p>
         </div>
 

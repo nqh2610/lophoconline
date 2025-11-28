@@ -130,12 +130,12 @@ export default function HomePage() {
             <FeatureCard
               icon={Video}
               title="Học trực tuyến"
-              description="Lớp học video call chất lượng cao, tương tác trực tiếp với gia sư"
+              description="Lớp học video call chất lượng cao, tương tác trực tiếp với giáo viên"
             />
             <FeatureCard
               icon={Shield}
-              title="Gia sư đã xác thực"
-              description="Tất cả gia sư đều được kiểm tra bằng cấp và kinh nghiệm"
+              title="Giáo viên đã xác thực"
+              description="Tất cả giáo viên đều được kiểm tra bằng cấp và kinh nghiệm"
             />
             <FeatureCard
               icon={Clock}
@@ -171,7 +171,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-3xl font-bold mb-1">5,000+</div>
-              <div className="text-sm text-muted-foreground">Gia sư</div>
+              <div className="text-sm text-muted-foreground">Giáo viên</div>
             </div>
             <div className="text-center">
               <div className="flex justify-center mb-3">
@@ -199,9 +199,9 @@ export default function HomePage() {
       <section id="tutors-section" className="py-8 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Gia sư nổi bật</h2>
+            <h2 className="text-3xl font-bold mb-4">Giáo viên nổi bật</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Khám phá các gia sư hàng đầu với kinh nghiệm và chuyên môn được xác thực
+              Khám phá các giáo viên hàng đầu với kinh nghiệm và chuyên môn được xác thực
             </p>
           </div>
 
@@ -216,7 +216,7 @@ export default function HomePage() {
               <div className="mt-12 flex justify-center">
                 <Link href="/tutors" prefetch={true}>
                   <Button size="lg" data-testid="button-view-all-tutors">
-                    Xem tất cả gia sư
+                    Xem tất cả giáo viên
                   </Button>
                 </Link>
               </div>

@@ -178,13 +178,13 @@ export async function GET(request: NextRequest) {
           userId: student.userId,
           type: 'payment',
           title: 'Thanh toán thành công',
-          message: `Bạn đã thanh toán thành công ${paymentData.amount.toLocaleString('vi-VN')}đ cho lớp học. Gia sư sẽ liên hệ bạn sớm để bắt đầu học.`,
+          message: `Bạn đã thanh toán thành công ${paymentData.amount.toLocaleString('vi-VN')}đ cho lớp học. Giáo viên sẽ liên hệ bạn sớm để bắt đầu học.`,
           link: `/dashboard/enrollments/${paymentData.enrollmentId}`,
           isRead: 0,
         });
       }
 
-      // 6.6. Tạo notification cho gia sư
+      // 6.6. Tạo notification cho giáo viên
       if (tutor) {
         await storage.createNotification({
           userId: tutor.userId,

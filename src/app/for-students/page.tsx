@@ -5,8 +5,8 @@ export default function ForStudents() {
   const features = [
     {
       icon: GraduationCap,
-      title: "Gia sư chất lượng",
-      description: "Hơn 5,000 gia sư được xác thực, có kinh nghiệm từ 1-10 năm"
+      title: "Giáo viên chất lượng",
+      description: "Hơn 5,000 giáo viên được xác thực, có kinh nghiệm từ 1-10 năm"
     },
     {
       icon: Video,
@@ -37,13 +37,13 @@ export default function ForStudents() {
       <section className="py-20 bg-gradient-to-br from-primary/10 to-primary/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">Học với gia sư giỏi nhất</h1>
+            <h1 className="text-5xl font-bold mb-6">Học với giáo viên giỏi nhất</h1>
             <p className="text-xl text-muted-foreground mb-8">
               Nâng cao kiến thức, cải thiện điểm số và đạt mục tiêu học tập của bạn
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-lg px-8">
-                Tìm gia sư ngay
+                Tìm giáo viên ngay
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8">
                 Học thử miễn phí

@@ -29,7 +29,7 @@ type Achievement = {
 const achievements: Achievement[] = [
   {
     id: '1',
-    title: 'Gia sư mới',
+    title: 'Giáo viên mới',
     description: 'Hoàn thành buổi học đầu tiên',
     icon: Award,
     unlocked: true

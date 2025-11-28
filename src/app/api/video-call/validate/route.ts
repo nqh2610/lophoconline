@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         userName,
         scheduledStartTime: sessionData.scheduledStartTime,
         scheduledEndTime: sessionData.scheduledEndTime,
-        provider: sessionData.provider || 'jitsi'
+        provider: sessionData.provider || 'videolify'
       }
     });
 

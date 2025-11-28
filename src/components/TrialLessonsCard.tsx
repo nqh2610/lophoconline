@@ -208,7 +208,7 @@ export function TrialLessonsCard() {
             <div className="text-center py-8 text-gray-500">
               <p>Chưa có buổi học thử nào</p>
               <Link href="/tutors">
-                <Button variant="link" className="mt-2">Tìm gia sư để đăng ký học thử</Button>
+                <Button variant="link" className="mt-2">Tìm giáo viên để đăng ký học thử</Button>
               </Link>
             </div>
           ) : (
@@ -227,7 +227,7 @@ export function TrialLessonsCard() {
                       />
                     )}
                     <div>
-                      <h4 className="font-medium">{lesson.tutorName || 'Gia sư'}</h4>
+                      <h4 className="font-medium">{lesson.tutorName || 'Giáo viên'}</h4>
                       <p className="text-sm text-gray-600">{lesson.subject}</p>
                       {lesson.tutorRating && (
                         <div className="flex items-center gap-1 text-sm text-yellow-600 mt-1">
@@ -255,7 +255,7 @@ export function TrialLessonsCard() {
 
                   {lesson.status === 'pending' && (
                     <p className="text-yellow-600 text-sm">
-                      ⏳ Đang chờ gia sư xác nhận và chọn lịch học cụ thể
+                      ⏳ Đang chờ giáo viên xác nhận và chọn lịch học cụ thể
                     </p>
                   )}
 

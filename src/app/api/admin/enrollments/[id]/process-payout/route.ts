@@ -15,7 +15,7 @@ import { z } from 'zod';
  * - Chỉ admin mới được phép
  * - Tính tiền dựa trên số buổi học THỰC TẾ đã hoàn thành
  * - Tự động tính phí hoa hồng cho nền tảng
- * - Chia tiền cho gia sư
+ * - Chia tiền cho giáo viên
  * - Ghi đầy đủ audit logs
  *
  * Flow:
@@ -25,7 +25,7 @@ import { z } from 'zod';
  * 4. Hệ thống tự động:
  *    - Tính số tiền dựa trên buổi thực tế
  *    - Trừ phí nền tảng (commission_rate%)
- *    - Cộng vào wallet gia sư (pending hoặc available)
+ *    - Cộng vào wallet giáo viên (pending hoặc available)
  *    - Cộng vào wallet platform
  *    - Ghi wallet transactions
  *    - Cập nhật escrow status
@@ -125,7 +125,7 @@ export async function POST(
       );
     }
 
-    // Tính phí nền tảng và tiền gia sư
+    // Tính phí nền tảng và tiền giáo viên
     const commissionRate = escrow.commissionRate || 15;
     const platformFee = Math.floor((amountToRelease * commissionRate) / 100);
     const tutorAmount = amountToRelease - platformFee;
@@ -145,7 +145,7 @@ export async function POST(
         })
         .where(eq(escrowPayments.id, escrow.id));
 
-      // 7.2. Lấy hoặc tạo wallet gia sư
+      // 7.2. Lấy hoặc tạo wallet giáo viên
       let tutorWallet = await storage.getWalletByOwner(enrollment.tutorId, 'tutor');
 
       if (!tutorWallet) {
@@ -155,7 +155,7 @@ export async function POST(
         });
       }
 
-      // 7.3. Cập nhật wallet gia sư
+      // 7.3. Cập nhật wallet giáo viên
       if (releaseToAvailable) {
         // Thêm vào available ngay (admin tin tưởng)
         await tx
@@ -239,7 +239,7 @@ export async function POST(
       }
     });
 
-    // 8. Gửi notification cho gia sư
+    // 8. Gửi notification cho giáo viên
     const tutor = await storage.getTutorById(enrollment.tutorId);
 
     if (tutor) {

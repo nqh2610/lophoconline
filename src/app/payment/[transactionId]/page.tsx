@@ -145,7 +145,7 @@ export default function PaymentPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span>Hoàn tiền 100% nếu gia sư từ chối</span>
+                    <span>Hoàn tiền 100% nếu giáo viên từ chối</span>
                   </div>
                 </div>
 
@@ -172,7 +172,7 @@ export default function PaymentPage() {
                   <div className="flex items-start gap-2">
                     <User className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Gia sư</p>
+                      <p className="text-sm font-medium">Giáo viên</p>
                       <p className="text-sm text-muted-foreground">
                         {mockTransaction.lessonDetails.tutorName}
                       </p>

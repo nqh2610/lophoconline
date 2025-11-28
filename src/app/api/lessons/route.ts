@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // ✅ VALIDATION: Check required fields
     if (!tutorId) {
       return NextResponse.json(
-        { error: "Thiếu thông tin gia sư" },
+        { error: "Thiếu thông tin giáo viên" },
         { status: 400 }
       );
     }
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       ]);
 
       if (!tutor) {
-        return NextResponse.json({ error: "Không tìm thấy gia sư" }, { status: 404 });
+        return NextResponse.json({ error: "Không tìm thấy giáo viên" }, { status: 404 });
       }
 
       if (!availability) {
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       ]);
 
       if (!tutorUser) {
-        return NextResponse.json({ error: "Không tìm thấy tài khoản gia sư" }, { status: 404 });
+        return NextResponse.json({ error: "Không tìm thấy tài khoản giáo viên" }, { status: 404 });
       }
 
     } catch (dbError) {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get tutor's full name from users table (after 3NF refactoring)
-    const tutorFullName = tutorUser.fullName || tutorUser.username || "Gia sư";
+    const tutorFullName = tutorUser.fullName || tutorUser.username || "Giáo viên";
 
     // ✅ FIX: Ensure student profile exists BEFORE validation
     if (!student && studentUser) {
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
           userId: studentUser.id,
           type: 'booking',
           title: '✅ Đã gửi yêu cầu học thử',
-          message: `Yêu cầu học thử với ${tutorFullName} đã được gửi. Gia sư sẽ liên hệ với bạn để xác nhận lịch học.`,
+          message: `Yêu cầu học thử với ${tutorFullName} đã được gửi. Giáo viên sẽ liên hệ với bạn để xác nhận lịch học.`,
           link: `/student/lessons/${trialBooking.id}`,
           isRead: 0,
         }),
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         lesson: trialBooking, // Return trial booking as lesson for backward compatibility
-        message: 'Yêu cầu học thử đã được gửi! Gia sư sẽ liên hệ với bạn sớm nhất.',
+        message: 'Yêu cầu học thử đã được gửi! Giáo viên sẽ liên hệ với bạn sớm nhất.',
       }, { status: 201 });
 
     } else {
@@ -393,7 +393,7 @@ export async function POST(request: NextRequest) {
           userId: parseInt(session.user.id),
           type: 'booking',
           title: '✅ Đã gửi yêu cầu đăng ký',
-          message: `Yêu cầu đăng ký gói ${packageMonths} tháng (${totalSessions} buổi) với ${tutorFullName} đã được gửi. Bạn sẽ nhận được thông báo về số tiền cần thanh toán sau khi gia sư xác nhận.`,
+          message: `Yêu cầu đăng ký gói ${packageMonths} tháng (${totalSessions} buổi) với ${tutorFullName} đã được gửi. Bạn sẽ nhận được thông báo về số tiền cần thanh toán sau khi giáo viên xác nhận.`,
           link: `/student/enrollments/${enrollment.id}`,
           isRead: 0,
         }),
@@ -423,7 +423,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         enrollment,
-        message: `Đã gửi yêu cầu đăng ký gói ${packageMonths} tháng (${totalSessions} buổi)! Gia sư sẽ xác nhận sớm nhất.`,
+        message: `Đã gửi yêu cầu đăng ký gói ${packageMonths} tháng (${totalSessions} buổi)! Giáo viên sẽ xác nhận sớm nhất.`,
       }, { status: 201 });
     }
 

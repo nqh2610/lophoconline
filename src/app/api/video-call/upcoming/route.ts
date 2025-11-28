@@ -65,10 +65,11 @@ export async function GET(request: NextRequest) {
     if (statusFilter) {
       conditions.push(eq(videoCallSessions.status, statusFilter));
     } else {
-      // Default: show only pending and active sessions (not completed or expired)
+      // Default: show pending, scheduled, and active sessions (not completed or expired)
       conditions.push(
         or(
           eq(videoCallSessions.status, 'pending'),
+          eq(videoCallSessions.status, 'scheduled'),
           eq(videoCallSessions.status, 'active')
         )
       );
@@ -226,7 +227,7 @@ export async function GET(request: NextRequest) {
 
     // 6. Separate into categories for better UX
     const upcomingSessions = enrichedSessions.filter(
-      (s) => new Date(s.scheduledStartTime) > now && s.status === 'pending'
+      (s) => new Date(s.scheduledStartTime) > now && (s.status === 'pending' || s.status === 'scheduled')
     );
 
     const activeSessions = enrichedSessions.filter(
@@ -234,7 +235,7 @@ export async function GET(request: NextRequest) {
     );
 
     const joinableSoon = enrichedSessions.filter(
-      (s) => s.canJoinNow && s.status === 'pending'
+      (s) => s.canJoinNow && (s.status === 'pending' || s.status === 'scheduled')
     );
 
     // 7. Return response

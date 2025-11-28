@@ -51,7 +51,7 @@ export function Navbar() {
         <Link href="/tutor-registration">
           <Button variant="ghost" size="sm" className="hidden lg:flex gap-2" data-testid="button-edit-tutor">
             <Edit className="h-4 w-4" />
-            Sửa thông tin gia sư
+            Sửa thông tin giáo viên
           </Button>
         </Link>
       );
@@ -61,7 +61,7 @@ export function Navbar() {
     return (
       <Link href="/tutor-registration">
         <Button variant="ghost" size="sm" className="hidden lg:flex" data-testid="button-become-tutor">
-          Trở thành gia sư
+          Trở thành giáo viên
         </Button>
       </Link>
     );
@@ -114,7 +114,7 @@ export function Navbar() {
                       <Link href="/tutor/dashboard">
                         <DropdownMenuItem data-testid="menu-tutor-dashboard">
                           <GraduationCap className="h-4 w-4 mr-2" />
-                          Dashboard gia sư
+                          Dashboard giáo viên
                         </DropdownMenuItem>
                       </Link>
                     )}

@@ -177,7 +177,7 @@ export default function MyLessonsPage() {
               </Avatar>
               <div>
                 <CardTitle className="text-lg">
-                  {lesson.tutor?.fullName || 'Gia sư'}
+                  {lesson.tutor?.fullName || 'Giáo viên'}
                 </CardTitle>
                 <CardDescription className="flex items-center gap-2">
                   {lesson.tutor?.rating && (
@@ -380,7 +380,7 @@ export default function MyLessonsPage() {
                     </p>
                     {status === 'all' && (
                       <Link href="/tutors">
-                        <Button>Tìm gia sư ngay</Button>
+                        <Button>Tìm giáo viên ngay</Button>
                       </Link>
                     )}
                   </CardContent>

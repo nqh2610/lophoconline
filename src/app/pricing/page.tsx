@@ -10,7 +10,7 @@ export default function Pricing() {
       period: "/giờ",
       description: "Phù hợp cho học sinh tiểu học và THCS",
       features: [
-        "Gia sư sinh viên có kinh nghiệm",
+        "Giáo viên sinh viên có kinh nghiệm",
         "Học 1-1 trực tuyến",
         "Tài liệu học tập cơ bản",
         "Hỗ trợ qua chat",
@@ -23,7 +23,7 @@ export default function Pricing() {
       period: "/giờ",
       description: "Phù hợp cho học sinh THPT và luyện thi",
       features: [
-        "Gia sư giáo viên chuyên nghiệp",
+        "Giáo viên giảng viên chuyên nghiệp",
         "Học 1-1 hoặc nhóm nhỏ",
         "Tài liệu học tập chuyên sâu",
         "Đề thi và bài tập nâng cao",
@@ -38,7 +38,7 @@ export default function Pricing() {
       period: "/giờ",
       description: "Phù hợp cho IELTS, TOEFL, SAT và các kỳ thi quốc tế",
       features: [
-        "Gia sư có chứng chỉ quốc tế",
+        "Giáo viên có chứng chỉ quốc tế",
         "Lộ trình học cá nhân hóa",
         "Tài liệu độc quyền cao cấp",
         "Mock test và chấm chữa chi tiết",

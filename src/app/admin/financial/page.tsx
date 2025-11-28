@@ -169,7 +169,7 @@ export default function AdminFinancialDashboard() {
   };
 
   const handleApprovePayoutRequest = async (payoutRequestId: number) => {
-    if (!confirm('Xác nhận đã chuyển tiền cho gia sư?')) return;
+    if (!confirm('Xác nhận đã chuyển tiền cho giáo viên?')) return;
 
     try {
       setProcessing(true);
@@ -396,7 +396,7 @@ export default function AdminFinancialDashboard() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Học viên</TableHead>
-                      <TableHead>Gia sư</TableHead>
+                      <TableHead>Giáo viên</TableHead>
                       <TableHead>Môn học</TableHead>
                       <TableHead>Buổi</TableHead>
                       <TableHead className="text-right">Đã trả</TableHead>
@@ -570,7 +570,7 @@ export default function AdminFinancialDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Yêu cầu rút tiền</CardTitle>
-              <CardDescription>Các yêu cầu rút tiền từ gia sư</CardDescription>
+              <CardDescription>Các yêu cầu rút tiền từ giáo viên</CardDescription>
             </CardHeader>
             <CardContent>
               {data.pendingPayouts.length === 0 ? (

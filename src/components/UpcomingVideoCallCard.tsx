@@ -132,40 +132,20 @@ export function UpcomingVideoCallsCard() {
     try {
       console.log('🚀 [UpcomingVideoCallCard] Joining video call:', accessToken);
 
-      // Call API to get Jitsi URL
-      const response = await fetch('/api/video-call/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken }),
+      // ✅ Navigate to prejoin page first (allows camera/mic setup before joining)
+      const prejoinUrl = `/prejoin-videolify-v2?accessToken=${accessToken}`;
+      console.log('✅ [UpcomingVideoCallCard] Opening prejoin page:', prejoinUrl);
+      window.open(prejoinUrl, '_blank', 'noopener,noreferrer');
+
+      toast({
+        title: 'Đã mở video call',
+        description: 'Cửa sổ cài đặt video call đã mở trong tab mới',
       });
 
-      const data = await response.json();
-      console.log('📥 [UpcomingVideoCallCard] API Response:', data);
-
-      if (!response.ok || !data.success) {
-        toast({
-          title: 'Lỗi',
-          description: data.error || 'Không thể vào lớp',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // ✅ Open Jitsi URL directly in new tab (STABLE APPROACH)
-      if (data.jitsiUrl) {
-        console.log('✅ [UpcomingVideoCallCard] Opening Jitsi in new tab');
-        window.open(data.jitsiUrl, '_blank', 'noopener,noreferrer');
-
-        toast({
-          title: 'Đã mở video call',
-          description: 'Video call đã mở trong tab mới',
-        });
-
-        // Refresh session list
-        setTimeout(() => {
-          fetchUpcomingSessions();
-        }, 1000);
-      }
+      // Refresh session list
+      setTimeout(() => {
+        fetchUpcomingSessions();
+      }, 1000);
     } catch (error) {
       console.error('❌ Error joining video call:', error);
       toast({

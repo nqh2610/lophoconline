@@ -28,7 +28,7 @@ export default function Privacy() {
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Cung cấp và cải thiện dịch vụ</li>
-              <li>Kết nối bạn với gia sư phù hợp</li>
+              <li>Kết nối bạn với giáo viên phù hợp</li>
               <li>Xử lý thanh toán và giao dịch</li>
               <li>Gửi thông báo về lịch học và cập nhật</li>
               <li>Hỗ trợ khách hàng và giải đáp thắc mắc</li>
@@ -42,7 +42,7 @@ export default function Privacy() {
               Chúng tôi chỉ chia sẻ thông tin của bạn với:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Gia sư được chọn (chỉ thông tin cần thiết để liên lạc và giảng dạy)</li>
+              <li>Giáo viên được chọn (chỉ thông tin cần thiết để liên lạc và giảng dạy)</li>
               <li>Đối tác thanh toán (để xử lý giao dịch)</li>
               <li>Cơ quan pháp luật (khi có yêu cầu hợp pháp)</li>
             </ul>

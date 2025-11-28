@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
         const amountForCompletedSessions =
           enrollment.pricePerSession * completedSessionsList.length;
 
-        // Số tiền đã được giải ngân cho gia sư (không thể hoàn lại)
+        // Số tiền đã được giải ngân cho giáo viên (không thể hoàn lại)
         const amountReleased = escrowInfo ? escrowInfo.releasedAmount : 0;
 
         // Số tiền có thể hoàn lại nếu hủy lớp
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
           financial: {
             amountPaid, // Tổng tiền đã trả
             amountForCompletedSessions, // Giá trị buổi đã học
-            amountReleased, // Tiền đã trả cho gia sư
+            amountReleased, // Tiền đã trả cho giáo viên
             refundableAmount, // Tiền có thể hoàn lại nếu hủy
             commissionRate,
           },

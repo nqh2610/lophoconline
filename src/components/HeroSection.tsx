@@ -11,10 +11,10 @@ export function HeroSection() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" data-testid="text-hero-title">
-            Kết nối với <span className="text-primary whitespace-nowrap">gia sư chất lượng</span>
+            Kết nối với <span className="text-primary whitespace-nowrap">giáo viên chất lượng</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto" data-testid="text-hero-subtitle">
-            Nền tảng học trực tuyến tin cậy với hơn <strong className="text-foreground">5,000+ gia sư</strong> đã được xác thực.
+            Nền tảng học trực tuyến tin cậy với hơn <strong className="text-foreground">5,000+ giáo viên</strong> đã được xác thực.
             Học thử miễn phí, thanh toán an toàn, hoàn tiền nếu không hài lòng.
           </p>
 
@@ -25,7 +25,7 @@ export function HeroSection() {
                 <CheckCircle2 className="h-5 w-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-sm">Gia sư đã xác thực</p>
+                <p className="font-semibold text-sm">Giáo viên đã xác thực</p>
                 <p className="text-xs text-muted-foreground">100% có bằng cấp</p>
               </div>
             </div>
@@ -55,13 +55,13 @@ export function HeroSection() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/tutors">
               <Button size="lg" className="h-12 px-8 text-base gap-2" data-testid="button-find-tutor">
-                Tìm gia sư ngay
+                Tìm giáo viên ngay
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/tutor-registration">
               <Button size="lg" variant="outline" className="h-12 px-8 text-base" data-testid="button-become-tutor">
-                Trở thành gia sư
+                Trở thành giáo viên
               </Button>
             </Link>
           </div>

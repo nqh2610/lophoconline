@@ -53,7 +53,7 @@ export async function POST(
     await storage.createNotification({
       userId: review.studentId,
       type: 'review_received',
-      title: 'Gia sư đã phản hồi đánh giá của bạn',
+      title: 'Giáo viên đã phản hồi đánh giá của bạn',
       message: `${tutor.fullName} đã phản hồi đánh giá của bạn`,
       link: `/dashboard?tab=reviews`,
       isRead: 0

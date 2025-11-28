@@ -1,5 +1,5 @@
 /**
- * API: Dashboard tài chính của gia sư
+ * API: Dashboard tài chính của giáo viên
  * GET /api/tutor/dashboard/financial
  *
  * Trả về:
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. Lấy thông tin ví của gia sư
+    // 3. Lấy thông tin ví của giáo viên
     let wallet = await db
       .select()
       .from(wallets)
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     const tutorWallet = wallet[0];
 
-    // 4. Lấy danh sách tất cả các lớp của gia sư (active, completed)
+    // 4. Lấy danh sách tất cả các lớp của giáo viên (active, completed)
     const enrollments = await db
       .select({
         enrollmentId: classEnrollments.id,

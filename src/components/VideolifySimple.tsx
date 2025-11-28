@@ -446,7 +446,7 @@ export function VideolifyCall({
       {/* User Info */}
       <div className="absolute top-4 left-4 bg-black/50 px-4 py-2 rounded-lg">
         <p className="text-white font-semibold">{userDisplayName}</p>
-        <p className="text-gray-300 text-sm">{role === 'tutor' ? 'Gia sư' : 'Học viên'}</p>
+        <p className="text-gray-300 text-sm">{role === 'tutor' ? 'Giáo viên' : 'Học viên'}</p>
       </div>
     </div>
   );

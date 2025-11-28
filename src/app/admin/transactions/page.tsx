@@ -193,7 +193,7 @@ export default function AdminTransactions() {
                         <span className="font-medium">{tx.student}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Gia sư:</span>{' '}
+                        <span className="text-muted-foreground">Giáo viên:</span>{' '}
                         <span className="font-medium">{tx.tutor}</span>
                       </div>
                       <div>

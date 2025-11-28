@@ -4,7 +4,7 @@
  *
  * Trả về:
  * - Danh sách tất cả enrollments với thông tin chi tiết
- * - Thông tin gia sư và học viên
+ * - Thông tin giáo viên và học viên
  * - Trạng thái thanh toán, escrow
  * - Buổi học đã hoàn thành
  * - Các yêu cầu cần xử lý (refund, payout)
@@ -350,7 +350,7 @@ export async function GET(request: NextRequest) {
           totalEnrollments: enrollmentDetails.length,
           totalRevenue, // Tổng doanh thu
           totalPlatformFee, // Hoa hồng nền tảng đã thu
-          totalPaidToTutors, // Đã trả cho gia sư
+          totalPaidToTutors, // Đã trả cho giáo viên
           totalPendingRelease, // Đang giữ trong escrow
           enrollmentsEligibleForPayout, // Số lớp đủ điều kiện thanh toán
           pendingPayoutRequests: pendingPayouts.length, // Số yêu cầu rút tiền chờ duyệt

@@ -72,7 +72,7 @@ const StatusBadge = ({ status, cancelledBy }: { status: string; cancelledBy?: st
     cancelled: {
       variant: "destructive" as const,
       icon: XCircle,
-      text: cancelledBy === 'tutor' ? "Gia sư đã từ chối" : "Đã hủy",
+      text: cancelledBy === 'tutor' ? "Giáo viên đã từ chối" : "Đã hủy",
       className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
     },
   };
@@ -286,7 +286,7 @@ export default function StudentLessonsList({ studentId }: StudentLessonsListProp
                         <Alert>
                           <Clock className="h-4 w-4" />
                           <AlertDescription>
-                            Đang chờ gia sư xác nhận. Bạn sẽ nhận được thông báo khi gia sư phản hồi.
+                            Đang chờ giáo viên xác nhận. Bạn sẽ nhận được thông báo khi giáo viên phản hồi.
                           </AlertDescription>
                         </Alert>
                       )}
@@ -343,7 +343,7 @@ export default function StudentLessonsList({ studentId }: StudentLessonsListProp
                             onClick={() => window.location.href = `/tutor/${lesson.tutor!.id}`}
                           >
                             <User className="h-4 w-4 mr-2" />
-                            Xem hồ sơ gia sư
+                            Xem hồ sơ giáo viên
                           </Button>
                         )}
                       </div>

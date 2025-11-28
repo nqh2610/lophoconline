@@ -192,7 +192,7 @@ export function TutorReviews({ tutorId, initialReviews }: TutorReviewsProps) {
           <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
           <p className="text-muted-foreground">Chưa có đánh giá nào</p>
           <p className="text-sm text-muted-foreground mt-2">
-            Hãy là người đầu tiên đánh giá gia sư này!
+            Hãy là người đầu tiên đánh giá giáo viên này!
           </p>
         </CardContent>
       </Card>
@@ -304,7 +304,7 @@ export function TutorReviews({ tutorId, initialReviews }: TutorReviewsProps) {
                     <div className="bg-muted p-4 rounded-lg mt-3">
                       <div className="flex items-center gap-2 mb-2">
                         <MessageSquare className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">Phản hồi từ gia sư</span>
+                        <span className="text-sm font-medium">Phản hồi từ giáo viên</span>
                         {review.tutorReplyAt && (
                           <span className="text-xs text-muted-foreground">
                             {formatDate(review.tutorReplyAt)}

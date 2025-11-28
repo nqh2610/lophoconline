@@ -230,7 +230,7 @@ export default function TutorVerification() {
                 <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                   <li>Quay ở nơi có ánh sáng tốt</li>
                   <li>Giơ CMND/CCCD lên cạnh khuôn mặt</li>
-                  <li>Nói rõ: "Tôi là [Họ tên], đăng ký làm gia sư trên LopHoc.Online"</li>
+                  <li>Nói rõ: "Tôi là [Họ tên], đăng ký làm giáo viên trên LopHoc.Online"</li>
                   <li>Thời lượng: 15-30 giây</li>
                 </ul>
               </AlertDescription>

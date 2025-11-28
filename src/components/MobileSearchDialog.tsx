@@ -109,20 +109,20 @@ export function MobileSearchDialog({ open, onOpenChange }: MobileSearchDialogPro
       'Giáo viên': 'Giáo viên',
       'Chuyên gia': 'Chuyên gia',
     };
-    return labels[occupation] || 'Gia sư';
+    return labels[occupation] || 'Giáo viên';
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl p-0 gap-0">
         <DialogHeader className="p-4 pb-3 border-b">
-          <DialogTitle className="sr-only">Tìm kiếm gia sư</DialogTitle>
+          <DialogTitle className="sr-only">Tìm kiếm giáo viên</DialogTitle>
           <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={inputRef}
               type="search"
-              placeholder="Tìm gia sư theo tên, môn học..."
+              placeholder="Tìm giáo viên theo tên, môn học..."
               className="pl-9 pr-20 h-12"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -152,7 +152,7 @@ export function MobileSearchDialog({ open, onOpenChange }: MobileSearchDialogPro
           {suggestions.length > 0 ? (
             <div className="p-2">
               <p className="text-xs text-muted-foreground px-2 py-1 mb-1">
-                Gợi ý gia sư
+                Gợi ý giáo viên
               </p>
               {suggestions.map((tutor) => (
                 <button
@@ -205,7 +205,7 @@ export function MobileSearchDialog({ open, onOpenChange }: MobileSearchDialogPro
           ) : searchText.trim().length >= 2 && !isLoading ? (
             <div className="p-8 text-center text-muted-foreground">
               <Search className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Không tìm thấy gia sư nào</p>
+              <p>Không tìm thấy giáo viên nào</p>
               <p className="text-sm">Thử tìm kiếm với từ khóa khác</p>
             </div>
           ) : searchText.trim().length < 2 ? (

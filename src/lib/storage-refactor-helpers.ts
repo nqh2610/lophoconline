@@ -93,7 +93,7 @@ export class BookingValidation {
       if (hasTrialWithTutor) {
         return {
           valid: false,
-          error: "Bạn đã có buổi học thử với gia sư này rồi",
+          error: "Bạn đã có buổi học thử với giáo viên này rồi",
         };
       }
 

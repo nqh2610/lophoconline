@@ -9,19 +9,19 @@ export default function FAQ() {
   const faqs = [
     {
       question: "LopHoc.Online là gì?",
-      answer: "LopHoc.Online là nền tảng kết nối gia sư và học viên trực tuyến, giúp học viên dễ dàng tìm kiếm và học với các gia sư chất lượng cao thông qua video call."
+      answer: "LopHoc.Online là nền tảng kết nối giáo viên và học viên trực tuyến, giúp học viên dễ dàng tìm kiếm và học với các giáo viên chất lượng cao thông qua video call."
     },
     {
-      question: "Làm thế nào để đăng ký làm gia sư?",
-      answer: "Bạn click vào nút 'Trở thành gia sư', điền thông tin cá nhân, bằng cấp và kinh nghiệm. Chúng tôi sẽ xác thực hồ sơ trong vòng 24-48 giờ."
+      question: "Làm thế nào để đăng ký làm giáo viên?",
+      answer: "Bạn click vào nút 'Trở thành giáo viên', điền thông tin cá nhân, bằng cấp và kinh nghiệm. Chúng tôi sẽ xác thực hồ sơ trong vòng 24-48 giờ."
     },
     {
       question: "Học phí được tính như thế nào?",
-      answer: "Học phí tính theo giờ và phụ thuộc vào trình độ, kinh nghiệm của gia sư. Dao động từ 100.000đ - 500.000đ/giờ. Bạn chỉ thanh toán sau khi hoàn thành buổi học."
+      answer: "Học phí tính theo giờ và phụ thuộc vào trình độ, kinh nghiệm của giáo viên. Dao động từ 100.000đ - 500.000đ/giờ. Bạn chỉ thanh toán sau khi hoàn thành buổi học."
     },
     {
       question: "Có được học thử không?",
-      answer: "Có! Buổi học thử đầu tiên hoàn toàn miễn phí (30 phút) để bạn đánh giá phương pháp giảng dạy của gia sư và quyết định có tiếp tục hay không."
+      answer: "Có! Buổi học thử đầu tiên hoàn toàn miễn phí (30 phút) để bạn đánh giá phương pháp giảng dạy của giáo viên và quyết định có tiếp tục hay không."
     },
     {
       question: "Thanh toán như thế nào?",
@@ -33,15 +33,15 @@ export default function FAQ() {
     },
     {
       question: "Nếu không hài lòng với buổi học thì sao?",
-      answer: "Nếu bạn không hài lòng với buổi học đầu tiên (sau buổi học thử), chúng tôi sẽ hoàn lại 100% học phí và giúp bạn tìm gia sư khác phù hợp hơn."
+      answer: "Nếu bạn không hài lòng với buổi học đầu tiên (sau buổi học thử), chúng tôi sẽ hoàn lại 100% học phí và giúp bạn tìm giáo viên khác phù hợp hơn."
     },
     {
       question: "Cần những thiết bị gì để học trực tuyến?",
       answer: "Bạn cần máy tính/laptop/tablet có kết nối internet ổn định, camera và microphone. Chúng tôi khuyến nghị tốc độ internet tối thiểu 5 Mbps để đảm bảo chất lượng video call."
     },
     {
-      question: "Gia sư có được xác thực không?",
-      answer: "Tất cả gia sư đều phải qua quy trình xác thực bằng cấp, chứng chỉ và kinh nghiệm giảng dạy. Chúng tôi chỉ chấp nhận những gia sư đạt tiêu chuẩn chất lượng."
+      question: "Giáo viên có được xác thực không?",
+      answer: "Tất cả giáo viên đều phải qua quy trình xác thực bằng cấp, chứng chỉ và kinh nghiệm giảng dạy. Chúng tôi chỉ chấp nhận những giáo viên đạt tiêu chuẩn chất lượng."
     },
     {
       question: "Có hỗ trợ kỹ thuật không?",

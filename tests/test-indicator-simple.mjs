@@ -306,8 +306,11 @@ async function runTests() {
       }
     }
     
-    if (stableCycles >= 2) {
+    if (stableCycles === 3) {
       console.log(`   ✅ TEST 5 PASSED: ${stableCycles}/3 cycles successful`);
+      passed++;
+    } else if (stableCycles >= 2) {
+      console.log(`   ⚠️ TEST 5 PASSED (with warning): ${stableCycles}/3 cycles successful`);
       passed++;
     } else {
       console.log(`   ❌ TEST 5 FAILED: Only ${stableCycles}/3 cycles`);

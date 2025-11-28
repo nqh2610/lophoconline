@@ -69,7 +69,7 @@ export default function VideoCallPage() {
           roomName,
           userName: data.userName,
           role: data.role,
-          provider: data.provider || 'jitsi', // Default to jitsi if not specified
+          provider: data.provider || 'videolify', // Default to videolify if not specified
         });
 
       } catch (err) {
@@ -139,25 +139,25 @@ export default function VideoCallPage() {
     return null;
   }
 
-  // Render Videolify or Jitsi based on provider
-  if (callData.provider === 'videolify') {
+  // Render Jitsi or Videolify based on provider
+  if (callData.provider === 'jitsi') {
     return (
-      <VideolifyFull
-        accessToken={accessToken as string}
-        roomId={callData.roomName}
-        userDisplayName={callData.userName}
-        role={callData.role}
-        onCallEnd={handleMeetingEnd}
+      <JitsiMeeting
+        roomName={callData.roomName}
+        userName={callData.userName}
+        onMeetingEnd={handleMeetingEnd}
       />
     );
   }
 
-  // Default to Jitsi
+  // Default to Videolify (provider === 'videolify' or not specified)
   return (
-    <JitsiMeeting
-      roomName={callData.roomName}
-      userName={callData.userName}
-      onMeetingEnd={handleMeetingEnd}
+    <VideolifyFull
+      accessToken={accessToken as string}
+      roomId={callData.roomName}
+      userDisplayName={callData.userName}
+      role={callData.role}
+      onCallEnd={handleMeetingEnd}
     />
   );
 }

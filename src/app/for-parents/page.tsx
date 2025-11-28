@@ -6,7 +6,7 @@ export default function ForParents() {
     {
       icon: Shield,
       title: "An toàn & Bảo mật",
-      description: "Tất cả gia sư đều được xác thực kỹ lưỡng. Bạn có thể yên tâm về chất lượng và an toàn cho con."
+      description: "Tất cả giáo viên đều được xác thực kỹ lưỡng. Bạn có thể yên tâm về chất lượng và an toàn cho con."
     },
     {
       icon: Eye,
@@ -21,7 +21,7 @@ export default function ForParents() {
     {
       icon: MessageCircle,
       title: "Liên lạc trực tiếp",
-      description: "Trao đổi trực tiếp với gia sư về phương pháp học và tiến độ của con thông qua chat."
+      description: "Trao đổi trực tiếp với giáo viên về phương pháp học và tiến độ của con thông qua chat."
     }
   ];
 
@@ -36,18 +36,18 @@ export default function ForParents() {
     },
     {
       title: "Chất lượng đảm bảo",
-      description: "Chọn gia sư phù hợp từ hàng nghìn hồ sơ. Đổi gia sư miễn phí nếu không hài lòng."
+      description: "Chọn giáo viên phù hợp từ hàng nghìn hồ sơ. Đổi giáo viên miễn phí nếu không hài lòng."
     },
     {
       title: "Học cá nhân hóa",
-      description: "Gia sư tập trung 100% vào con, điều chỉnh phương pháp dạy phù hợp với khả năng và tính cách."
+      description: "Giáo viên tập trung 100% vào con, điều chỉnh phương pháp dạy phù hợp với khả năng và tính cách."
     }
   ];
 
   const faqs = [
     {
-      q: "Làm sao biết gia sư có đủ năng lực?",
-      a: "Tất cả gia sư đều được xác thực bằng cấp, kinh nghiệm. Bạn có thể xem đánh giá của phụ huynh khác và video giới thiệu của gia sư."
+      q: "Làm sao biết giáo viên có đủ năng lực?",
+      a: "Tất cả giáo viên đều được xác thực bằng cấp, kinh nghiệm. Bạn có thể xem đánh giá của phụ huynh khác và video giới thiệu của giáo viên."
     },
     {
       q: "Con có an toàn khi học online không?",
@@ -55,7 +55,7 @@ export default function ForParents() {
     },
     {
       q: "Nếu con không hiểu bài thì sao?",
-      a: "Gia sư sẽ giải thích lại nhiều lần với các phương pháp khác nhau. Bạn cũng có thể yêu cầu thêm buổi học hoặc tài liệu bổ sung."
+      a: "Giáo viên sẽ giải thích lại nhiều lần với các phương pháp khác nhau. Bạn cũng có thể yêu cầu thêm buổi học hoặc tài liệu bổ sung."
     }
   ];
 
@@ -67,10 +67,10 @@ export default function ForParents() {
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-5xl font-bold mb-6">Giúp con học tốt hơn</h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Tìm gia sư chất lượng, theo dõi tiến độ và đồng hành cùng con trên hành trình học tập
+              Tìm giáo viên chất lượng, theo dõi tiến độ và đồng hành cùng con trên hành trình học tập
             </p>
             <Button size="lg" className="text-lg px-8">
-              Tìm gia sư cho con
+              Tìm giáo viên cho con
             </Button>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function ForParents() {
               <p className="font-semibold">- Phụ huynh Nguyễn Văn A</p>
             </div>
             <div className="p-6 bg-background rounded-lg">
-              <p className="mb-4">"Tôi yên tâm vì có thể theo dõi tiến độ học của con qua app. Gia sư cũng thường xuyên báo cáo."</p>
+              <p className="mb-4">"Tôi yên tâm vì có thể theo dõi tiến độ học của con qua app. Giáo viên cũng thường xuyên báo cáo."</p>
               <p className="font-semibold">- Phụ huynh Trần Thị B</p>
             </div>
             <div className="p-6 bg-background rounded-lg">

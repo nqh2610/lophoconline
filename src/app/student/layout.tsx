@@ -7,7 +7,7 @@ import { Home, BookOpen, Calendar, CreditCard, User, Bell } from "lucide-react";
 
 const navItems = [
   { title: "Trang chủ", href: "/student", icon: Home },
-  { title: "Tìm gia sư", href: "/tutors", icon: BookOpen },
+  { title: "Tìm giáo viên", href: "/tutors", icon: BookOpen },
   { title: "Lớp học của tôi", href: "/student/classes", icon: Calendar },
   { title: "Thanh toán", href: "/student/payments", icon: CreditCard },
   { title: "Hồ sơ", href: "/student/profile", icon: User },

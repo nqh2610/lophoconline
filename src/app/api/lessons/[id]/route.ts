@@ -87,7 +87,7 @@ export async function PUT(
 
       if (tutorConflict) {
         return NextResponse.json(
-          { error: "Gia sư đã có lớp khác trong khung giờ này" },
+          { error: "Giáo viên đã có lớp khác trong khung giờ này" },
           { status: 409 }
         );
       }

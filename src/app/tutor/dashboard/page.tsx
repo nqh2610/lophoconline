@@ -151,7 +151,7 @@ export default function TutorDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold" data-testid="heading-tutor-dashboard">
-            Bảng điều khiển gia sư
+            Bảng điều khiển giáo viên
           </h1>
           <p className="text-muted-foreground mt-2">
             Theo dõi tiến trình và quản lý hoạt động của bạn
@@ -286,8 +286,8 @@ export default function TutorDashboard() {
         {/* Quick Actions */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Chức năng gia sư</CardTitle>
-            <CardDescription>Tất cả các tính năng quản lý dành cho gia sư</CardDescription>
+            <CardTitle>Chức năng giáo viên</CardTitle>
+            <CardDescription>Tất cả các tính năng quản lý dành cho giáo viên</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

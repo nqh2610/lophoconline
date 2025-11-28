@@ -18,7 +18,7 @@ import { z } from 'zod';
  * 1. Admin xem danh sách payouts đủ điều kiện
  * 2. Admin duyệt
  * 3. Chuyển từ pending → available
- * 4. Gia sư có thể rút tiền
+ * 4. Giáo viên có thể rút tiền
  */
 
 const approvePayoutSchema = z.object({
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tutorId, amount } = approvePayoutSchema.parse(body);
 
-    // 3. Lấy wallet của gia sư
+    // 3. Lấy wallet của giáo viên
     const wallet = await storage.getWalletByOwner(tutorId, 'tutor');
 
     if (!wallet) {
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Lấy thông tin gia sư để gửi notification
+    // 6. Lấy thông tin giáo viên để gửi notification
     const tutor = await storage.getTutorById(tutorId);
 
     if (tutor) {
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
         availableBalance: updatedWallet.availableBalance,
         totalEarned: updatedWallet.totalEarned,
       },
-      message: `Đã duyệt thanh toán ${amount.toLocaleString('vi-VN')}đ cho gia sư`,
+      message: `Đã duyệt thanh toán ${amount.toLocaleString('vi-VN')}đ cho giáo viên`,
     }, { status: 200 });
 
   } catch (error) {

@@ -338,7 +338,7 @@ export default function StudentFinancialDashboard() {
                         {classData.subject} - {classData.gradeLevel}
                       </CardTitle>
                       <CardDescription>
-                        Gia sư: {classData.tutor.name}
+                        Giáo viên: {classData.tutor.name}
                       </CardDescription>
                     </div>
                   </div>

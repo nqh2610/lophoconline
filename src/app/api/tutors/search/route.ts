@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Return simplified tutor data for autocomplete
     const suggestions = tutors.map(tutor => ({
       id: tutor.id,
-      name: (tutor as any).fullName || 'Gia sư', // ✅ From users table
+      name: (tutor as any).fullName || 'Giáo viên', // ✅ From users table
       avatar: (tutor as any).avatar, // ✅ From users table
       rating: tutor.rating,
       hourlyRate: tutor.hourlyRate,

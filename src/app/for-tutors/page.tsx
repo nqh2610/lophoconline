@@ -37,7 +37,7 @@ export default function ForTutors() {
   const steps = [
     { title: "Đăng ký", description: "Điền form đăng ký với thông tin cá nhân và bằng cấp" },
     { title: "Xác thực", description: "Chúng tôi xác thực hồ sơ trong 24-48 giờ" },
-    { title: "Tạo hồ sơ", description: "Hoàn thiện hồ sơ gia sư với giới thiệu và video demo" },
+    { title: "Tạo hồ sơ", description: "Hoàn thiện hồ sơ giáo viên với giới thiệu và video demo" },
     { title: "Bắt đầu dạy", description: "Nhận yêu cầu từ học viên và bắt đầu kiếm tiền" }
   ];
 
@@ -47,7 +47,7 @@ export default function ForTutors() {
       <section className="py-20 bg-gradient-to-br from-primary/10 to-primary/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">Trở thành gia sư trực tuyến</h1>
+            <h1 className="text-5xl font-bold mb-6">Trở thành giáo viên trực tuyến</h1>
             <p className="text-xl text-muted-foreground mb-8">
               Chia sẻ kiến thức, kiếm thu nhập hấp dẫn và phát triển sự nghiệp giảng dạy của bạn
             </p>
@@ -63,7 +63,7 @@ export default function ForTutors() {
       {/* Benefits */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Lợi ích khi trở thành gia sư</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Lợi ích khi trở thành giáo viên</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
               <div key={index} className="text-center">
@@ -83,7 +83,7 @@ export default function ForTutors() {
       {/* Requirements */}
       <section className="py-16 bg-muted/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-8">Yêu cầu gia sư</h2>
+          <h2 className="text-3xl font-bold text-center mb-8">Yêu cầu giáo viên</h2>
           <ul className="space-y-3">
             {requirements.map((req, index) => (
               <li key={index} className="flex items-start gap-3 text-lg">
@@ -120,11 +120,11 @@ export default function ForTutors() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">Sẵn sàng bắt đầu?</h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Tham gia cùng hàng nghìn gia sư đang kiếm thu nhập ổn định trên LopHoc.Online
+            Tham gia cùng hàng nghìn giáo viên đang kiếm thu nhập ổn định trên LopHoc.Online
           </p>
           <Link href="/tutor-registration">
             <Button size="lg" className="text-lg px-8">
-              Đăng ký làm gia sư
+              Đăng ký làm giáo viên
             </Button>
           </Link>
         </div>
